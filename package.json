@@ -12,7 +12,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "format": "prettier --write .",
+    "format": "prettier --check .",
+    "format:write": "prettier --write .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
