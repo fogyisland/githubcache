@@ -1,2 +1,3 @@
-// Vitest global setup; extend as the project grows.
+import { config } from 'dotenv';
+config({ path: '.env' });
 export {};
