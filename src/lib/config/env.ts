@@ -9,6 +9,7 @@ const schema = z.object({
     .string()
     .min(32, 'SESSION_SECRET must be at least 32 chars')
     .default('dev-secret-change-me-32-chars-min-aaaaa'),
+  GITHUB_TOKEN: z.string().optional(),
 });
 
 export const env = schema.parse(process.env);

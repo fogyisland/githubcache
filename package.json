@@ -19,6 +19,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@octokit/rest": "^22.0.1",
     "@prisma/client": "5",
     "next": "14",
     "pino": "^10.3.1",
@@ -35,9 +36,15 @@
     "dotenv": "^17.4.2",
     "eslint": "9",
     "eslint-config-next": "^16.3.1",
+    "msw": "^2.15.0",
     "prettier": "3",
     "prisma": "5",
     "typescript": "5.4",
     "vitest": "1"
+  },
+  "msw": {
+    "workerDirectory": [
+      "tests"
+    ]
   }
 }
