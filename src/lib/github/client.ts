@@ -1,31 +1,110 @@
-import { Octokit } from '@octokit/rest';
-import { env } from '@/lib/config/env';
 import { GitHubError, GitHubUnavailable, NotFoundError } from '@/lib/errors';
 import { logger } from '@/lib/logger';
+import {
+  pickToken,
+  recordUsage,
+  getBackoff,
+  initPool,
+} from '@/lib/github/pool';
 
-// M1 uses single token from env. M4 replaces with per-token Octokit.
-// We do NOT pass `request: { fetch }` explicitly so that Octokit resolves the
-// global `fetch` at request time — this lets MSW (and other test-time
-// fetch patches) intercept calls transparently.
-const octokit = new Octokit({
-  auth: env.GITHUB_TOKEN ?? process.env.GITHUB_TOKEN,
-});
+let poolInitPromise: Promise<void> | null = null;
+
+async function ensurePoolInitialized(): Promise<void> {
+  if (!poolInitPromise) {
+    poolInitPromise = initPool().catch((e: unknown) => {
+      poolInitPromise = null; // allow retry on next call
+      throw e;
+    });
+  }
+  return poolInitPromise;
+}
+
+const sleep = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+
+const MAX_ATTEMPTS = 3;
 
 export async function fetchRepoCore(
   owner: string,
   name: string,
 ): Promise<{ data: unknown; etag?: string }> {
-  try {
-    const res = await octokit.repos.get({ owner, repo: name });
-    const etag = res.headers.etag ?? undefined;
-    return etag ? { data: res.data, etag } : { data: res.data };
-  } catch (e: unknown) {
-    const err = e as { status?: number; message?: string };
-    if (err?.status === 404) throw new NotFoundError(`Repo ${owner}/${name} not found`);
-    if (err?.status === 403) throw new GitHubError('GH_FORBIDDEN', 403, err.message ?? 'forbidden');
-    if (err?.status !== undefined && err.status >= 500)
-      throw new GitHubUnavailable(`GitHub ${err.status}`);
-    logger.error({ err }, 'unexpected github error');
-    throw new GitHubError('GH_ERROR', err?.status ?? 500, err?.message ?? 'unknown');
+  await ensurePoolInitialized();
+
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    const picked = pickToken();
+    if (!picked) {
+      throw new GitHubUnavailable(
+        'no github tokens available (all exhausted or pool not initialized)',
+      );
+    }
+
+    try {
+      const res = await picked.octokit.repos.get({ owner, repo: name });
+      const etag = res.headers.etag ?? undefined;
+
+      // Record rate-limit usage on success
+      const remainingRaw = res.headers['x-ratelimit-remaining'];
+      const resetRaw = res.headers['x-ratelimit-reset'];
+      if (remainingRaw !== undefined && resetRaw !== undefined) {
+        const remaining = Number.parseInt(remainingRaw, 10);
+        const reset = Number.parseInt(resetRaw, 10);
+        if (Number.isFinite(remaining) && Number.isFinite(reset) && reset > 0) {
+          await recordUsage(picked.id, remaining, reset);
+        }
+      }
+
+      return etag ? { data: res.data, etag } : { data: res.data };
+    } catch (e: unknown) {
+      lastError = e;
+      const err = e as {
+        status?: number;
+        message?: string;
+        response?: { headers?: Record<string, string | undefined> };
+      };
+      const status = err?.status;
+
+      if (status === 404) {
+        throw new NotFoundError(`Repo ${owner}/${name} not found`);
+      }
+
+      if (status === 403) {
+        const remainingRaw = err.response?.headers?.['x-ratelimit-remaining'];
+        const remaining =
+          remainingRaw !== undefined ? Number.parseInt(remainingRaw, 10) : NaN;
+        // 403 with remaining=0 means this token is exhausted — rotate to next
+        if (remaining === 0) {
+          logger.warn(
+            { tokenId: picked.id.toString(), attempt },
+            'github token exhausted, rotating',
+          );
+          continue;
+        }
+        throw new GitHubError('GH_FORBIDDEN', 403, err.message ?? 'forbidden');
+      }
+
+      if (status === 429) {
+        const backoffMs = getBackoff();
+        logger.warn({ backoffMs, attempt }, 'github rate limited, backing off');
+        await sleep(backoffMs);
+        continue;
+      }
+
+      if (status !== undefined && status >= 500) {
+        await sleep(1000);
+        continue;
+      }
+
+      logger.error({ err, attempt }, 'unexpected github error');
+      throw new GitHubError(
+        'GH_ERROR',
+        status ?? 500,
+        err?.message ?? 'unknown',
+      );
+    }
   }
+
+  throw new GitHubUnavailable(
+    `github unreachable after ${MAX_ATTEMPTS} attempts: ${(lastError as Error)?.message ?? 'unknown'}`,
+  );
 }

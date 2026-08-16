@@ -1,9 +1,24 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
+import { Octokit } from '@octokit/rest';
 import { POST } from '@/app/api/query/route';
 import { prisma } from '@/lib/db/client';
 import { generateApiKey } from '@/lib/api-keys/generate';
+
+// Mock the token pool — these tests don't care about token rotation.
+// Provide a single always-available token so fetchRepoCore proceeds.
+vi.mock('@/lib/github/pool', () => {
+  const entry = { id: BigInt(1), octokit: new Octokit({ auth: 'ghp_test' }) };
+  return {
+    initPool: vi.fn(() => Promise.resolve()),
+    pickToken: vi.fn(() => entry),
+    recordUsage: vi.fn(() => Promise.resolve()),
+    getBackoff: vi.fn(() => 10),
+    shutdownPool: vi.fn(() => Promise.resolve()),
+    poolSize: vi.fn(() => 1),
+  };
+});
 
 const server = setupServer(
   http.get('https://api.github.com/repos/:owner/:name', ({ params }) =>
