@@ -29,3 +29,86 @@ enum FetchStatus {
   forbidden
   error
 }
+
+model User {
+  id           BigInt     @id @default(autoincrement())
+  email        String     @unique @db.VarChar(255)
+  passwordHash String?    @map("password_hash") @db.VarChar(255)
+  role         Role       @default(operator)
+  status       UserStatus @default(active) @map("user_status")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  lastLoginAt  DateTime?  @map("last_login_at")
+
+  apiKeys      ApiKey[]   @relation("owner")
+  approvedKeys ApiKey[]   @relation("approver")
+
+  @@map("users")
+}
+
+enum Role {
+  admin
+  operator
+}
+
+enum UserStatus {
+  active
+  disabled
+}
+
+model ApiKey {
+  id              BigInt        @id @default(autoincrement())
+  userId          BigInt        @map("user_id")
+  user            User          @relation("owner", fields: [userId], references: [id])
+  name            String        @db.VarChar(100)
+  keyPrefix       String        @map("key_prefix") @db.VarChar(16)
+  keyHash         String        @unique @map("key_hash") @db.VarChar(64)
+  status          ApiKeyStatus  @default(pending)
+  rateLimitPerMin Int           @default(60) @map("rate_limit_per_min")
+  dailyQuota      Int           @default(10000) @map("daily_quota")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  approvedAt      DateTime?     @map("approved_at")
+  approvedBy      BigInt?       @map("approved_by")
+  approver        User?         @relation("approver", fields: [approvedBy], references: [id])
+  revokedAt       DateTime?     @map("revoked_at")
+  lastUsedAt      DateTime?     @map("last_used_at")
+
+  @@index([status])
+  @@map("api_keys")
+}
+
+enum ApiKeyStatus {
+  pending
+  active
+  revoked
+}
+
+model AuditLog {
+  id          BigInt   @id @default(autoincrement())
+  actorUserId BigInt?  @map("actor_user_id")
+  action      String   @db.VarChar(100)
+  targetType  String   @map("target_type") @db.VarChar(50)
+  targetId    String   @map("target_id") @db.VarChar(100)
+  metadata    Json?
+  ip          String?  @db.VarChar(45)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_log")
+}
+
+model RequestLog {
+  id            BigInt   @id @default(autoincrement())
+  apiKeyId      BigInt?  @map("api_key_id")
+  endpoint      String   @db.VarChar(100)
+  repoRequested String?  @map("repo_requested") @db.VarChar(300)
+  cacheHit      Boolean  @map("cache_hit")
+  durationMs    Int      @map("duration_ms")
+  statusCode    Int      @map("status_code")
+  ip            String?  @db.VarChar(45)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([apiKeyId, createdAt])
+  @@map("request_log")
+}
