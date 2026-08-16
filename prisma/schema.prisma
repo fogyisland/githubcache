@@ -112,3 +112,24 @@ model RequestLog {
   @@index([apiKeyId, createdAt])
   @@map("request_log")
 }
+
+model GithubToken {
+  id            BigInt            @id @default(autoincrement())
+  label         String            @db.VarChar(100)
+  tokenFirst4   String            @map("token_first4") @db.Char(4)
+  tokenLast4    String            @map("token_last4") @db.Char(4)
+  tokenHash     String            @unique @map("token_hash") @db.Char(64)
+  status        GithubTokenStatus @default(active)
+  requestsUsed  Int               @default(0) @map("requests_used")
+  requestsLimit Int               @default(5000) @map("requests_limit")
+  resetAt       DateTime?         @map("reset_at")
+  lastUsedAt    DateTime?         @map("last_used_at")
+  createdAt     DateTime          @default(now()) @map("created_at")
+
+  @@map("github_tokens")
+}
+
+enum GithubTokenStatus {
+  active
+  disabled
+}
