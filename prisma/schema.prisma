@@ -41,8 +41,10 @@ model User {
   createdAt    DateTime   @default(now()) @map("created_at")
   lastLoginAt  DateTime?  @map("last_login_at")
 
-  apiKeys      ApiKey[]   @relation("owner")
-  approvedKeys ApiKey[]   @relation("approver")
+  apiKeys      ApiKey[]    @relation("owner")
+  approvedKeys ApiKey[]    @relation("approver")
+  sessions     Session[]
+  invitations  Invitation[] @relation("inviter")
 
   @@map("users")
 }
@@ -159,4 +161,30 @@ enum RefreshJobStatus {
   in_progress
   done
   failed
+}
+
+model Session {
+  id        String   @id @db.Char(43)
+  userId    BigInt   @map("user_id")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  ip        String?  @db.VarChar(45)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Invitation {
+  id         String    @id @db.Char(32)
+  email      String    @db.VarChar(255)
+  role       Role
+  invitedBy  BigInt    @map("invited_by")
+  expiresAt  DateTime  @map("expires_at")
+  consumedAt DateTime? @map("consumed_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  inviter    User      @relation("inviter", fields: [invitedBy], references: [id])
+
+  @@index([email])
+  @@map("invitations")
 }
