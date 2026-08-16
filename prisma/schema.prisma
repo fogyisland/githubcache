@@ -13,7 +13,7 @@ model Repository {
   name          String      @db.VarChar(200)
   node          Json
   metadata      Json?
-  etag          String?     @db.VarChar(64)
+  etag          String?     @db.VarChar(128)
   lastFetchedAt DateTime?   @map("last_fetched_at")
   fetchStatus   FetchStatus @default(ok) @map("fetch_status")
   fetchError    String?     @map("fetch_error") @db.Text

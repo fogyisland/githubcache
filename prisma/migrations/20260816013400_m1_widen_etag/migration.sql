@@ -1,0 +1,2 @@
+-- AlterTable: widen etag column. GitHub's W/ weak etag format (e.g. W/"b4b78a9b...") is 78 chars; the M1 schema chose VARCHAR(64) which truncates real GitHub etags. Bumping to 128 to fit W/ format and any future strong-etag variants.
+ALTER TABLE `repositories` MODIFY COLUMN `etag` VARCHAR(128) NULL;
