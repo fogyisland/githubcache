@@ -1,4 +1,3 @@
-import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { env } from '@/lib/config/env';
 
 export const CSRF_COOKIE_NAME = 'ghc_csrf';
@@ -16,9 +15,14 @@ interface RequestLike extends HeaderCarrier {
  * Generate a new CSRF token: 32 random bytes encoded as hex (64 chars).
  * Tokens are NOT stored server-side; the double-submit pattern relies on
  * the client echoing the same value in header.
+ *
+ * Uses Web Crypto API (`crypto.getRandomValues`) — works in both Node 20+
+ * and Edge runtime.
  */
 export function issueCsrfToken(): string {
-  return randomBytes(32).toString('hex');
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 /**
@@ -63,6 +67,23 @@ function extractToken(req: RequestLike, from: 'cookie' | 'header'): string | nul
 }
 
 /**
+ * Constant-time comparison of two byte arrays. Pure implementation — no
+ * Node-specific APIs. Works in both Node and Edge runtime.
+ *
+ * Returns false (never throws) for:
+ *   - Length mismatch (different lengths → cannot be constant-time equal)
+ *   - Different byte values
+ */
+function constantTimeEqual(a: Uint8Array, b: Uint8Array): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a[i]! ^ b[i]!;
+  }
+  return diff === 0;
+}
+
+/**
  * Verify CSRF protection: the token in the X-CSRF-Token header must match
  * the value in the ghc_csrf cookie, byte-for-byte.
  *
@@ -72,6 +93,7 @@ function extractToken(req: RequestLike, from: 'cookie' | 'header'): string | nul
  *   - Different values
  *
  * Uses constant-time comparison to defeat timing attacks.
+ * Edge-runtime safe: no `node:crypto` import.
  */
 export function verifyCsrf(req: RequestLike, headerToken: string | null): boolean {
   const cookieToken = extractToken(req, 'cookie');
@@ -79,10 +101,5 @@ export function verifyCsrf(req: RequestLike, headerToken: string | null): boolea
   // Use constant-time comparison on UTF-8 bytes
   const a = new TextEncoder().encode(cookieToken);
   const b = new TextEncoder().encode(headerToken);
-  if (a.length !== b.length) return false;
-  try {
-    return timingSafeEqual(a, b);
-  } catch {
-    return false;
-  }
+  return constantTimeEqual(a, b);
 }
