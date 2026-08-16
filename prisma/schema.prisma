@@ -19,6 +19,8 @@ model Repository {
   fetchError    String?     @map("fetch_error") @db.Text
   createdAt     DateTime    @default(now()) @map("created_at")
 
+  refreshJobs   RefreshJob[]
+
   @@unique([owner, name])
   @@map("repositories")
 }
@@ -132,4 +134,29 @@ model GithubToken {
 enum GithubTokenStatus {
   active
   disabled
+}
+
+model RefreshJob {
+  id            BigInt           @id @default(autoincrement())
+  repositoryId  BigInt           @map("repository_id")
+  priority      Int              @default(50)
+  scheduledFor  DateTime         @map("scheduled_for")
+  status        RefreshJobStatus @default(pending)
+  attempts      Int              @default(0)
+  lastError     String?          @map("last_error") @db.Text
+  lockedUntil   DateTime?        @map("locked_until")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+  repository    Repository       @relation(fields: [repositoryId], references: [id])
+
+  @@index([status, scheduledFor])
+  @@index([status, priority])
+  @@map("refresh_jobs")
+}
+
+enum RefreshJobStatus {
+  pending
+  in_progress
+  done
+  failed
 }
