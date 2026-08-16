@@ -4,11 +4,13 @@ import { storeRepoMetadata, getRepoMetadata } from '@/lib/cache';
 
 describe('cache write+read round-trip', () => {
   afterAll(async () => {
+    await prisma.refreshJob.deleteMany({ where: { repository: { owner: 'test-owner' } } });
     await prisma.repository.deleteMany({ where: { owner: 'test-owner' } });
     await prisma.$disconnect();
   });
 
   afterEach(async () => {
+    await prisma.refreshJob.deleteMany({ where: { repository: { owner: 'test-owner' } } });
     await prisma.repository.deleteMany({ where: { owner: 'test-owner' } });
   });
 

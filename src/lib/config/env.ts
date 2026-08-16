@@ -13,6 +13,10 @@ const schema = z.object({
   GITHUB_TOKENS: z.string().optional(),
   GITHUB_TOKENS_FILE: z.string().optional(),
   ADMIN_DEV_TOKEN: z.string().default('dev-only-token'),
+  SCHEDULER_BATCH_SIZE: z.coerce.number().int().positive().default(10),
+  SCHEDULER_TICK_MS: z.coerce.number().int().positive().default(60_000),
+  NIGHTLY_SWEEP_INTERVAL_MS: z.coerce.number().int().positive().default(24 * 60 * 60_000),
+  SCHEDULER_ENABLED: z.coerce.boolean().default(true),
 });
 
 export const env = schema.parse(process.env);

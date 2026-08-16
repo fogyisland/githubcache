@@ -59,10 +59,25 @@ beforeAll(async () => {
 afterAll(async () => {
   server.close();
   for (const owner of TEST_OWNERS) {
+    await prisma.refreshJob.deleteMany({ where: { repository: { owner } } });
     await prisma.repository.deleteMany({ where: { owner } });
   }
+  await prisma.refreshJob.deleteMany({});
   await prisma.requestLog.deleteMany({});
-  await prisma.apiKey.deleteMany({ where: { id: authKeyId } });
+  // Delete ALL api keys owned by auth-test users (not just authKeyId — leftover
+  // keys from previous test runs reference users we're about to delete).
+  const authUsers = await prisma.user.findMany({
+    where: { email: { startsWith: AUTH_EMAIL_PREFIX } },
+    select: { id: true },
+  });
+  if (authUsers.length > 0) {
+    await prisma.apiKey.deleteMany({
+      where: { userId: { in: authUsers.map((u) => u.id) } },
+    });
+  }
+  await prisma.auditLog.deleteMany({
+    where: { actorUserId: { in: authUsers.map((u) => u.id) } },
+  });
   await prisma.user.deleteMany({ where: { email: { startsWith: AUTH_EMAIL_PREFIX } } });
   await prisma.$disconnect();
 });
