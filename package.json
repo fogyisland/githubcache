@@ -9,6 +9,8 @@
   },
   "scripts": {
     "dev": "next dev -p 3000",
+    "dev:server": "tsx watch src/server.ts",
+    "start:server": "node --import tsx/esm src/server.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
