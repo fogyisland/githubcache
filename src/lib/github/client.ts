@@ -27,7 +27,8 @@ const MAX_ATTEMPTS = 3;
 export async function fetchRepoCore(
   owner: string,
   name: string,
-): Promise<{ data: unknown; etag?: string }> {
+  etag?: string,
+): Promise<{ data?: unknown; etag?: string; notModified?: boolean }> {
   await ensurePoolInitialized();
 
   let lastError: unknown;
@@ -40,8 +41,12 @@ export async function fetchRepoCore(
     }
 
     try {
-      const res = await picked.octokit.repos.get({ owner, repo: name });
-      const etag = res.headers.etag ?? undefined;
+      const res = await picked.octokit.repos.get({
+        owner,
+        repo: name,
+        ...(etag !== undefined ? { headers: { 'If-None-Match': etag } } : {}),
+      });
+      const responseEtag = res.headers.etag ?? undefined;
 
       // Record rate-limit usage on success
       const remainingRaw = res.headers['x-ratelimit-remaining'];
@@ -54,7 +59,10 @@ export async function fetchRepoCore(
         }
       }
 
-      return etag ? { data: res.data, etag } : { data: res.data };
+      if (responseEtag) {
+        return { data: res.data, etag: responseEtag };
+      }
+      return { data: res.data };
     } catch (e: unknown) {
       lastError = e;
       const err = e as {
@@ -63,6 +71,15 @@ export async function fetchRepoCore(
         response?: { headers?: Record<string, string | undefined> };
       };
       const status = err?.status;
+
+      // 304 Not Modified — Octokit throws on 3xx by default. The etag is still
+      // valid (we sent it, server confirmed resource is unchanged). Return
+      // notModified so caller can skip the parse+upsert.
+      if (status === 304) {
+        return etag !== undefined
+          ? { notModified: true, etag }
+          : { notModified: true };
+      }
 
       if (status === 404) {
         throw new NotFoundError(`Repo ${owner}/${name} not found`);
