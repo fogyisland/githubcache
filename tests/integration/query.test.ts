@@ -3,6 +3,7 @@ import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
 import { POST } from '@/app/api/query/route';
 import { prisma } from '@/lib/db/client';
+import { generateApiKey } from '@/lib/api-keys/generate';
 
 const server = setupServer(
   http.get('https://api.github.com/repos/:owner/:name', ({ params }) =>
@@ -14,16 +15,43 @@ const server = setupServer(
   ),
 );
 
-const TEST_OWNERS = ['cache-owner', 'miss-owner', 'dedupe'];
+const TEST_OWNERS = ['cache-owner', 'miss-owner', 'dedupe', 'auth-test-owner'];
+const AUTH_EMAIL_PREFIX = 'auth-test-';
 
-beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+let authPlainKey = '';
+let authKeyId = 0n;
+
+beforeAll(async () => {
+  server.listen({ onUnhandledRequest: 'error' });
+  // Create a user and approved API key for tests
+  const user = await prisma.user.create({
+    data: { email: `${AUTH_EMAIL_PREFIX}${Date.now()}@test`, role: 'admin', status: 'active' },
+  });
+  const generated = generateApiKey();
+  authPlainKey = generated.plain;
+  const created = await prisma.apiKey.create({
+    data: {
+      userId: user.id,
+      name: 'query-test-key',
+      keyPrefix: generated.prefix,
+      keyHash: generated.hash,
+      status: 'active',
+    },
+  });
+  authKeyId = created.id;
+});
+
 afterAll(async () => {
   server.close();
   for (const owner of TEST_OWNERS) {
     await prisma.repository.deleteMany({ where: { owner } });
   }
+  await prisma.requestLog.deleteMany({});
+  await prisma.apiKey.deleteMany({ where: { id: authKeyId } });
+  await prisma.user.deleteMany({ where: { email: { startsWith: AUTH_EMAIL_PREFIX } } });
   await prisma.$disconnect();
 });
+
 beforeEach(async () => {
   server.resetHandlers();
   for (const owner of TEST_OWNERS) {
@@ -35,7 +63,10 @@ async function postQuery(nodes: unknown[]): Promise<Response> {
   return POST(
     new Request('http://x/api/query', {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': authPlainKey,
+      },
       body: JSON.stringify({ nodes }),
     }),
   );
@@ -85,6 +116,7 @@ describe('POST /api/query', () => {
     const res = await POST(
       new Request('http://x/api/query', {
         method: 'POST',
+        headers: { 'x-api-key': authPlainKey },
         body: JSON.stringify({ nodes: 'not-an-array' }),
       }),
     );
@@ -106,5 +138,38 @@ describe('POST /api/query', () => {
     ]);
     for (const r of responses) expect(r.status).toBe(200);
     expect(count).toBe(1);
+  });
+
+  it('rejects missing X-API-Key with 401', async () => {
+    const res = await POST(
+      new Request('http://x/api/query', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ nodes: ['cache-owner/r'] }),
+      }),
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects invalid X-API-Key with 403', async () => {
+    const res = await POST(
+      new Request('http://x/api/query', {
+        method: 'POST',
+        headers: { 'x-api-key': 'ghc_live_invalid_does_not_exist' },
+        body: JSON.stringify({ nodes: ['cache-owner/r'] }),
+      }),
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it('rejects revoked key with 403', async () => {
+    // Temporarily revoke, then restore
+    await prisma.apiKey.update({ where: { id: authKeyId }, data: { status: 'revoked' } });
+    try {
+      const res = await postQuery(['cache-owner/r']);
+      expect(res.status).toBe(403);
+    } finally {
+      await prisma.apiKey.update({ where: { id: authKeyId }, data: { status: 'active' } });
+    }
   });
 });

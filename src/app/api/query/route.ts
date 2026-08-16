@@ -1,15 +1,17 @@
 import { NextResponse } from 'next/server';
+import { createHash } from 'crypto';
 import { parseNodes } from '@/lib/cache/parser';
 import { getRepoMetadata } from '@/lib/cache/read';
 import { fetchRepoCore } from '@/lib/github/client';
 import { parseRepoResponse } from '@/lib/github/fields';
 import { storeRepoMetadata } from '@/lib/cache/write';
 import { NotFoundError } from '@/lib/errors';
+import { prisma } from '@/lib/db/client';
+import { findApiKeyByHash } from '@/lib/db/api-keys';
+import { recordRequest } from '@/lib/db/request-log';
+import { tokenBucket } from '@/lib/rate-limit/memory';
 import type { Prisma } from '@prisma/client';
 import { logger } from '@/lib/logger';
-
-// TODO: integrate tokenBucket (src/lib/rate-limit/memory.ts) in M3.
-// M2.3 brief defers rate-limiting; we still consume the upstream call directly.
 
 // In-process dedupe: concurrent first-miss requests for the same
 // owner/name share one upstream fetch. M5 may replace with a durable
@@ -88,6 +90,31 @@ interface ResultError {
 type QueryResult = ResultOk | ResultNotFound | ResultError;
 
 export async function POST(req: Request): Promise<Response> {
+  const start = Date.now();
+
+  // 1. Extract and validate X-API-Key
+  const plain = req.headers.get('x-api-key');
+  if (!plain) {
+    return NextResponse.json({ error: 'missing api key' }, { status: 401 });
+  }
+  const hash = createHash('sha256').update(plain).digest('hex');
+  const apiKey = await findApiKeyByHash(hash);
+  if (!apiKey || apiKey.status !== 'active') {
+    return NextResponse.json({ error: 'invalid api key' }, { status: 403 });
+  }
+
+  // 2. Rate limit per key (in-memory token bucket, replaced in M8)
+  const bucket = tokenBucket(`key:${apiKey.id}`, apiKey.rateLimitPerMin);
+  if (!bucket.allow()) {
+    return NextResponse.json({ error: 'rate limit exceeded' }, { status: 429 });
+  }
+
+  // 3. Fire-and-forget lastUsedAt update
+  void prisma.apiKey
+    .update({ where: { id: apiKey.id }, data: { lastUsedAt: new Date() } })
+    .catch((e: unknown) => logger.error({ err: e }, 'lastUsedAt update failed'));
+
+  // 4. Parse body
   let body: unknown;
   try {
     body = await req.json();
@@ -99,6 +126,7 @@ export async function POST(req: Request): Promise<Response> {
     return NextResponse.json({ error: parsed.error }, { status: 400 });
   }
 
+  // 5. Existing route logic
   const results = await Promise.all(
     parsed.nodes.map(async (n): Promise<QueryResult> => {
       const r = await getRepoMetadata(n.owner, n.name);
@@ -174,5 +202,22 @@ export async function POST(req: Request): Promise<Response> {
     miss: results.filter((r) => !r.found).length,
     stale: 0,
   };
-  return NextResponse.json({ results, summary });
+  const response = NextResponse.json({ results, summary });
+
+  // 6. Fire-and-forget request log — one row per /api/query invocation.
+  // For multi-node batches, repoRequested captures only the first node's
+  // original input. M5/M7 may refine to per-node records.
+  const firstNode = parsed.nodes[0];
+  const fwd = req.headers.get('x-forwarded-for');
+  void recordRequest({
+    apiKeyId: apiKey.id,
+    endpoint: '/api/query',
+    ...(firstNode !== undefined ? { repoRequested: firstNode.original } : {}),
+    cacheHit: summary.hit === results.length,
+    durationMs: Date.now() - start,
+    statusCode: 200,
+    ...(fwd !== null ? { ip: fwd ?? undefined } : {}),
+  }).catch((e: unknown) => logger.error({ err: e }, 'request log failed'));
+
+  return response;
 }
