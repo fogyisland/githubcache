@@ -10,6 +10,8 @@ const schema = z.object({
     .min(32, 'SESSION_SECRET must be at least 32 chars')
     .default('dev-secret-change-me-32-chars-min-aaaaa'),
   GITHUB_TOKEN: z.string().optional(),
+  GITHUB_TOKENS: z.string().optional(),
+  GITHUB_TOKENS_FILE: z.string().optional(),
   ADMIN_DEV_TOKEN: z.string().default('dev-only-token'),
 });
 
