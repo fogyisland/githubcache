@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { approveKey } from '@/lib/api-keys/workflow';
-import { validateDevToken } from '@/lib/dev-token';
-import { prisma } from '@/lib/db/client';
+import { validateSession } from '@/lib/auth/session';
 import { logger } from '@/lib/logger';
 
 interface Params {
@@ -9,23 +8,26 @@ interface Params {
 }
 
 /**
- * Resolve the actor for dev-token admin actions. M3 has no session, so we
- * pick the first active admin user. M6 replaces this with a cookie-session
- * lookup. Returns null when no admin user exists.
+ * POST /api/admin/api-keys/[id]/approve
+ *
+ * Session-authenticated (cookie-session). CSRF is enforced
+ * by the middleware for all non-GET /api/admin/* requests.
+ *
+ * Response codes:
+ *   200 — approved; body contains the one-time plaintext key
+ *   400 — invalid id
+ *   403 — session valid but account disabled
+ *   404 — no/invalid session (deliberately not 401: hides endpoint existence)
+ *   404 — key not found / already revoked
  */
-async function devTokenActor(): Promise<bigint | null> {
-  const u = await prisma.user.findFirst({
-    where: { role: 'admin', status: 'active' },
-    orderBy: { id: 'asc' },
-    select: { id: true },
-  });
-  return u?.id ?? null;
-}
-
 export async function POST(req: Request, { params }: Params): Promise<Response> {
-  if (!validateDevToken(req)) {
-    // Hide endpoint existence from unauth callers
+  const user = await validateSession(req);
+  if (!user) {
+    // Hide endpoint existence from unauthenticated callers
     return new NextResponse(null, { status: 404 });
+  }
+  if (user.status !== 'active') {
+    return NextResponse.json({ error: 'account_disabled' }, { status: 403 });
   }
 
   let id: bigint;
@@ -49,17 +51,12 @@ export async function POST(req: Request, { params }: Params): Promise<Response> 
     // empty body OK — defaults apply
   }
 
-  const actor = await devTokenActor();
-  if (actor === null) {
-    return NextResponse.json({ error: 'no admin user exists' }, { status: 500 });
-  }
-
   try {
     const fwd = req.headers.get('x-forwarded-for');
     const result = await approveKey({
       id,
       ...body,
-      actorUserId: actor,
+      actorUserId: user.id,
       ...(fwd !== null && fwd !== '' ? { ip: fwd } : {}),
     });
     return NextResponse.json({

@@ -2,8 +2,11 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
 import { POST as queryPOST } from '@/app/api/query/route';
-import { POST as approvePOST } from '@/app/api/admin/dev-token-approve/[id]/route';
+import { GET as getCsrf } from '@/app/api/admin/auth/csrf/route';
+import { POST as loginPOST } from '@/app/api/admin/auth/login/route';
+import { POST as approvePOST } from '@/app/api/admin/api-keys/[id]/approve/route';
 import { POST as revokePOST } from '@/app/api/admin/api-keys/[id]/revoke/route';
+import { hashPassword } from '@/lib/auth/password';
 import { prisma } from '@/lib/db/client';
 import { requestKey, revokeKey } from '@/lib/api-keys/workflow';
 
@@ -18,22 +21,57 @@ const server = setupServer(
 );
 
 const TEST_OWNER_PREFIX = 'flow-test';
+const TEST_EMAIL = 'flow@example.test';
+const TEST_PASSWORD = 'flow-test-password';
 let testUserId = 0n;
+let adminCookie = '';
+let adminCsrfToken = '';
 
 beforeAll(async () => {
   server.listen({ onUnhandledRequest: 'error' });
   const user = await prisma.user.create({
-    data: { email: 'flow@test', role: 'admin', status: 'active' },
+    data: {
+      email: TEST_EMAIL,
+      role: 'admin',
+      status: 'active',
+      passwordHash: await hashPassword(TEST_PASSWORD),
+    },
   });
   testUserId = user.id;
-});
+
+  // Log in once — the admin endpoints are session-authenticated (M6 replaced
+  // the M3 dev-token header).
+  const csrfRes = await getCsrf();
+  const { csrfToken } = (await csrfRes.json()) as { csrfToken: string };
+  const csrfCookie = (csrfRes.headers.get('Set-Cookie') ?? '').split(';')[0] ?? '';
+  const loginRes = await loginPOST(
+    new Request('http://x/api/admin/auth/login', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        cookie: csrfCookie,
+        'x-csrf-token': csrfToken,
+      },
+      body: JSON.stringify({ email: TEST_EMAIL, password: TEST_PASSWORD, csrf: csrfToken }),
+    }),
+  );
+  expect(loginRes.status).toBe(200);
+  const setCookies = loginRes.headers.getSetCookie?.() ?? [];
+  const sessionCookie = setCookies.find((c) => c.startsWith('ghc_admin_sid='))?.split(';')[0] ?? '';
+  // CSRF is rotated on login — pick up the new value.
+  const rotatedCsrf = setCookies.find((c) => c.startsWith('ghc_csrf='))?.split(';')[0] ?? csrfCookie;
+  adminCsrfToken = rotatedCsrf.slice('ghc_csrf='.length);
+  adminCookie = `${rotatedCsrf}; ${sessionCookie}`;
+  expect(sessionCookie).not.toBe('');
+}, 30_000);
 
 afterAll(async () => {
   server.close();
   await prisma.requestLog.deleteMany({});
   await prisma.auditLog.deleteMany({});
   await prisma.apiKey.deleteMany({ where: { userId: testUserId } });
-  await prisma.user.deleteMany({ where: { email: 'flow@test' } });
+  await prisma.session.deleteMany({ where: { userId: testUserId } });
+  await prisma.user.deleteMany({ where: { email: TEST_EMAIL } });
   await prisma.repository.deleteMany({ where: { owner: { startsWith: TEST_OWNER_PREFIX } } });
   await prisma.$disconnect();
 });
@@ -43,7 +81,15 @@ beforeEach(async () => {
   await prisma.repository.deleteMany({ where: { owner: { startsWith: TEST_OWNER_PREFIX } } });
 });
 
-describe('API key lifecycle (dev-token mode)', () => {
+function adminHeaders(): Record<string, string> {
+  return {
+    'content-type': 'application/json',
+    cookie: adminCookie,
+    'x-csrf-token': adminCsrfToken,
+  };
+}
+
+describe('API key lifecycle (session-auth mode)', () => {
   it('request -> approve -> use -> revoke -> 403', async () => {
     // Request a key
     const req = await requestKey({ userId: testUserId, name: 'flow-test-key-1' });
@@ -51,12 +97,9 @@ describe('API key lifecycle (dev-token mode)', () => {
 
     // Approve via the admin endpoint
     const approveRes = await approvePOST(
-      new Request(`http://x/api/admin/dev-token-approve/${req.id}`, {
+      new Request(`http://x/api/admin/api-keys/${req.id}/approve`, {
         method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'x-admin-dev-token': 'dev-only-token',
-        },
+        headers: adminHeaders(),
         body: JSON.stringify({ rateLimit: 60, dailyQuota: 1000 }),
       }),
       { params: { id: String(req.id) } },
@@ -82,7 +125,7 @@ describe('API key lifecycle (dev-token mode)', () => {
     const revokeRes = await revokePOST(
       new Request(`http://x/api/admin/api-keys/${req.id}/revoke`, {
         method: 'POST',
-        headers: { 'x-admin-dev-token': 'dev-only-token' },
+        headers: adminHeaders(),
       }),
       { params: { id: String(req.id) } },
     );
@@ -102,9 +145,9 @@ describe('API key lifecycle (dev-token mode)', () => {
     expect(afterRes.status).toBe(403);
   });
 
-  it('admin endpoints reject missing dev token with 404', async () => {
+  it('approve rejects missing session with 404', async () => {
     const res = await approvePOST(
-      new Request('http://x/api/admin/dev-token-approve/1', {
+      new Request('http://x/api/admin/api-keys/1/approve', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
       }),
@@ -113,11 +156,11 @@ describe('API key lifecycle (dev-token mode)', () => {
     expect(res.status).toBe(404);
   });
 
-  it('admin endpoints reject wrong dev token with 404', async () => {
+  it('revoke rejects a forged session cookie with 404', async () => {
     const res = await revokePOST(
       new Request('http://x/api/admin/api-keys/1/revoke', {
         method: 'POST',
-        headers: { 'x-admin-dev-token': 'wrong' },
+        headers: { cookie: 'ghc_admin_sid=not-a-real-session-id' },
       }),
       { params: { id: '1' } },
     );
@@ -125,8 +168,6 @@ describe('API key lifecycle (dev-token mode)', () => {
   });
 
   it('revokeKey on non-existent id throws', async () => {
-    await expect(
-      revokeKey({ id: BigInt(999999999), actorUserId: testUserId }),
-    ).rejects.toThrow();
+    await expect(revokeKey({ id: BigInt(999999999), actorUserId: testUserId })).rejects.toThrow();
   });
 });
