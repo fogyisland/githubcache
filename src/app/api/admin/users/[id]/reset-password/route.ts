@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { randomBytes } from 'node:crypto';
 import { z } from 'zod';
 import { validateSession } from '@/lib/auth/session';
+import { cookiesFromRequest } from '@/lib/auth/cookies-from-request';
 import { verifyCsrf } from '@/lib/auth/csrf';
 import { getUserById } from '@/lib/db/users';
 import { changePassword } from '@/lib/auth/password-reset';
@@ -12,36 +13,13 @@ const Body = z.object({ csrf: z.string().min(1) });
 /**
  * Generate a 16-character base64url temporary password.
  *
- * 12 random bytes → 16 base64url chars (rounded down from 16). Displayed
- * to the admin ONCE; the hash is stored and the plaintext is never
- * recoverable later.
+ * 16 chars produced from 12 random bytes (base64url encodes 3 bytes
+ * as 4 chars, so 12 bytes → 16 chars exactly — no slicing needed).
+ * Displayed to the admin ONCE; the hash is stored and the plaintext
+ * is never recoverable later.
  */
 function generateTempPassword(): string {
-  return randomBytes(12).toString('base64url').slice(0, 16);
-}
-
-/**
- * Build a `{get}` adapter for `validateSession` from the raw `Cookie`
- * header — see /api/admin/users/invite/route.ts for the rationale.
- */
-function cookiesFromRequest(req: Request): {
-  get(name: string): { value: string } | undefined;
-} {
-  const header = req.headers.get('cookie') ?? '';
-  const map: Record<string, string> = {};
-  for (const part of header.split(';')) {
-    const trimmed = part.trim();
-    if (!trimmed) continue;
-    const eq = trimmed.indexOf('=');
-    if (eq <= 0) continue;
-    const k = trimmed.slice(0, eq);
-    const v = trimmed.slice(eq + 1);
-    if (!(k in map)) map[k] = v;
-  }
-  return {
-    get: (name: string): { value: string } | undefined =>
-      map[name] !== undefined ? { value: map[name]! } : undefined,
-  };
+  return randomBytes(12).toString('base64url');
 }
 
 /**

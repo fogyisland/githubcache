@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { validateSession } from '@/lib/auth/session';
+import { cookiesFromRequest } from '@/lib/auth/cookies-from-request';
 import { verifyCsrf } from '@/lib/auth/csrf';
 import { createInvitation } from '@/lib/db/invitations';
 import { prisma } from '@/lib/db/client';
@@ -11,35 +12,6 @@ const Body = z.object({
   role: z.enum(['admin', 'operator']),
   csrf: z.string().min(1),
 });
-
-/**
- * Build a `{get}` adapter for `validateSession` from the raw `Cookie`
- * header. This mirrors the cookieMap pattern from the admin layout,
- * adapted to read from `req.headers` rather than `next/headers` cookies().
- *
- * Reading cookies via `req.headers` lets the route handler work both in
- * the Next.js request scope AND in Vitest tests (where `cookies()` from
- * `next/headers` throws "called outside a request scope").
- */
-function cookiesFromRequest(req: Request): {
-  get(name: string): { value: string } | undefined;
-} {
-  const header = req.headers.get('cookie') ?? '';
-  const map: Record<string, string> = {};
-  for (const part of header.split(';')) {
-    const trimmed = part.trim();
-    if (!trimmed) continue;
-    const eq = trimmed.indexOf('=');
-    if (eq <= 0) continue;
-    const k = trimmed.slice(0, eq);
-    const v = trimmed.slice(eq + 1);
-    if (!(k in map)) map[k] = v;
-  }
-  return {
-    get: (name: string): { value: string } | undefined =>
-      map[name] !== undefined ? { value: map[name]! } : undefined,
-  };
-}
 
 /**
  * POST /api/admin/users/invite

@@ -12,6 +12,10 @@ const ADMIN_EMAIL = `${TEST_EMAIL_PREFIX}admin-${Date.now()}@example.test`;
 const ADMIN_PASSWORD = 'admin-users-password';
 const OPERATOR_EMAIL = `${TEST_EMAIL_PREFIX}operator-${Date.now()}@example.test`;
 const OPERATOR_PASSWORD = 'operator-password';
+// Audit cleanup uses a date cutoff (captured at module load) so that rows
+// with targetId = invitation.id (32-char base64url, NOT a user ID) are
+// still caught — see fix round 1.
+const TEST_START = new Date();
 
 let adminUserId: bigint;
 let operatorUserId: bigint;
@@ -108,11 +112,7 @@ afterAll(async () => {
   });
   await prisma.auditLog.deleteMany({
     where: {
-      OR: [
-        { actorUserId: { in: [adminUserId, operatorUserId] } },
-        { targetId: String(adminUserId) },
-        { targetId: String(operatorUserId) },
-      ],
+      createdAt: { gte: TEST_START },
     },
   });
   await prisma.session.deleteMany({

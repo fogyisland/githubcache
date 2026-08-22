@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { validateSession } from '@/lib/auth/session';
+import { cookiesFromRequest } from '@/lib/auth/cookies-from-request';
 import { verifyCsrf } from '@/lib/auth/csrf';
 import { getUserById, updateUserStatus } from '@/lib/db/users';
 import { invalidateAllSessionsForUser } from '@/lib/db/sessions';
@@ -18,30 +19,6 @@ interface AuthOk {
 interface AuthFail {
   ok: false;
   res: Response;
-}
-
-/**
- * Build a `{get}` adapter for `validateSession` from the raw `Cookie`
- * header — see /api/admin/users/invite/route.ts for the rationale.
- */
-function cookiesFromRequest(req: Request): {
-  get(name: string): { value: string } | undefined;
-} {
-  const header = req.headers.get('cookie') ?? '';
-  const map: Record<string, string> = {};
-  for (const part of header.split(';')) {
-    const trimmed = part.trim();
-    if (!trimmed) continue;
-    const eq = trimmed.indexOf('=');
-    if (eq <= 0) continue;
-    const k = trimmed.slice(0, eq);
-    const v = trimmed.slice(eq + 1);
-    if (!(k in map)) map[k] = v;
-  }
-  return {
-    get: (name: string): { value: string } | undefined =>
-      map[name] !== undefined ? { value: map[name]! } : undefined,
-  };
 }
 
 /**
