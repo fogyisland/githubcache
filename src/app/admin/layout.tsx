@@ -44,8 +44,18 @@ export default async function AdminLayout({
           borderBottom: '1px solid #ccc',
         }}
       >
-        <div>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <Link href="/admin">Dashboard</Link>
+          {user.role === 'admin' && <Link href="/admin/users">Users</Link>}
+          {user.role === 'admin' && (
+            // M7.2 ships this page — link target reserved
+            <Link href="/admin/api-keys">API Keys</Link>
+          )}
+          {user.role === 'admin' && (
+            // M7.3 ships this page — link target reserved
+            <Link href="/admin/github-tokens">GitHub Tokens</Link>
+          )}
+          {/* M7.4 (Reports), M7.5 (Audit), M7.6 (Refresh) deferred to a later round */}
         </div>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <span>
