@@ -44,7 +44,7 @@ beforeEach(async () => {
 
 describe('changePassword', () => {
   it('updates the password hash', async () => {
-    await changePassword(testUserId, 'new-password-123');
+    await changePassword(testUserId, 'new-password-123', testUserId);
     const user = await prisma.user.findUnique({ where: { id: testUserId } });
     expect(user?.passwordHash).toBeTruthy();
     expect(await verifyPassword('new-password-123', user!.passwordHash!)).toBe(true);
@@ -59,7 +59,7 @@ describe('changePassword', () => {
     const before = await prisma.session.count({ where: { userId: testUserId } });
     expect(before).toBe(3);
 
-    await changePassword(testUserId, 'new-password-123');
+    await changePassword(testUserId, 'new-password-123', testUserId);
 
     const after = await prisma.session.count({ where: { userId: testUserId } });
     expect(after).toBe(0);
@@ -67,19 +67,35 @@ describe('changePassword', () => {
 
   it('invalidated sessions cannot be validated by findSessionById', async () => {
     const { id } = await createSession(testUserId);
-    await changePassword(testUserId, 'new-password-123');
+    await changePassword(testUserId, 'new-password-123', testUserId);
     const result = await findSessionById(id);
     expect(result).toBeNull();
   }, 15_000);
 
-  it('writes audit_log entry (action=password_changed)', async () => {
-    await changePassword(testUserId, 'new-password-456');
+  it('writes audit_log entry (action=password_changed) with actorUserId = explicit actor', async () => {
+    await changePassword(testUserId, 'new-password-456', testUserId);
     await new Promise((resolve) => setTimeout(resolve, 100));
     const audits = await prisma.auditLog.findMany({
       where: { action: 'password_changed', targetId: String(testUserId) },
     });
     expect(audits.length).toBeGreaterThanOrEqual(1);
     expect(audits[0]!.actorUserId).toBe(testUserId);
+  }, 15_000);
+
+  it('records the admin as actor when actorUserId differs from target (reset-password scenario)', async () => {
+    // Simulate an admin resetting another user's password.
+    // `testUserId` is the target, but we pass a different BigInt as actor.
+    const actorId = testUserId + 99n;
+    await changePassword(testUserId, 'new-password-admin', actorId);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const audits = await prisma.auditLog.findMany({
+      where: { action: 'password_changed', targetId: String(testUserId) },
+      orderBy: { id: 'desc' },
+    });
+    expect(audits.length).toBeGreaterThanOrEqual(1);
+    // The most recent audit must record the admin, NOT the target.
+    expect(audits[0]!.actorUserId).toBe(actorId);
+    expect(audits[0]!.actorUserId).not.toBe(testUserId);
   }, 15_000);
 
   it('does not affect other users\' sessions', async () => {
@@ -98,7 +114,7 @@ describe('changePassword', () => {
       const before = await prisma.session.count({ where: { userId: otherUser.id } });
       expect(before).toBe(1);
 
-      await changePassword(testUserId, 'new-password-789');
+      await changePassword(testUserId, 'new-password-789', testUserId);
 
       const otherAfter = await prisma.session.count({ where: { userId: otherUser.id } });
       expect(otherAfter).toBe(1); // unchanged

@@ -1,5 +1,7 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import type { ReactElement } from 'react';
+import { validateSession } from '@/lib/auth/session';
 import { getUserById } from '@/lib/db/users';
 import { prisma } from '@/lib/db/client';
 import { UserActions } from './_components/user-actions';
@@ -12,14 +14,29 @@ import { UserActions } from './_components/user-actions';
  * provides the three admin buttons (reset password, disable/enable, logout
  * all sessions).
  *
- * Admin-only: the surrounding `/admin/users` page is admin-gated, and any
- * link to this page only renders for admins (see nav in `layout.tsx`).
+ * Admin-only: this page enforces `user.role === 'admin'` and redirects to
+ * /admin otherwise. The surrounding nav in `layout.tsx` also hides the link
+ * from operators, but the redirect here is defense-in-depth in case of
+ * direct URL access.
  */
 export default async function AdminUserDetailPage({
   params,
 }: {
   params: { id: string };
 }): Promise<ReactElement> {
+  const cookieStore = cookies();
+  const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
+  const session = await validateSession({
+    headers: new Headers(),
+    cookies: {
+      get: (name: string) =>
+        cookieMap[name] !== undefined ? { value: cookieMap[name]! } : undefined,
+    },
+  });
+  if (!session || session.role !== 'admin') {
+    redirect('/admin');
+  }
+
   let id: bigint;
   try {
     id = BigInt(params.id);

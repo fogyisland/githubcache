@@ -73,7 +73,9 @@ export async function POST(
 
   const tempPassword = generateTempPassword();
   // changePassword already invalidates all sessions + audits password_changed.
-  await changePassword(id, tempPassword);
+  // Pass `user.id` (the admin) as the audit actor — the audit should reflect
+  // who performed the reset, not the user whose password was changed.
+  await changePassword(id, tempPassword, user.id);
 
   const fwdReset = req.headers.get('x-forwarded-for');
   void writeAudit({

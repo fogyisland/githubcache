@@ -87,7 +87,23 @@ export async function POST(req: Request): Promise<Response> {
     tokenFirst4: first4,
     tokenLast4: last4,
     tokenHash: hash,
+  }).catch((e: unknown) => {
+    // Prisma P2002 = unique constraint violation on tokenHash.
+    // Race window: listAllTokens() above checked for an existing hash, but
+    // two concurrent POSTs can both pass the check before either inserts.
+    // The DB constraint is the source of truth — return 409 in that case.
+    if (
+      e instanceof Error &&
+      'code' in e &&
+      (e as { code?: unknown }).code === 'P2002'
+    ) {
+      return null;
+    }
+    throw e;
   });
+  if (row === null) {
+    return NextResponse.json({ error: 'token already registered' }, { status: 409 });
+  }
 
   const fwd = req.headers.get('x-forwarded-for');
   void writeAudit({

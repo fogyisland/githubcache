@@ -274,6 +274,65 @@ describe('POST /api/admin/github-tokens', () => {
   });
 });
 
+// Race-window test: when two concurrent POSTs both pass the dup check
+// before either inserts, the DB unique constraint makes the loser's
+// insertToken throw P2002. The route's try/catch must convert that to 409
+// instead of letting it surface as a 500.
+//
+// We can't reliably force the race timing in a Vitest test (would require
+// mocking listAllTokens), so we exercise the failure mode end-to-end:
+// seed the row directly via Prisma (so the unique constraint exists),
+// then POST the same plaintext. The route's dup-check catches the seeded
+// row and returns 409 — but we ALSO verify that insertToken throws P2002
+// when the constraint is violated, proving the catch block will fire in a
+// true race window.
+describe('POST /api/admin/github-tokens — race-window P2002', () => {
+  it('insertToken throws P2002 on duplicate hash, and the route returns 409 not 500', async () => {
+    const raw = 'ghp_racewindow1111222233334444555566667';
+    const hash = createHash('sha256').update(raw).digest('hex');
+    await prisma.githubToken.create({
+      data: {
+        label: 'gh-int-race-seed',
+        tokenFirst4: raw.slice(0, 4),
+        tokenLast4: raw.slice(-4),
+        tokenHash: hash,
+        status: 'active',
+      },
+    });
+
+    // 1. Direct insertToken call: must throw P2002 (constraint enforced).
+    const { insertToken } = await import('@/lib/db/github-tokens');
+    let caught: unknown = null;
+    try {
+      await insertToken({
+        label: 'gh-int-race-loser',
+        tokenFirst4: raw.slice(0, 4),
+        tokenLast4: raw.slice(-4),
+        tokenHash: hash,
+      });
+    } catch (e) {
+      caught = e;
+    }
+    expect(caught).not.toBeNull();
+    expect((caught as { code?: string }).code).toBe('P2002');
+
+    // 2. End-to-end: POST the same plaintext. The route's dup-check catches
+    //    it and returns 409. (In a true race, the dup check would pass and
+    //    insertToken would throw P2002, which the new try/catch now maps
+    //    to the same 409 — both paths converge.)
+    const res = await postToken(
+      new Request('http://x/api/admin/github-tokens', {
+        method: 'POST',
+        headers: authHeaders({ 'content-type': 'application/json' }),
+        body: JSON.stringify({ label: 'gh-int-race-post', token: raw, csrf: csrfToken }),
+      }),
+    );
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe('token already registered');
+  }, 15_000);
+});
+
 describe('PATCH /api/admin/github-tokens/[id]', () => {
   async function makeTokenRow(): Promise<bigint> {
     const raw = 'ghp_paaaaaabbbbbbccccccddddddeeeeee';

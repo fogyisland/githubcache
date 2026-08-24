@@ -1,10 +1,35 @@
+import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { listAllTokens } from '@/lib/db/github-tokens';
 import { poolHasHash, poolSize } from '@/lib/github/pool';
+import { validateSession } from '@/lib/auth/session';
 import { AddTokenForm } from './_components/add-token-form';
 import { TokenActions } from './_components/token-actions';
 import type { ReactElement } from 'react';
 
+/**
+ * Admin → GitHub Tokens page.
+ *
+ * Admin-only: enforces `user.role === 'admin'` and redirects to /admin
+ * otherwise. Defense-in-depth — the nav in `layout.tsx` also hides the
+ * link from operators, but the redirect here catches direct URL access.
+ * (The underlying GET API serves admin OR operator, but the form actions
+ * on this page are admin-only.)
+ */
 export default async function AdminGithubTokensPage(): Promise<ReactElement> {
+  const cookieStore = cookies();
+  const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
+  const user = await validateSession({
+    headers: new Headers(),
+    cookies: {
+      get: (name: string) =>
+        cookieMap[name] !== undefined ? { value: cookieMap[name]! } : undefined,
+    },
+  });
+  if (!user || user.role !== 'admin') {
+    redirect('/admin');
+  }
+
   const tokens = await listAllTokens();
   const activePoolSize = poolSize();
 
