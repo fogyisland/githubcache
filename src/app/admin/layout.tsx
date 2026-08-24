@@ -33,6 +33,9 @@ export default async function AdminLayout({
     redirect('/login');
   }
 
+  const isAdmin = user.role === 'admin';
+  const isAdminOrOperator = isAdmin || user.role === 'operator';
+
   return (
     <div>
       <nav
@@ -46,12 +49,12 @@ export default async function AdminLayout({
       >
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <Link href="/admin">Dashboard</Link>
-          {user.role === 'admin' && <Link href="/admin/users">Users</Link>}
-          {user.role === 'admin' && (
+          {isAdmin && <Link href="/admin/users">Users</Link>}
+          {isAdminOrOperator && (
             // M7.2 ships this page — link target reserved
             <Link href="/admin/api-keys">API Keys</Link>
           )}
-          {user.role === 'admin' && (
+          {isAdminOrOperator && (
             // M7.3 ships this page — link target reserved
             <Link href="/admin/github-tokens">GitHub Tokens</Link>
           )}
