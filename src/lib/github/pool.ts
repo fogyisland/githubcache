@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { Octokit } from '@octokit/rest';
 import { logger } from '@/lib/logger';
 import { loadTokensFromEnv } from './tokens-loader';
@@ -188,4 +189,19 @@ export async function shutdownPool(): Promise<void> {
 
 export function poolSize(): number {
   return pool.size;
+}
+
+/**
+ * Returns true if the pool currently has an entry for the given token hash.
+ * Used by the admin UI to show whether a DB row is "active in pool" or
+ * "pending activation" (added to DB but not yet in env/file).
+ *
+ * Re-hashes on every call — fine for admin UI with O(10) tokens.
+ */
+export function poolHasHash(hash: string): boolean {
+  for (const entry of pool.values()) {
+    const entryHash = createHash('sha256').update(entry.raw).digest('hex');
+    if (entryHash === hash) return true;
+  }
+  return false;
 }
