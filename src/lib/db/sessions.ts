@@ -1,4 +1,3 @@
-import { randomBytes } from 'node:crypto';
 import type { Session, User } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
 
@@ -8,9 +7,22 @@ export const SESSION_RENEWAL_THRESHOLD_HOURS = 4; // renew if <4h remaining
 /**
  * Generate a session ID: 32 random bytes encoded as base64url (43 chars).
  * Matches `sessions.id CHAR(43)` schema.
+ *
+ * Uses the Web Crypto API (`globalThis.crypto.getRandomValues`) available in
+ * Node 20+ AND the Edge runtime, so it does not depend on `node:crypto`.
+ * Previously this imported `node:crypto`, which broke Next.js webpack builds
+ * when the Edge middleware transitively pulled this module in (Edge has no
+ * `node:*` scheme support).
  */
 export function generateSessionId(): string {
-  return randomBytes(32).toString('base64url');
+  const bytes = new Uint8Array(32);
+  globalThis.crypto.getRandomValues(bytes);
+  // base64url encoding (43 chars: 32 bytes → 43 base64 chars without padding)
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]!);
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 /**
