@@ -116,9 +116,8 @@ function buildOkResult(
   original: string,
   metadata: unknown,
   lastFetchedAt: Date | null,
-  fetchStatus: FetchStatus,
 ): ResultOk {
-  const stale = isStale(fetchStatus, lastFetchedAt);
+  const stale = isStale('ok', lastFetchedAt);
   return {
     canonical: `${owner}/${repoName}`,
     original,
@@ -184,7 +183,7 @@ export async function POST(req: Request): Promise<Response> {
       const r = await getRepoMetadata(n.owner, n.name);
       if (r.found) {
         if (r.fetchStatus === 'ok') {
-          return buildOkResult(n.owner, n.name, n.original, r.metadata, r.lastFetchedAt, r.fetchStatus);
+          return buildOkResult(n.owner, n.name, n.original, r.metadata, r.lastFetchedAt);
         }
         if (r.fetchStatus === 'not_found') {
           return {
@@ -213,7 +212,6 @@ export async function POST(req: Request): Promise<Response> {
               n.original,
               stale.metadata,
               stale.lastFetchedAt,
-              stale.fetchStatus,
             );
           }
         }
@@ -251,7 +249,6 @@ export async function POST(req: Request): Promise<Response> {
         n.original,
         r2.metadata,
         r2.lastFetchedAt,
-        r2.fetchStatus,
       );
     }),
   );
@@ -259,7 +256,7 @@ export async function POST(req: Request): Promise<Response> {
   const summary = {
     hit: results.filter((r) => r.fetch_status === 'ok' && r.found).length,
     miss: results.filter((r) => !r.found).length,
-    stale: 0,
+    stale: results.filter((r) => 'stale' in r && r.stale === true).length,
   };
   const response = NextResponse.json({ results, summary });
 

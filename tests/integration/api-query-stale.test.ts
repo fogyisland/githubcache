@@ -269,4 +269,20 @@ describe('POST /api/query — stale path', () => {
     expect(body.results[0]!.fetch_status).toBe('error');
     expect(body.results[0]!.stale).toBeUndefined();
   });
+
+  it('summary.stale counts per-node stale:true results', async () => {
+    const old = new Date(Date.now() - 25 * 60 * 60_000);
+    await seedRow(`${TEST_REPO_OWNER_PREFIX}sumA`, { lastFetchedAt: old });
+    await seedRow(`${TEST_REPO_OWNER_PREFIX}sumB`, { lastFetchedAt: new Date() });
+    const res = await postQuery([
+      `${TEST_REPO_OWNER_PREFIX}sumA/r`,
+      `${TEST_REPO_OWNER_PREFIX}sumB/r`,
+    ]);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      summary: { hit: number; miss: number; stale: number };
+    };
+    expect(body.summary.hit).toBe(2);
+    expect(body.summary.stale).toBe(1);
+  });
 });
