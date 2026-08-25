@@ -294,11 +294,12 @@ describe('POST /api/admin/refresh — trigger happy path', () => {
     });
     expect(audits.length).toBeGreaterThanOrEqual(1);
     expect(audits[0]!.actorUserId).toBe(adminUserId);
-    // Metadata should include jobId + priority
-    const meta = audits[0]!.metadata as { jobId: string; priority: number } | null;
+    // Metadata should include repoId + priority (per brief line 74)
+    const meta = audits[0]!.metadata as { repoId: string; priority: number; jobId?: string } | null;
     expect(meta).not.toBeNull();
-    expect(meta!.jobId).toBe(body.jobId);
+    expect(meta!.repoId).toBe(testRepo.id.toString());
     expect(meta!.priority).toBe(10);
+    expect(meta!.jobId).toBe(body.jobId);
   });
 });
 

@@ -107,7 +107,7 @@ export async function POST(req: Request): Promise<Response> {
     action: 'manual_refresh_trigger',
     targetType: 'repository',
     targetId: String(repoId),
-    metadata: { jobId: job.id.toString(), priority: job.priority },
+    metadata: { repoId: String(repoId), priority: 10, jobId: job.id.toString() },
     actorUserId: user.id,
     ...(fwd !== null && fwd !== '' ? { ip: fwd } : {}),
   });

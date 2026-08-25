@@ -110,6 +110,9 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await prisma.requestLog.deleteMany({ where: { repoRequested: 'admin-reports-test/repo' } });
+  await prisma.auditLog.deleteMany({
+    where: { actorUserId: { in: [adminUserId, operatorUserId] } },
+  });
   await prisma.apiKey.deleteMany({ where: { userId: { in: [adminUserId, operatorUserId] } } });
   await prisma.session.deleteMany({
     where: { userId: { in: [adminUserId, operatorUserId] } },
