@@ -1,11 +1,109 @@
 import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/db/client';
+import { poolSize } from '@/lib/github/pool';
 
 export const dynamic = 'force-dynamic';
+const STARTED_AT = new Date().toISOString();
 
-export async function GET() {
-  return NextResponse.json({
+interface StatusBody {
+  ok: boolean;
+  db: 'up' | 'down';
+  tokens: { active: number; exhausted: number; total: number };
+  queue: { pending: number; in_progress: number; done: number; failed: number };
+  repositories: {
+    total: number;
+    ok: number;
+    not_found: number;
+    forbidden: number;
+    error: number;
+  };
+  version: { commit: string; startedAt: string; nodeVersion: string };
+  timestamp: string;
+}
+
+async function pingDb(): Promise<boolean> {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function GET(): Promise<Response> {
+  const dbUp = await pingDb();
+  if (!dbUp) {
+    const body: StatusBody = {
+      ok: false,
+      db: 'down',
+      tokens: { active: 0, exhausted: 0, total: 0 },
+      queue: { pending: 0, in_progress: 0, done: 0, failed: 0 },
+      repositories: { total: 0, ok: 0, not_found: 0, forbidden: 0, error: 0 },
+      version: {
+        commit: process.env.GIT_COMMIT ?? 'unknown',
+        startedAt: STARTED_AT,
+        nodeVersion: process.version,
+      },
+      timestamp: new Date().toISOString(),
+    };
+    return NextResponse.json(body, { status: 503 });
+  }
+
+  const [repoGroups, queueGroups, tokens] = await Promise.all([
+    prisma.repository.groupBy({ by: ['fetchStatus'], _count: true }),
+    prisma.refreshJob.groupBy({ by: ['status'], _count: true }),
+    prisma.githubToken.findMany({
+      where: { status: 'active' },
+      select: { requestsUsed: true, requestsLimit: true, resetAt: true },
+    }),
+  ]);
+
+  const repoCount = (s: string): number =>
+    repoGroups.find((g) => g.fetchStatus === s)?._count ?? 0;
+  const queueCount = (s: string): number =>
+    queueGroups.find((g) => g.status === s)?._count ?? 0;
+
+  // The brief asked for `done (last 24h)` — schema has no `completedAt`, so
+  // we filter on `updatedAt` which Prisma auto-bumps on every save. `done`
+  // rows are terminal: they're set to `done` once and never touched again,
+  // so `updatedAt` reflects the moment of completion.
+  const dayAgo = new Date(Date.now() - 24 * 60 * 60_000);
+  const doneLast24h = await prisma.refreshJob.count({
+    where: { status: 'done', updatedAt: { gte: dayAgo } },
+  });
+
+  const now = Date.now();
+  const exhausted = tokens.filter(
+    (t) =>
+      t.requestsUsed >= t.requestsLimit &&
+      t.resetAt !== null &&
+      t.resetAt.getTime() > now,
+  ).length;
+
+  const body: StatusBody = {
     ok: true,
     db: 'up',
-    tokens: { active: 0, exhausted: 0 },
-  });
+    tokens: { active: poolSize(), exhausted, total: tokens.length },
+    queue: {
+      pending: queueCount('pending'),
+      in_progress: queueCount('in_progress'),
+      done: doneLast24h,
+      failed: queueCount('failed'),
+    },
+    repositories: {
+      total: repoGroups.reduce((acc, g) => acc + g._count, 0),
+      ok: repoCount('ok'),
+      not_found: repoCount('not_found'),
+      forbidden: repoCount('forbidden'),
+      error: repoCount('error'),
+    },
+    version: {
+      commit: process.env.GIT_COMMIT ?? 'unknown',
+      startedAt: STARTED_AT,
+      nodeVersion: process.version,
+    },
+    timestamp: new Date().toISOString(),
+  };
+
+  return NextResponse.json(body);
 }

@@ -6,10 +6,9 @@ describe('GET /api/v1/status', () => {
     const res = await GET();
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body).toEqual({
-      ok: true,
-      db: 'up',
-      tokens: { active: 0, exhausted: 0 },
-    });
+    expect(body.ok).toBe(true);
+    expect(body.db).toBe('up');
+    expect(body.tokens.active).toBe(0);
+    expect(body.tokens.exhausted).toBe(0);
   });
 });
