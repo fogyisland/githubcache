@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  lint-typecheck:
+    name: Lint + Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npx vitest run tests/unit/
+
+  integration:
+    name: Integration tests
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: mysql://test:testpw@127.0.0.1:3306/githubcache_test
+    services:
+      mysql:
+        image: mysql:5.7.44
+        env:
+          MYSQL_ROOT_PASSWORD: rootpw
+          MYSQL_DATABASE: githubcache_test
+          MYSQL_USER: test
+          MYSQL_PASSWORD: testpw
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -prootpw"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Generate Prisma client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: mysql://test:testpw@127.0.0.1:3306/githubcache_test
+      - name: Run migrations
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: mysql://test:testpw@127.0.0.1:3306/githubcache_test
+      - run: npx vitest run tests/integration/
+
+  build:
+    name: Next.js build
+    runs-on: ubuntu-latest
+    needs: [lint-typecheck, unit, integration]
+    env:
+      DATABASE_URL: mysql://test:testpw@127.0.0.1:3306/githubcache_test
+      NEXT_TELEMETRY_DISABLED: '1'
+    services:
+      mysql:
+        image: mysql:5.7.44
+        env:
+          MYSQL_ROOT_PASSWORD: rootpw
+          MYSQL_DATABASE: githubcache_test
+          MYSQL_USER: test
+          MYSQL_PASSWORD: testpw
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -prootpw"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - name: Generate Prisma client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: mysql://test:testpw@127.0.0.1:3306/githubcache_test
+      - name: Run migrations
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: mysql://test:testpw@127.0.0.1:3306/githubcache_test
+      - run: npm run build
