@@ -62,7 +62,7 @@ export default async function AdminLayout({
             <Link href="/admin/reports">Reports</Link>
           )}
           {user.role === 'admin' && <Link href="/admin/audit">Audit</Link>}
-          {/* M7.6 (Manual refresh) deferred to a later round */}
+          {user.role === 'admin' && <Link href="/admin/refresh">Refresh</Link>}
         </div>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <span>

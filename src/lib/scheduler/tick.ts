@@ -3,6 +3,7 @@ import { refreshOne, type RefreshJobResult } from '@/lib/jobs/refresh-one';
 import { prisma } from '@/lib/db/client';
 import { env } from '@/lib/config/env';
 import { logger } from '@/lib/logger';
+import { isPaused } from '@/lib/scheduler/state';
 
 export interface TickResult {
   claimed: number;
@@ -22,6 +23,13 @@ export interface TickResult {
  * (DB failures, programmer errors).
  */
 export async function runTick(): Promise<TickResult> {
+  // Pause check at the START of tick — claimed jobs from previous ticks
+  // (already in_progress) still complete, but no new jobs are claimed.
+  if (isPaused()) {
+    logger.info('scheduler is paused; skipping tick');
+    return { claimed: 0, done: 0, pending: 0, failed: 0 };
+  }
+
   const jobs = await claimBatch(env.SCHEDULER_BATCH_SIZE);
   if (jobs.length === 0) {
     return { claimed: 0, done: 0, pending: 0, failed: 0 };

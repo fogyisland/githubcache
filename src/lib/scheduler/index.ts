@@ -3,6 +3,10 @@ import { env } from '@/lib/config/env';
 import { runTick } from './tick';
 import { nightlySweep } from './sweep';
 
+// Re-export pause/resume state helpers. Defined in `./state` to avoid a
+// circular import with `./tick` (which imports `isPaused`).
+export { pause, resume, isPaused, getPausedAt } from './state';
+
 interface SchedulerHandle {
   stop(): void;
 }
