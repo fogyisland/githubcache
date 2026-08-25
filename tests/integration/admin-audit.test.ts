@@ -136,7 +136,7 @@ afterAll(async () => {
     where: { createdAt: { gte: TEST_START } },
   });
   await prisma.session.deleteMany({
-    where: { userId: { in: [adminUserId, operatorUserId] } },
+    where: { user: { email: { startsWith: TEST_EMAIL_PREFIX } } },
   });
   await prisma.user.deleteMany({
     where: { email: { startsWith: TEST_EMAIL_PREFIX } },

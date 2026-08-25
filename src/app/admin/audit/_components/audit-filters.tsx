@@ -5,10 +5,12 @@ import { useState } from 'react';
 
 // Hard-coded list of known audit actions. Stable for M7.5; if a new action
 // is added elsewhere in the codebase, this list should be updated too.
+// Keep in sync with `action:` strings in src/app/api/admin/**/route.ts.
 const ACTIONS = [
   '', // empty = all
   'login_success',
-  'login_failure',
+  'login_failed',
+  'login_throttled',
   'logout',
   'password_changed',
   'invite_user',
@@ -17,10 +19,17 @@ const ACTIONS = [
   'logout_all_sessions',
   'reset_password',
   'change_key_limits',
+  'request_key',
+  'approve_key',
+  'revoke_key',
   'register_token',
   'disable_token',
   'enable_token',
   'delete_token',
+  'manual_refresh_trigger',
+  'scheduler_paused',
+  'scheduler_resumed',
+  'repo_forbidden',
 ];
 
 const TARGET_TYPES = ['', 'session', 'user', 'invitation', 'api_key', 'github_token'];

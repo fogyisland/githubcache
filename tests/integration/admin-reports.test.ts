@@ -113,9 +113,11 @@ afterAll(async () => {
   await prisma.auditLog.deleteMany({
     where: { actorUserId: { in: [adminUserId, operatorUserId] } },
   });
-  await prisma.apiKey.deleteMany({ where: { userId: { in: [adminUserId, operatorUserId] } } });
+  await prisma.apiKey.deleteMany({
+    where: { user: { email: { startsWith: TEST_EMAIL_PREFIX } } },
+  });
   await prisma.session.deleteMany({
-    where: { userId: { in: [adminUserId, operatorUserId] } },
+    where: { user: { email: { startsWith: TEST_EMAIL_PREFIX } } },
   });
   await prisma.user.deleteMany({
     where: { email: { startsWith: TEST_EMAIL_PREFIX } },
