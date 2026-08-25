@@ -1,3 +1,41 @@
+import type { FetchStatus } from '@prisma/client';
+
+/**
+ * Per-fetchStatus freshness window. A row's `lastFetchedAt` is considered
+ * fresh for this duration after a successful write. After that, it's
+ * stale (data may be delayed) and the next refresh should be prioritized.
+ *
+ * Sourced from spec §10.2:
+ *   - 'ok' / 'forbidden' / 'not_found' → 24h (these are stable states)
+ *   - 'error' → 5min (transient — retry quickly to recover)
+ *
+ * Used by /api/query to decide whether a cache hit is `stale: true` and
+ * by nextDueForStatus to compute the staleness boundary.
+ */
+export const TTL_MS: Readonly<Record<FetchStatus, number>> = {
+  ok: 24 * 60 * 60_000,
+  forbidden: 24 * 60 * 60_000,
+  not_found: 24 * 60 * 60_000,
+  error: 5 * 60_000,
+};
+
+/**
+ * Compute the wall-clock instant at which a cache row with `fetchStatus`
+ * last fetched at `lastFetchedAt` becomes stale.
+ *
+ * Returns `lastFetchedAt + TTL_MS[fetchStatus]`. Callers compare
+ * `now > nextDue(...)` to test staleness.
+ *
+ * Used by /api/query to surface `stale: true` + a "data may be delayed"
+ * warning on cache hits whose fetchStatus='ok' has aged past the TTL.
+ */
+export function nextDueForStatus(
+  fetchStatus: FetchStatus,
+  lastFetchedAt: Date,
+): Date {
+  return new Date(lastFetchedAt.getTime() + TTL_MS[fetchStatus]);
+}
+
 /**
  * Computes the delay until the next refresh job should run.
  *

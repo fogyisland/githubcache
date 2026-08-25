@@ -5,12 +5,13 @@ import { getRepoMetadata } from '@/lib/cache/read';
 import { fetchRepoCore } from '@/lib/github/client';
 import { parseRepoResponse } from '@/lib/github/fields';
 import { storeRepoMetadata } from '@/lib/cache/write';
-import { NotFoundError } from '@/lib/errors';
+import { GitHubUnavailable, NotFoundError } from '@/lib/errors';
 import { prisma } from '@/lib/db/client';
 import { findApiKeyByHash } from '@/lib/db/api-keys';
 import { recordRequest } from '@/lib/db/request-log';
 import { checkRateLimit } from '@/lib/rate-limit/bucket';
-import type { Prisma } from '@prisma/client';
+import { nextDueForStatus } from '@/lib/scheduler/aging';
+import type { FetchStatus, Prisma } from '@prisma/client';
 import { logger } from '@/lib/logger';
 
 // In-process dedupe: concurrent first-miss requests for the same
@@ -71,7 +72,8 @@ interface ResultOk {
   metadata: unknown;
   last_fetched_at: Date | null;
   fetch_status: 'ok';
-  stale: false;
+  stale: boolean;
+  warning?: string;
 }
 interface ResultNotFound {
   canonical: string;
@@ -88,6 +90,46 @@ interface ResultError {
   error: string;
 }
 type QueryResult = ResultOk | ResultNotFound | ResultError;
+
+const STALE_WARNING = 'data may be delayed';
+
+/**
+ * A row is stale when its fetchStatus window has elapsed since lastFetchedAt.
+ * Used to surface `stale: true` + a "data may be delayed" warning on cache hits
+ * whose 'ok' fetch has aged past the 24h TTL.
+ *
+ * Returns false when lastFetchedAt is null (never fetched — caller treats this
+ * as fresh and overwrites via firstMiss).
+ */
+function isStale(
+  fetchStatus: FetchStatus,
+  lastFetchedAt: Date | null,
+  now: Date = new Date(),
+): boolean {
+  if (!lastFetchedAt) return false;
+  return now > nextDueForStatus(fetchStatus, lastFetchedAt);
+}
+
+function buildOkResult(
+  owner: string,
+  repoName: string,
+  original: string,
+  metadata: unknown,
+  lastFetchedAt: Date | null,
+  fetchStatus: FetchStatus,
+): ResultOk {
+  const stale = isStale(fetchStatus, lastFetchedAt);
+  return {
+    canonical: `${owner}/${repoName}`,
+    original,
+    found: true,
+    metadata,
+    last_fetched_at: lastFetchedAt,
+    fetch_status: 'ok',
+    stale,
+    ...(stale ? { warning: STALE_WARNING } : {}),
+  };
+}
 
 export async function POST(req: Request): Promise<Response> {
   const start = Date.now();
@@ -142,15 +184,7 @@ export async function POST(req: Request): Promise<Response> {
       const r = await getRepoMetadata(n.owner, n.name);
       if (r.found) {
         if (r.fetchStatus === 'ok') {
-          return {
-            canonical: `${n.owner}/${n.name}`,
-            original: n.original,
-            found: true,
-            metadata: r.metadata,
-            last_fetched_at: r.lastFetchedAt,
-            fetch_status: 'ok',
-            stale: false,
-          };
+          return buildOkResult(n.owner, n.name, n.original, r.metadata, r.lastFetchedAt, r.fetchStatus);
         }
         if (r.fetchStatus === 'not_found') {
           return {
@@ -167,6 +201,22 @@ export async function POST(req: Request): Promise<Response> {
       try {
         await firstMiss(n.owner, n.name);
       } catch (e: unknown) {
+        // M8.2: GitHubUnavailable (network down / DNS fail / connection refused)
+        // triggers the stale path. If we have a prior 'ok' row, serve it with
+        // stale:true + a warning. Otherwise fall through to the error response.
+        if (e instanceof GitHubUnavailable) {
+          const stale = await getRepoMetadata(n.owner, n.name);
+          if (stale.found && stale.fetchStatus === 'ok') {
+            return buildOkResult(
+              n.owner,
+              n.name,
+              n.original,
+              stale.metadata,
+              stale.lastFetchedAt,
+              stale.fetchStatus,
+            );
+          }
+        }
         const msg = e instanceof Error ? e.message : 'unknown';
         return {
           canonical: `${n.owner}/${n.name}`,
@@ -195,15 +245,14 @@ export async function POST(req: Request): Promise<Response> {
           error: 'Repository not found or private',
         };
       }
-      return {
-        canonical: `${n.owner}/${n.name}`,
-        original: n.original,
-        found: true,
-        metadata: r2.metadata,
-        last_fetched_at: r2.lastFetchedAt,
-        fetch_status: 'ok',
-        stale: false,
-      };
+      return buildOkResult(
+        n.owner,
+        n.name,
+        n.original,
+        r2.metadata,
+        r2.lastFetchedAt,
+        r2.fetchStatus,
+      );
     }),
   );
 

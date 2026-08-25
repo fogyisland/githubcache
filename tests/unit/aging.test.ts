@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { nextDelay } from '@/lib/scheduler/aging';
+import { nextDelay, nextDueForStatus, TTL_MS } from '@/lib/scheduler/aging';
 
 const ONE_HOUR = 60 * 60_000;
 const SIX_HOURS = 6 * ONE_HOUR;
@@ -99,5 +99,40 @@ describe('nextDelay — edge cases', () => {
   it('returns plain object (not class instance)', () => {
     const result = nextDelay(0, 0);
     expect(Object.getPrototypeOf(result)).toBe(Object.prototype);
+  });
+});
+
+describe('TTL_MS — per-fetchStatus freshness window', () => {
+  it('ok → 24h', () => {
+    expect(TTL_MS.ok).toBe(24 * 60 * 60_000);
+  });
+  it('forbidden → 24h', () => {
+    expect(TTL_MS.forbidden).toBe(24 * 60 * 60_000);
+  });
+  it('not_found → 24h', () => {
+    expect(TTL_MS.not_found).toBe(24 * 60 * 60_000);
+  });
+  it('error → 5min', () => {
+    expect(TTL_MS.error).toBe(5 * 60_000);
+  });
+});
+
+describe('nextDueForStatus', () => {
+  const fetched = new Date('2026-01-01T00:00:00.000Z');
+
+  it('ok row becomes stale at fetched + 24h', () => {
+    expect(nextDueForStatus('ok', fetched).toISOString()).toBe('2026-01-02T00:00:00.000Z');
+  });
+  it('error row becomes stale at fetched + 5min', () => {
+    expect(nextDueForStatus('error', fetched).toISOString()).toBe('2026-01-01T00:05:00.000Z');
+  });
+  it('forbidden row becomes stale at fetched + 24h', () => {
+    expect(nextDueForStatus('forbidden', fetched).toISOString()).toBe('2026-01-02T00:00:00.000Z');
+  });
+  it('not_found row becomes stale at fetched + 24h', () => {
+    expect(nextDueForStatus('not_found', fetched).toISOString()).toBe('2026-01-02T00:00:00.000Z');
+  });
+  it('returns a Date instance, not a string', () => {
+    expect(nextDueForStatus('ok', fetched)).toBeInstanceOf(Date);
   });
 });
