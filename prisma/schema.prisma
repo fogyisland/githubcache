@@ -76,6 +76,8 @@ model ApiKey {
   revokedAt       DateTime?     @map("revoked_at")
   lastUsedAt      DateTime?     @map("last_used_at")
 
+  rateLimitBuckets RateLimitBucket[]
+
   @@index([status])
   @@map("api_keys")
 }
@@ -187,4 +189,20 @@ model Invitation {
 
   @@index([email])
   @@map("invitations")
+}
+
+model RateLimitBucket {
+  id          BigInt   @id @default(autoincrement())
+  apiKeyId    BigInt   @map("api_key_id")
+  // Sliding window state. Window length is fixed at 60s by the rate-limit
+  // semantics; we store the timestamp of the current window's start.
+  windowStart DateTime @map("window_start")
+  count       Int      @default(0)
+  apiKey      ApiKey   @relation(fields: [apiKeyId], references: [id], onDelete: Cascade)
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([apiKeyId])
+  @@index([windowStart])
+  @@map("rate_limit_buckets")
 }

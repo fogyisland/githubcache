@@ -4,7 +4,6 @@ import { POST as postLogin } from '@/app/api/admin/auth/login/route';
 import { hashPassword } from '@/lib/auth/password';
 import { prisma } from '@/lib/db/client';
 import { __resetAllLoginThrottlesForTests } from '@/lib/rate-limit/login-throttle';
-import { __resetAllBucketsForTests } from '@/lib/rate-limit/memory';
 
 const TEST_EMAIL_PREFIX = 'login-test-';
 
@@ -61,7 +60,6 @@ afterAll(async () => {
 beforeEach(async () => {
   // Reset throttles + per-test cleanup
   __resetAllLoginThrottlesForTests();
-  __resetAllBucketsForTests();
   await prisma.session.deleteMany({ where: { userId: activeUserId } });
   // Reset lastLoginAt so tests that depend on it being null behave deterministically
   await prisma.user.update({

@@ -9,7 +9,7 @@ import { NotFoundError } from '@/lib/errors';
 import { prisma } from '@/lib/db/client';
 import { findApiKeyByHash } from '@/lib/db/api-keys';
 import { recordRequest } from '@/lib/db/request-log';
-import { tokenBucket } from '@/lib/rate-limit/memory';
+import { checkRateLimit } from '@/lib/rate-limit/bucket';
 import type { Prisma } from '@prisma/client';
 import { logger } from '@/lib/logger';
 
@@ -103,10 +103,20 @@ export async function POST(req: Request): Promise<Response> {
     return NextResponse.json({ error: 'invalid api key' }, { status: 403 });
   }
 
-  // 2. Rate limit per key (in-memory token bucket, replaced in M8)
-  const bucket = tokenBucket(`key:${apiKey.id}`, apiKey.rateLimitPerMin);
-  if (!bucket.allow()) {
-    return NextResponse.json({ error: 'rate limit exceeded' }, { status: 429 });
+  // 2. Rate limit per key (durable bucket, M8.1; was in-memory tokenBucket pre-M8)
+  const rl = await checkRateLimit(apiKey.id, apiKey.rateLimitPerMin);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: 'rate limit exceeded', retryAfter: rl.retryAfterSeconds },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(rl.retryAfterSeconds),
+          'X-RateLimit-Limit': String(rl.limit),
+          'X-RateLimit-Remaining': String(Math.max(0, rl.limit - rl.count)),
+        },
+      },
+    );
   }
 
   // 3. Fire-and-forget lastUsedAt update
