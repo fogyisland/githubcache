@@ -37,7 +37,7 @@ export default async function AdminLayout({
   const isAdminOrOperator = isAdmin || user.role === 'operator';
 
   return (
-    <div>
+    <div className="min-h-screen bg-gray-50">
       <nav
         style={{
           display: 'flex',
@@ -58,7 +58,10 @@ export default async function AdminLayout({
             // M7.3 ships this page — link target reserved
             <Link href="/admin/github-tokens">GitHub Tokens</Link>
           )}
-          {/* M7.4 (Reports), M7.5 (Audit), M7.6 (Refresh) deferred to a later round */}
+          {(user.role === 'admin' || user.role === 'operator') && (
+            <Link href="/admin/reports">Reports</Link>
+          )}
+          {/* M7.5 (Audit), M7.6 (Refresh) deferred to a later round */}
         </div>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <span>

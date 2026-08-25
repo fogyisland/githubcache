@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+/* Project-wide CSS variables / reset if needed */
+:root {
+  --color-text: #111;
+  --color-bg: #f9fafb;
+}

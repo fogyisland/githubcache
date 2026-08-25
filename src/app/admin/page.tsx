@@ -21,18 +21,18 @@ export default async function AdminDashboardPage(): Promise<ReactElement> {
   });
 
   return (
-    <div>
-      <h1>Dashboard</h1>
+    <div className="space-y-6 p-6">
+      <h1 className="text-2xl font-bold">Dashboard</h1>
       <p>
         Logged in as: <strong>{user?.email ?? 'unknown'}</strong> ({user?.role ?? 'unknown'})
       </p>
       <p>
         <em>Full admin UI (KPI cards, key management, user CRUD, reports) arrives in M7.</em>
       </p>
-      <h2>Quick links</h2>
-      <ul>
+      <h2 className="text-lg font-semibold">Quick links</h2>
+      <ul className="list-disc pl-6">
         <li>
-          <a href="/api/v1/status">Public status endpoint</a>
+          <a href="/api/v1/status" className="text-blue-600 hover:underline">Public status endpoint</a>
         </li>
       </ul>
     </div>
