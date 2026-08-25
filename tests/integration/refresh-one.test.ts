@@ -273,7 +273,7 @@ describe('refreshOne', () => {
     expect(refreshed?.attempts).toBe(3); // unchanged
   });
 
-  it('on 5 consecutive 404s: marks job failed, writes audit log', async () => {
+  it('on 5 consecutive 404s: marks job failed, writes refresh.failed_review audit with kind=not_found', async () => {
     pickQueue.push({ id: BigInt(1), octokit: fakeOctokit() });
     server.use(ghNotFound());
     // In production, the same job is re-claimed by claimBatch which increments
@@ -292,15 +292,87 @@ describe('refreshOne', () => {
     expect(refreshed?.status).toBe('failed');
     expect(refreshed?.attempts).toBe(5);
 
-    // Action string for 404 escalation: 'repo_not_found_escalation' (implementer choice).
+    // Spec §10.4: terminal refresh failures escalate to admin via
+    // action='refresh.failed_review'. metadata.kind distinguishes 404 from
+    // unexpected-error escalations.
     const audits = await prisma.auditLog.findMany({
       where: {
-        action: 'repo_not_found_escalation',
+        action: 'refresh.failed_review',
         targetType: 'repository',
         targetId: `${TEST_OWNER}/r1`,
       },
     });
     expect(audits).toHaveLength(1);
+    const metadata = audits[0]?.metadata as {
+      repoId: string;
+      attempts: number;
+      message: string;
+      kind: string;
+    };
+    expect(metadata.kind).toBe('not_found');
+    expect(metadata.attempts).toBe(5);
+    expect(metadata.repoId).toBe(repo.id.toString());
+  });
+
+  it('on 5 consecutive unexpected errors: marks job failed, writes refresh.failed_review with kind=unexpected', async () => {
+    pickQueue.push({ id: BigInt(1), octokit: fakeOctokit() });
+    // 400 falls through to the catch-all "other" branch (failure ladder).
+    server.use(
+      http.get(`${GH_BASE}/repos/${TEST_OWNER}/r1`, () =>
+        HttpResponse.json({ message: 'mock network failure' }, { status: 400 }),
+      ),
+    );
+    const job = await claimAndMake({ attempts: 4 });
+    const result = await refreshOne(job);
+
+    expect(result.status).toBe('failed');
+    if (result.status === 'failed') {
+      expect(result.error).toContain('mock network failure');
+    }
+
+    const refreshed = await prisma.refreshJob.findUnique({ where: { id: job.id } });
+    expect(refreshed?.status).toBe('failed');
+    expect(refreshed?.attempts).toBe(5);
+
+    const audits = await prisma.auditLog.findMany({
+      where: {
+        action: 'refresh.failed_review',
+        targetType: 'repository',
+        targetId: `${TEST_OWNER}/r1`,
+      },
+    });
+    expect(audits).toHaveLength(1);
+    const metadata = audits[0]?.metadata as {
+      repoId: string;
+      attempts: number;
+      message: string;
+      kind: string;
+    };
+    expect(metadata.kind).toBe('unexpected');
+    expect(metadata.attempts).toBe(5);
+    expect(metadata.message).toContain('mock network failure');
+  });
+
+  it('on 4 attempts (not terminal): does NOT write refresh.failed_review', async () => {
+    pickQueue.push({ id: BigInt(1), octokit: fakeOctokit() });
+    server.use(ghNotFound());
+    const job = await claimAndMake({ attempts: 3 });
+    const result = await refreshOne(job);
+
+    expect(result.status).toBe('pending');
+
+    const refreshed = await prisma.refreshJob.findUnique({ where: { id: job.id } });
+    expect(refreshed?.status).toBe('pending');
+    expect(refreshed?.attempts).toBe(4); // incremented, but still under terminal
+
+    const audits = await prisma.auditLog.findMany({
+      where: {
+        action: 'refresh.failed_review',
+        targetType: 'repository',
+        targetId: `${TEST_OWNER}/r1`,
+      },
+    });
+    expect(audits).toHaveLength(0);
   });
 
   it('on unexpected error: increments attempts, uses failureDelay', async () => {

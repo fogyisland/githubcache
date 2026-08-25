@@ -32,10 +32,11 @@ export type RefreshJobResult =
 const TRANSIENT_RESCHEDULE_MS = 30_000; // 30s for GitHubUnavailable / 429
 const FIVE_S_SERVER_ERROR_RESCHEDULE_MS = 5_000; // 5s for 5xx
 
-// Failure-escalation audit log action (consecutive 404 → admin review).
-// Choice rationale: 'repo_not_found_escalation' describes both the trigger
-// (repo not found) and the consequence (escalation to admin).
-const ESCALATION_AUDIT_ACTION = 'repo_not_found_escalation';
+// Failure-escalation audit log action (terminal refresh failure → admin review).
+// Spec §10.4: 'refresh.failed_review' is emitted when a refresh goes terminal
+// after retries (either 5 consecutive 404/410s or 5 consecutive unexpected
+// errors). metadata.kind distinguishes the two escalation paths.
+const ESCALATION_AUDIT_ACTION = 'refresh.failed_review';
 
 /**
  * Process a single claimed refresh job: fetch from GitHub, upsert cache,
@@ -168,7 +169,7 @@ async function handleError(
         action: ESCALATION_AUDIT_ACTION,
         targetType: 'repository',
         targetId: `${repo.owner}/${repo.name}`,
-        metadata: { repoId: repo.id.toString(), attempts, message: e.message },
+        metadata: { repoId: repo.id.toString(), attempts, message: e.message, kind: 'not_found' },
       });
       logger.warn(
         { jobId: job.id.toString(), owner: repo.owner, name: repo.name, attempts },

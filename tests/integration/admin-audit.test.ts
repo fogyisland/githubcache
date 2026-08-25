@@ -204,6 +204,44 @@ describe('GET /api/admin/audit', () => {
     expect(target!.actorEmail).toBe(ADMIN_EMAIL);
   });
 
+  it('filters by refresh.failed_review action', async () => {
+    // Seed one refresh.failed_review row (actor=null since this is system-generated).
+    const seeded = await prisma.auditLog.create({
+      data: {
+        actorUserId: null,
+        action: 'refresh.failed_review',
+        targetType: 'repository',
+        targetId: 'test/repo-43',
+        metadata: {
+          repoId: '999',
+          attempts: 5,
+          message: 'simulated',
+          kind: 'not_found',
+        },
+        ip: null,
+      },
+    });
+    seededAuditIds.push(seeded.id);
+
+    const res = await getAudit(
+      new Request('http://x/api/admin/audit?action=refresh.failed_review', {
+        headers: { cookie: sessionCookie },
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      rows: Array<{ action: string; targetId: string; metadata: { kind?: string } }>;
+    };
+    expect(body.rows.length).toBeGreaterThanOrEqual(1);
+    for (const r of body.rows) {
+      expect(r.action).toBe('refresh.failed_review');
+    }
+    // Our seeded row should be among them
+    const target = body.rows.find((r) => r.targetId === 'test/repo-43');
+    expect(target).toBeDefined();
+    expect(target!.metadata.kind).toBe('not_found');
+  });
+
   it('filters by actorUserId', async () => {
     const res = await getAudit(
       new Request(
