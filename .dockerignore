@@ -1,0 +1,17 @@
+node_modules
+.next
+coverage
+.git
+.gitignore
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+.vscode
+.idea
+playwright-report
+test-results
+tests/e2e/playwright-report
+.superpowers
+**/*.tsbuildinfo
