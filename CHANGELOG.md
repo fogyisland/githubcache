@@ -8,6 +8,59 @@ once a stable release is cut. Until then, milestone tags serve as the version an
 
 ---
 
+## [m9-project-site] — 2026-08-26
+
+**Project-site frontend.** Public-facing homepage with a GitHub repo lookup
+form, per-IP rate limit for anonymous users, and a `/repo/[owner]/[name]`
+detail page. Existing `/api/query` API-key path and admin SPA unchanged.
+
+### Added
+
+- `IpRateLimitBucket` model + `m9_ip_rate_limit_buckets` migration.
+  Parallel to `RateLimitBucket` but keyed on client IP (VarChar(45) — IPv4
+  or IPv6). Same atomic semantics (SELECT ... FOR UPDATE in transaction).
+- `checkIpRateLimit(ip, perMinute)` — mirrors `checkRateLimit` (M8.1).
+- `lookupRepo(owner, name)` helper in `src/lib/cache/lookup.ts` — extracted
+  from `/api/query` per-node logic. Reused by the homepage server action
+  and the `/repo/[owner]/[name]` detail page.
+- Server action `lookupAction(formData)` at `src/app/_actions/lookup.ts` —
+  zod-validated owner/name, per-IP rate limit (default 30/min via
+  `PUBLIC_LOOKUP_RATE_PER_MIN` env), TRUST_PROXY-aware IP extraction,
+  `revalidatePath('/')` on success.
+- Homepage (`/`) — project-style landing: hero, tagline, lookup form,
+  recent lookups (top 8 cached repos), footer with status/admin links.
+- Repo detail page (`/repo/[owner]/[name]`) — server component rendering
+  full metadata (stars, forks, watchers, language, license, topics,
+  default branch, homepage, created/updated/pushed dates) with a
+  `loading.tsx` skeleton for cold-cache path and `not-found.tsx` for
+  not_found rows.
+- Recent-lookups DB helper `recentLookups(limit)` in
+  `src/lib/db/repositories.ts`.
+
+### Env
+
+- `PUBLIC_LOOKUP_RATE_PER_MIN` (default 30) — per-IP per-minute limit for
+  the public form. Protects the GitHub token pool from anonymous abuse.
+- `TRUST_PROXY` (default false) — trust `X-Forwarded-For` / `X-Real-IP`
+  for client IP. Set true when behind a reverse proxy.
+
+### Stats
+
+- 9 commits (M9.1 → M9.7), 13 new files, 2 modified
+- 187 unit tests + 10 new ip-rate-limit tests + 10 new public-lookup-action
+  tests = 207 vitest tests (offline-compatible suites)
+
+### Migration
+
+- `npx prisma migrate deploy` to apply `m9_ip_rate_limit_buckets`.
+
+### Breaking changes
+
+None. All M9 features are additive. `/api/query` refactored to use
+`lookupRepo` internally — same wire contract.
+
+---
+
 ## [m8-prod-ready] — 2026-08-26
 
 **Deployment + Observability.** Production-ready observability surface, durable rate-limit,
