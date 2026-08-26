@@ -1,9 +1,30 @@
 import { notFound } from 'next/navigation';
+import type { ReactElement } from 'react';
 import { getApiKeyById } from '@/lib/db/api-keys';
+import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
+import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
+import { AdminTable, type AdminColumn } from '@/app/admin/_components/admin-table';
 import { LimitsForm } from './_components/limits-form';
 import { KeyActions } from './_components/key-actions';
-import type { ReactElement } from 'react';
+import { queryAuditLog } from '@/lib/db/audit';
 
+interface AuditRow {
+  id: bigint;
+  action: string;
+  createdAt: Date;
+}
+
+/**
+ * Admin → API key detail page (M11.11 rewrite).
+ *
+ * Sections:
+ *   1. AdminPageHeader (key name + prefix)
+ *   2. Profile dl: prefix / owner / status / created / approved / revoked
+ *      / last-used / 24h request count
+ *   3. LimitsForm (existing client component)
+ *   4. KeyActions (existing client component)
+ *   5. Recent audit trail (top 10)
+ */
 export default async function AdminApiKeyDetailPage({
   params,
 }: {
@@ -13,47 +34,134 @@ export default async function AdminApiKeyDetailPage({
   const key = await getApiKeyById(id);
   if (!key) notFound();
 
-  return (
-    <div>
-      <h1>{key.name}</h1>
-      <dl>
-        <dt>Prefix</dt>
-        <dd>
-          <code>{key.keyPrefix}…</code> (full key never displayed)
-        </dd>
-        <dt>Owner</dt>
-        <dd>
-          {key.user.email} ({key.user.role})
-        </dd>
-        <dt>Status</dt>
-        <dd>{key.status}</dd>
-        <dt>Created</dt>
-        <dd>{key.createdAt.toISOString()}</dd>
-        <dt>Approved</dt>
-        <dd>
-          {key.approvedAt?.toISOString() ?? '—'} (by user {key.approvedBy?.toString() ?? '—'})
-        </dd>
-        <dt>Revoked</dt>
-        <dd>{key.revokedAt?.toISOString() ?? '—'}</dd>
-        <dt>Last used</dt>
-        <dd>{key.lastUsedAt?.toISOString() ?? 'never'}</dd>
-        <dt>Requests (last 24h)</dt>
-        <dd>{key.requestCountLast24h}</dd>
-      </dl>
+  const recentAudit = await queryAuditLog({
+    targetType: 'api_key',
+    limit: 10,
+    offset: 0,
+  });
 
-      <h2>Limits</h2>
-      <LimitsForm
-        apiKeyId={key.id.toString()}
-        currentRateLimit={key.rateLimitPerMin}
-        currentDailyQuota={key.dailyQuota}
+  const auditColumns: AdminColumn<AuditRow>[] = [
+    {
+      key: 'time',
+      header: 'When',
+      render: (r) => r.createdAt.toISOString().replace('T', ' ').slice(0, 19),
+    },
+    {
+      key: 'action',
+      header: 'Action',
+      render: (r) => (
+        <AdminStatusChip variant="neutral">{r.action}</AdminStatusChip>
+      ),
+    },
+  ];
+
+  return (
+    <div className="ghc-admin-page">
+      <AdminPageHeader
+        breadcrumb={[
+          { label: 'Admin', href: '/admin' },
+          { label: 'API Keys', href: '/admin/api-keys' },
+          { label: key.name },
+        ]}
+        title={key.name}
+        description={`Owned by ${key.user.email} (${key.user.role})`}
       />
 
-      <h2>Actions</h2>
-      <KeyActions apiKeyId={key.id.toString()} currentStatus={key.status} />
+      <section className="ghc-admin-detail-card">
+        <dl className="ghc-admin-detail-dl">
+          <div className="ghc-admin-detail-row">
+            <dt>Prefix</dt>
+            <dd>
+              <code className="ghc-admin-mono">{key.keyPrefix}…</code>{' '}
+              <span className="ghc-admin-detail-hint">(full key never displayed)</span>
+            </dd>
+          </div>
+          <div className="ghc-admin-detail-row">
+            <dt>Status</dt>
+            <dd>
+              <AdminStatusChip
+                variant={
+                  key.status === 'active'
+                    ? 'ok'
+                    : key.status === 'pending'
+                    ? 'warn'
+                    : 'danger'
+                }
+              >
+                {key.status}
+              </AdminStatusChip>
+            </dd>
+          </div>
+          <div className="ghc-admin-detail-row">
+            <dt>Created</dt>
+            <dd>{key.createdAt.toISOString().replace('T', ' ').slice(0, 19)}</dd>
+          </div>
+          <div className="ghc-admin-detail-row">
+            <dt>Approved</dt>
+            <dd>
+              {key.approvedAt
+                ? `${key.approvedAt.toISOString().replace('T', ' ').slice(0, 19)} by #${key.approvedBy}`
+                : '—'}
+            </dd>
+          </div>
+          <div className="ghc-admin-detail-row">
+            <dt>Revoked</dt>
+            <dd>
+              {key.revokedAt
+                ? key.revokedAt.toISOString().replace('T', ' ').slice(0, 19)
+                : '—'}
+            </dd>
+          </div>
+          <div className="ghc-admin-detail-row">
+            <dt>Last used</dt>
+            <dd>
+              {key.lastUsedAt
+                ? key.lastUsedAt.toISOString().replace('T', ' ').slice(0, 19)
+                : 'never'}
+            </dd>
+          </div>
+          <div className="ghc-admin-detail-row">
+            <dt>Requests (24h)</dt>
+            <dd>
+              <strong>{key.requestCountLast24h.toLocaleString()}</strong>
+            </dd>
+          </div>
+          <div className="ghc-admin-detail-row">
+            <dt>Rate limit</dt>
+            <dd>
+              {key.rateLimitPerMin.toLocaleString()}/min ·{' '}
+              {key.dailyQuota.toLocaleString()}/day
+            </dd>
+          </div>
+        </dl>
+      </section>
 
-      <p>
-        <a href="/admin/api-keys">← Back to API keys</a>
-      </p>
+      <section>
+        <h2 className="ghc-admin-section-title">Limits</h2>
+        <LimitsForm
+          apiKeyId={key.id.toString()}
+          currentRateLimit={key.rateLimitPerMin}
+          currentDailyQuota={key.dailyQuota}
+        />
+      </section>
+
+      <section>
+        <h2 className="ghc-admin-section-title">Actions</h2>
+        <KeyActions apiKeyId={key.id.toString()} currentStatus={key.status} />
+      </section>
+
+      <section>
+        <h2 className="ghc-admin-section-title">
+          Recent activity{' '}
+          <span className="ghc-admin-section-count">({recentAudit.total})</span>
+        </h2>
+        <AdminTable<AuditRow>
+          columns={auditColumns}
+          rows={recentAudit.rows}
+          emptyTitle="No recent activity for this key"
+          ariaLabel="Recent audit entries for this API key"
+        />
+      </section>
     </div>
   );
 }
