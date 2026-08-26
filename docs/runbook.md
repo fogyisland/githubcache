@@ -43,8 +43,9 @@ Response body fields:
    - Verify `DATABASE_URL` is set correctly in the runtime env
    - Check DB connection count / capacity on MySQL
    - Verify network path (security group, firewall, VPC peering)
-3. If DB is up but the service still reports down, restart the container:
-   - `docker restart githubcache` (or your platform equivalent)
+3. If DB is up but the service still reports down, restart the service:
+   - systemd: `systemctl restart githubcache`
+   - pm2: `pm2 restart githubcache`
    - In k8s: `kubectl rollout restart deploy/githubcache`
 4. If the alert repeats, escalate to the DB team.
 
@@ -112,7 +113,8 @@ not a failure.**
 ### Running migrations (production)
 
 ```bash
-docker exec githubcache npx prisma migrate deploy
+# Run as the same user as the service (e.g., in a deploy job / init container)
+npx prisma migrate deploy
 ```
 
 This is idempotent — re-running is safe. Run after every deploy that ships a
@@ -168,17 +170,18 @@ curl -X POST http://<host>:3000/api/admin/refresh \
 
 ### Service crash loop
 
-1. Inspect container logs: `docker logs githubcache --tail 200` (or
-   `kubectl logs -l app=githubcache --tail=200`).
+1. Inspect service logs:
+   - systemd: `journalctl -u githubcache -n 200`
+   - pm2: `pm2 logs githubcache --lines 200`
+   - In k8s: `kubectl logs -l app=githubcache --tail=200`
 2. Common root causes:
    - `DATABASE_URL` misconfigured / not set in the runtime env
    - `SESSION_SECRET` shorter than 32 chars
    - Prisma client not generated — run `npx prisma generate` then redeploy
-3. If the pod is being killed, check for OOM:
-   `docker inspect githubcache | grep OOMKilled`
-   (or `kubectl describe pod <pod> | grep -i oom`).
-4. If the loop persists, capture full logs + a `docker inspect` / `kubectl
-   describe` and escalate.
+3. If the process is being OOM-killed, check system memory:
+   - systemd: `dmesg | grep -i oom` (recent)
+   - In k8s: `kubectl describe pod <pod> | grep -i oom`
+4. If the loop persists, capture full logs + a memory profile and escalate.
 
 ## Where to look
 

@@ -11,7 +11,6 @@
 - Background refresh scheduler with graceful stale-fallback when GitHub is down
 - Cookie-session admin panel (users, api-keys, github-tokens, audit log, reports)
 - Manual refresh + scheduler pause controls
-- Docker image (multi-stage, non-root)
 
 ## Quick Start
 
@@ -59,32 +58,6 @@ All env vars are validated by `src/lib/config/env.ts` (zod schema).
 
 ## Deploy
 
-### Docker (recommended)
-
-```bash
-docker build -t githubcache:latest .
-docker run -d \
-  -p 3000:3000 \
-  -e DATABASE_URL=mysql://user:pass@db:3306/githubcache \
-  -e SESSION_SECRET=$(openssl rand -hex 32) \
-  -e GITHUB_TOKENS=ghp_xxx,ghp_yyy \
-  --name githubcache \
-  githubcache:latest
-```
-
-After first deploy, run migrations:
-
-```bash
-docker exec githubcache npx prisma migrate deploy
-```
-
-In Kubernetes, run this from a one-shot init container or pre-deploy job.
-
-The image runs as a non-root user and includes a built-in `HEALTHCHECK` against
-`GET /api/v1/status`.
-
-### Manual (Node)
-
 ```bash
 npm ci
 npx prisma migrate deploy
@@ -94,6 +67,10 @@ npm run start:server
 
 `start:server` boots the custom server (`src/server.ts`) which mounts Next.js
 together with the scheduler and the GitHub token pool.
+
+For zero-downtime deploys, run this behind a process supervisor (systemd,
+`pm2`, or your platform's app runner). The process handles `SIGTERM` /
+`SIGINT` for graceful shutdown.
 
 ### Health Check
 
