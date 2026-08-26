@@ -13,7 +13,7 @@ async function main(): Promise<void> {
   const arg = process.argv[2] ?? '';
   const [owner, name] = arg.split('/');
   if (!owner || !name) {
-    console.error('usage: pnpm dev:fetch owner/name');
+    console.error('usage: npm run dev:fetch -- owner/name');
     process.exitCode = 2;
     return;
   }

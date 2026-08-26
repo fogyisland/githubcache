@@ -18,9 +18,11 @@ RUN npm run build
 
 # ---------- Stage 3: runner ----------
 FROM node:20-bookworm-slim AS runner
+ARG GIT_COMMIT=unknown
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
+ENV GIT_COMMIT=${GIT_COMMIT}
 # Non-root user (built-in)
 USER node
 COPY --chown=node:node --from=builder /app/.next ./.next
