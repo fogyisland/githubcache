@@ -288,6 +288,29 @@ a {
     cursor: not-allowed;
   }
 
+  .ghc-btn-danger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    background: var(--color-danger, #dc2626);
+    color: white;
+    border: var(--border-width-card) solid var(--color-danger, #dc2626);
+    border-radius: var(--radius-button);
+    padding: 0.375rem 0.75rem;
+    font-family: var(--font-mono-active);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: filter 120ms ease-out;
+  }
+  .ghc-btn-danger:hover { filter: brightness(1.08); }
+  .ghc-btn-danger:disabled,
+  .ghc-btn-danger[aria-busy="true"] {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+
   .ghc-btn-ghost {
     display: inline-flex;
     align-items: center;
@@ -746,6 +769,92 @@ a {
     font-size: 0.875rem;
     line-height: 1.25;
   }
+
+  /* Mission-control status bar (sticky bottom, 5 columns). */
+  .ghc-admin-statusbar {
+    position: sticky;
+    bottom: 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-top: 1px solid var(--color-rule);
+    background: var(--color-surface-2);
+    font-family: var(--font-mono-active);
+    font-size: 0.75rem;
+    color: var(--color-ink);
+  }
+  .ghc-admin-statusbar-tone-ok { border-top-color: var(--color-success, #16a34a); }
+  .ghc-admin-statusbar-tone-warn {
+    border-top-color: var(--color-warn, #d97706);
+    background: color-mix(in srgb, var(--color-warn, #d97706) 8%, var(--color-surface-2));
+  }
+  .ghc-admin-statusbar-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+  }
+  .ghc-admin-statusbar-meta {
+    text-align: right;
+    border-left: 1px solid var(--color-rule);
+    padding-left: 0.75rem;
+  }
+  .ghc-admin-statusbar-label {
+    color: var(--color-ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+  }
+  .ghc-admin-statusbar-value {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ghc-admin-statusbar-sub {
+    color: var(--color-ink-muted);
+    font-size: 0.6875rem;
+  }
+
+  /* Destructive-action confirm dialog (native <dialog>). */
+  .ghc-admin-confirm-dialog {
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    color: var(--color-ink);
+    padding: 0;
+    max-width: 28rem;
+    width: calc(100vw - 2rem);
+    box-shadow: 0 10px 30px color-mix(in srgb, black 18%, transparent);
+  }
+  .ghc-admin-confirm-dialog::backdrop {
+    background: color-mix(in srgb, black 50%, transparent);
+  }
+  .ghc-admin-confirm-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1.25rem;
+  }
+  .ghc-admin-confirm-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+  }
+  .ghc-admin-confirm-desc {
+    margin: 0;
+    color: var(--color-ink-muted);
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+  .ghc-admin-confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+  }
+  .ghc-admin-confirm-actions button[aria-busy="true"] { opacity: 0.7; cursor: progress; }
 
   /* Status code chip — terminal signature element */
   .ghc-status {
