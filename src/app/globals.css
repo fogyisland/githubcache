@@ -464,6 +464,34 @@ a {
     color: var(--color-ink);
   }
 
+  /* Admin variant switcher (M11) — three pills M / I / W.
+     Reuses theme tokens; full per-variant chrome lands in M11.6. */
+  .ghc-admin-variant-row {
+    display: inline-flex;
+    border: var(--border-width-card) solid var(--color-rule);
+    border-radius: var(--radius-pill);
+    padding: 2px;
+    background: var(--color-surface);
+  }
+  .ghc-admin-variant-pill {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    padding: 0.25rem 0.625rem;
+    border-radius: inherit;
+    color: var(--color-ink-muted);
+    font-family: var(--font-mono-active);
+    font-size: 0.75rem;
+    cursor: pointer;
+  }
+  .ghc-admin-variant-pill[aria-pressed="true"] {
+    background: var(--color-accent);
+    color: var(--color-accent-ink);
+  }
+  .ghc-admin-variant-pill:hover:not([aria-pressed="true"]) {
+    color: var(--color-ink);
+  }
+
   /* Status code chip — terminal signature element */
   .ghc-status {
     display: inline-flex;

@@ -5,7 +5,9 @@ import type { ReactElement, ReactNode } from 'react';
 import { validateSession } from '@/lib/auth/session';
 import { LogoutButton } from '@/app/admin/logout-button';
 import { ThemeSwitcher } from '@/app/_components/theme-switcher';
+import { AdminVariantSwitcher } from '@/app/_components/admin-variant-switcher';
 import { readThemeFromCookieHeader } from '@/lib/theme/cookie';
+import { readAdminVariantFromCookieHeader } from '@/lib/admin/cookie';
 
 /**
  * Layout for all /admin/* pages.
@@ -18,6 +20,8 @@ import { readThemeFromCookieHeader } from '@/lib/theme/cookie';
  *
  * Styling: admin chrome re-uses the theme tokens via `ghc-*` classes so the
  * admin app picks up the same theme the operator chose on the public surface.
+ * M11 adds the admin variant switcher (mission_control / inspector / workbench);
+ * the actual `[data-admin]` chrome lands in M11.6.
  */
 export default async function AdminLayout({
   children,
@@ -43,11 +47,13 @@ export default async function AdminLayout({
 
   // Theme cookie for the admin chrome — admin pages are inside the same
   // <html data-theme> as the public surface, so we just read the same value.
-  const headerStore = cookies();
-  const currentTheme = readThemeFromCookieHeader(headerStore.get('cookie')?.value ?? null);
+  const currentTheme = readThemeFromCookieHeader(cookieStore.get('cookie')?.value ?? null);
+  const currentAdminVariant = readAdminVariantFromCookieHeader(
+    cookieStore.get('cookie')?.value ?? null,
+  );
 
   return (
-    <div>
+    <div data-admin={currentAdminVariant}>
       <nav className="ghc-card flex flex-wrap items-center justify-between gap-2 border-x-0 border-t-0 rounded-none px-4 py-2">
         <div className="flex flex-wrap items-center gap-2">
           <Link href="/admin" className="ghc-btn-ghost">
@@ -85,6 +91,7 @@ export default async function AdminLayout({
           )}
         </div>
         <div className="flex items-center gap-2">
+          <AdminVariantSwitcher current={currentAdminVariant} />
           <ThemeSwitcher current={currentTheme} />
           <span className="text-sm">
             {user.email} ({user.role})
