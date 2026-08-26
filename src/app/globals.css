@@ -1061,6 +1061,223 @@ a {
     color: var(--color-ink);
   }
 
+  /* API doc — curl + trimmed response shape, two-card grid. */
+  .ghc-api-doc {
+    display: flex;
+    flex-direction: column;
+  }
+  .ghc-api-doc-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+    margin-top: 1.5rem;
+  }
+  @media (max-width: 768px) {
+    .ghc-api-doc-grid { grid-template-columns: 1fr; }
+  }
+  .ghc-api-doc-card {
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-card);
+    padding: 1rem 1.25rem;
+    background: var(--color-surface-1);
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+  }
+  .ghc-api-doc-card-title {
+    font-family: var(--font-mono-active);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-ink-muted);
+    margin: 0;
+  }
+  .ghc-api-doc-card-hint {
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--color-ink-muted);
+    margin: 0;
+  }
+  .ghc-api-doc-card-hint code {
+    font-family: var(--font-mono-active);
+    font-size: 0.8125em;
+    background: var(--color-surface-2);
+    padding: 0.0625rem 0.25rem;
+    border-radius: 3px;
+  }
+  .ghc-code-block {
+    margin: 0;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-card);
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-rule);
+    font-family: var(--font-mono-active);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    overflow-x: auto;
+    color: var(--color-ink);
+  }
+  .ghc-code-block code {
+    background: transparent;
+    padding: 0;
+  }
+  .ghc-code-block-truncated {
+    position: relative;
+    max-height: 16rem;
+    overflow-y: auto;
+  }
+
+  /* Quick try — three repo preset buttons that fire the lookup action. */
+  .ghc-quick-try {
+    display: flex;
+    flex-direction: column;
+  }
+  .ghc-quick-try-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+  }
+  .ghc-quick-try-btn {
+    appearance: none;
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.375rem;
+    padding: 0.625rem 1rem;
+    border-radius: var(--radius-card);
+    border: 1px solid var(--color-rule);
+    background: var(--color-surface-1);
+    font-family: var(--font-mono-active);
+    font-size: 0.9375rem;
+    color: var(--color-ink);
+    cursor: pointer;
+    transition: border-color 120ms ease, background-color 120ms ease;
+  }
+  .ghc-quick-try-btn:hover:not(:disabled) {
+    border-color: var(--color-accent);
+    background: var(--color-surface-2);
+  }
+  .ghc-quick-try-btn:disabled {
+    opacity: 0.6;
+    cursor: progress;
+  }
+  .ghc-quick-try-owner {
+    color: var(--color-ink-muted);
+  }
+  .ghc-quick-try-name {
+    font-weight: 700;
+    color: var(--color-accent);
+  }
+  .ghc-quick-try-blurb {
+    color: var(--color-ink-muted);
+    font-size: 0.8125rem;
+  }
+  .ghc-quick-try-pending {
+    margin: 0.75rem 0 0;
+    font-size: 0.875rem;
+    color: var(--color-ink-muted);
+  }
+
+  /* Site footer — 3-column meta strip + fine print. */
+  .ghc-site-footer {
+    border-top: 1px solid var(--color-rule);
+    margin-top: 2.5rem;
+    padding: 2rem 0 1.25rem;
+    color: var(--color-ink-muted);
+    background: var(--color-surface-1);
+  }
+  .ghc-site-footer-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 2rem;
+    max-width: 72rem;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+  @media (max-width: 768px) {
+    .ghc-site-footer-grid {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+  }
+  .ghc-site-footer-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .ghc-site-footer-brand {
+    font-family: var(--font-display);
+    font-size: 1.0625rem;
+    font-weight: 700;
+    color: var(--color-ink);
+    margin: 0;
+  }
+  .ghc-site-footer-tagline {
+    font-size: 0.875rem;
+    line-height: 1.45;
+    color: var(--color-ink-muted);
+    margin: 0;
+    max-width: 26rem;
+  }
+  .ghc-site-footer-heading {
+    font-family: var(--font-mono-active);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-ink);
+    margin: 0 0 0.25rem;
+  }
+  .ghc-site-footer-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+  }
+  .ghc-site-footer-list code {
+    font-family: var(--font-mono-active);
+    font-size: 0.8125rem;
+    background: var(--color-surface-2);
+    padding: 0.0625rem 0.375rem;
+    border-radius: 3px;
+    color: var(--color-ink);
+  }
+  .ghc-site-footer-label {
+    color: var(--color-ink-muted);
+    margin-right: 0.25rem;
+  }
+  .ghc-site-footer-fine {
+    max-width: 72rem;
+    margin: 1.5rem auto 0;
+    padding: 1rem 1rem 0;
+    border-top: 1px solid var(--color-rule);
+    font-size: 0.75rem;
+    color: var(--color-ink-muted);
+    text-align: center;
+  }
+
+  /* ghc-header-util-link — demoted ghost-style link in site-header. */
+  .ghc-header-util-link {
+    font-size: 0.8125rem;
+    color: var(--color-ink-muted);
+    text-decoration: none;
+    padding: 0.25rem 0.375rem;
+    border-radius: 3px;
+    transition: color 120ms ease, background-color 120ms ease;
+  }
+  .ghc-header-util-link:hover {
+    color: var(--color-ink);
+    background: var(--color-surface-2);
+  }
+  .ghc-header-util-link:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
   /* ghc-display-name — repo / project name headline. Per-theme sizing. */
   .ghc-display-name {
     font-family: var(--font-mono-active);

@@ -5,6 +5,9 @@ import { RecentLookupsList } from './_components/recent-lookups-list';
 import { StatsBar } from './_components/stats-bar';
 import { FeaturesSection } from './_components/features-section';
 import { HowItWorks } from './_components/how-it-works';
+import { ApiDocSection } from './_components/api-doc-section';
+import { QuickTry } from './_components/quick-try';
+import { SiteFooter } from './_components/site-footer';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,6 +43,11 @@ export default async function HomePage() {
         <LookupForm />
       </section>
 
+      {/* Quick try — 3 sample repo buttons that fire the lookup action. */}
+      <section className="mx-auto mt-12 max-w-6xl px-4">
+        <QuickTry />
+      </section>
+
       {/* Stats bar — live counts from /api/v1/status, animated on mount. */}
       <section className="mx-auto mt-12 max-w-6xl px-4">
         <StatsBar />
@@ -55,6 +63,11 @@ export default async function HomePage() {
         <HowItWorks />
       </section>
 
+      {/* API doc — curl example + trimmed response shape. */}
+      <section className="mx-auto mt-16 max-w-6xl px-4">
+        <ApiDocSection />
+      </section>
+
       {/* Recent lookups */}
       <section className="mx-auto mt-16 max-w-6xl px-4 pb-16">
         <div className="mb-6 flex items-baseline justify-between">
@@ -67,22 +80,7 @@ export default async function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-[color:var(--color-rule)]">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-6 text-sm text-[color:var(--color-ink-muted)]">
-          <p>
-            Need the raw API?{' '}
-            <a href="/api/v1/status" className="ghc-link">
-              /api/v1/status
-            </a>{' '}
-            for health.
-          </p>
-          <p>
-            <a href="/login" className="ghc-link">
-              Admin login →
-            </a>
-          </p>
-        </div>
-      </footer>
+      <SiteFooter />
     </main>
   );
 }

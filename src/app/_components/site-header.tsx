@@ -34,12 +34,20 @@ export function SiteHeader() {
           </span>
           <span className="text-base">GitHub Metadata Cache</span>
         </Link>
-        <nav className="flex items-center gap-1">
+        <nav className="flex items-center gap-3">
           <ThemeSwitcher current={currentTheme} />
-          <Link href="/api/v1/status" className="ghc-btn-ghost">
+          <Link
+            href="/api/v1/status"
+            className="ghc-header-util-link"
+            aria-label="System status JSON"
+          >
             Status
           </Link>
-          <Link href="/login" className="ghc-btn-ghost">
+          <Link
+            href="/login"
+            className="ghc-header-util-link"
+            aria-label="Admin login"
+          >
             Admin
           </Link>
         </nav>
