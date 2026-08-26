@@ -17,3 +17,16 @@ export const upsertRepo = (data: Prisma.RepositoryUncheckedCreateInput): Promise
     update,
   });
 };
+
+/**
+ * Top N most-recently-fetched 'ok' repositories. Used by the homepage
+ * recent-lookups list (M9.5). Skips not_found / forbidden / error rows
+ * since those would be misleading as "recently browsed" entries.
+ */
+export const recentLookups = (limit: number): Promise<Repository[]> =>
+  prisma.repository.findMany({
+    where: { fetchStatus: 'ok', lastFetchedAt: { not: null } },
+    orderBy: { lastFetchedAt: 'desc' },
+    take: limit,
+  });
+
