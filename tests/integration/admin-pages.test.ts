@@ -30,7 +30,9 @@ describe('page-level admin role check', () => {
   it('redirects to /admin when no session is present (AdminUsersPage)', async () => {
     mockValidateSession.mockResolvedValueOnce(null);
     const AdminUsersPage = (await import('@/app/admin/users/page')).default;
-    await expect(AdminUsersPage()).rejects.toThrow('__redirect_to__/admin');
+    await expect(AdminUsersPage({ searchParams: {} })).rejects.toThrow(
+      '__redirect_to__/admin',
+    );
     expect(mockRedirect).toHaveBeenCalledWith('/admin');
   });
 
@@ -49,7 +51,9 @@ describe('page-level admin role check', () => {
     // with a DB error — but we expect the redirect throw to win because
     // it's synchronous after the await on validateSession.
     const AdminUsersPage = (await import('@/app/admin/users/page')).default;
-    await expect(AdminUsersPage()).rejects.toThrow('__redirect_to__/admin');
+    await expect(AdminUsersPage({ searchParams: {} })).rejects.toThrow(
+      '__redirect_to__/admin',
+    );
     expect(mockRedirect).toHaveBeenCalledWith('/admin');
   });
 

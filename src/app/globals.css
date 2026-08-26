@@ -1066,6 +1066,66 @@ a {
     flex-direction: column;
     gap: 1.5rem;
   }
+
+  /* Page layout wrapper used by list pages (Users / API Keys / Tokens). */
+  .ghc-admin-page {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  .ghc-admin-section-title {
+    font-family: var(--admin-display, var(--font-display));
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem;
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+  .ghc-admin-section-count {
+    font-family: var(--admin-mono, monospace);
+    font-size: 0.75rem;
+    color: var(--color-ink-muted);
+    font-weight: 400;
+  }
+  .ghc-admin-hint {
+    margin: 0;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-button, 6px);
+    font-size: 0.8125rem;
+    color: var(--color-ink-muted);
+  }
+  .ghc-admin-mono {
+    font-family: var(--admin-mono, monospace);
+    font-size: 0.8125rem;
+  }
+  .ghc-admin-invite-link {
+    font-family: var(--admin-mono, monospace);
+    font-size: 0.75rem;
+    background: var(--color-surface-2);
+    padding: 0.125rem 0.375rem;
+    border-radius: var(--radius-button, 6px);
+  }
+  .ghc-admin-usage {
+    font-family: var(--admin-mono, monospace);
+    font-size: 0.8125rem;
+  }
+  .ghc-admin-usage-pct {
+    margin-left: 0.25rem;
+    color: var(--color-ink-muted);
+  }
+  .ghc-admin-quota-warning {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: color-mix(in srgb, var(--color-warn, #d97706) 12%, var(--color-surface));
+    border: 1px solid var(--color-warn, #d97706);
+    border-radius: var(--radius-card, 10px);
+    font-size: 0.875rem;
+  }
   .ghc-admin-kpi-row {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));

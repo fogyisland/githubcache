@@ -1,20 +1,24 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
+import type { ReactElement } from 'react';
 import { listAllTokens } from '@/lib/db/github-tokens';
 import { poolHasHash, poolSize } from '@/lib/github/pool';
 import { validateSession } from '@/lib/auth/session';
+import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
+import { AdminTable, type AdminColumn } from '@/app/admin/_components/admin-table';
+import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
 import { AddTokenForm } from './_components/add-token-form';
 import { TokenActions } from './_components/token-actions';
-import type { ReactElement } from 'react';
+
+type TokenRow = Awaited<ReturnType<typeof listAllTokens>>[number];
 
 /**
- * Admin → GitHub Tokens page.
+ * Admin → GitHub Tokens page (M11.10 rewrite).
  *
- * Admin-only: enforces `user.role === 'admin'` and redirects to /admin
- * otherwise. Defense-in-depth — the nav in `layout.tsx` also hides the
- * link from operators, but the redirect here catches direct URL access.
- * (The underlying GET API serves admin OR operator, but the form actions
- * on this page are admin-only.)
+ * Admin-only. Shows pool size banner + quota warning, then AddTokenForm +
+ * AdminTable of tokens. Each row carries a status chip (active/disabled),
+ * a pool-state chip (in-pool vs pending activation), used/limit progress,
+ * and per-row TokenActions.
  */
 export default async function AdminGithubTokensPage(): Promise<ReactElement> {
   const cookieStore = cookies();
@@ -32,81 +36,114 @@ export default async function AdminGithubTokensPage(): Promise<ReactElement> {
 
   const tokens = await listAllTokens();
   const activePoolSize = poolSize();
+  const totalQuotaUsed = tokens.reduce((a, t) => a + t.requestsUsed, 0);
+  const totalQuotaLimit = tokens.reduce((a, t) => a + t.requestsLimit, 0);
+  const quotaPct = totalQuotaLimit > 0 ? Math.round((totalQuotaUsed / totalQuotaLimit) * 100) : 0;
+
+  const columns: AdminColumn<TokenRow>[] = [
+    { key: 'label', header: 'Label', render: (t) => t.label },
+    {
+      key: 'prefix',
+      header: 'Prefix',
+      render: (t) => (
+        <code className="ghc-admin-mono">
+          {t.tokenFirst4}…{t.tokenLast4}
+        </code>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (t) => (
+        <AdminStatusChip variant={t.status === 'active' ? 'ok' : 'warn'}>
+          {t.status}
+        </AdminStatusChip>
+      ),
+    },
+    {
+      key: 'pool',
+      header: 'Pool state',
+      render: (t) => {
+        const inPool = poolHasHash(t.tokenHash);
+        return (
+          <AdminStatusChip variant={inPool ? 'ok' : 'warn'}>
+            {inPool ? 'in pool' : 'pending activation'}
+          </AdminStatusChip>
+        );
+      },
+    },
+    {
+      key: 'usage',
+      header: 'Used / Limit',
+      render: (t) => {
+        const pct = t.requestsLimit > 0
+          ? Math.round((t.requestsUsed / t.requestsLimit) * 100)
+          : 0;
+        return (
+          <span className="ghc-admin-usage">
+            {t.requestsUsed.toLocaleString()} / {t.requestsLimit.toLocaleString()}
+            <span className="ghc-admin-usage-pct">({pct}%)</span>
+          </span>
+        );
+      },
+      align: 'right',
+    },
+    {
+      key: 'lastUsed',
+      header: 'Last used',
+      render: (t) => (t.lastUsedAt ? t.lastUsedAt.toISOString().slice(0, 10) : '—'),
+    },
+    {
+      key: 'actions',
+      header: '',
+      render: (t) => (
+        <TokenActions tokenId={t.id.toString()} currentStatus={t.status} />
+      ),
+    },
+  ];
 
   return (
-    <div>
-      <h1>GitHub Tokens</h1>
-      <p>
-        Pool size (currently active in memory): <strong>{activePoolSize}</strong>
-      </p>
-      <p>
-        <em>
-          Adding a token here creates a DB record only. To activate it, add the token to{' '}
-          <code>GITHUB_TOKENS</code> env var or <code>GITHUB_TOKENS_FILE</code> and restart the
-          service. Tokens that exist in env/file but not in DB are auto-registered on next restart.
-        </em>
+    <div className="ghc-admin-page">
+      <AdminPageHeader
+        breadcrumb={[{ label: 'Admin', href: '/admin' }, { label: 'GitHub Tokens' }]}
+        title="GitHub Tokens"
+        description="Manage the GitHub token pool used by the refresh scheduler."
+      />
+
+      {tokens.length > 0 && quotaPct >= 80 ? (
+        <div className="ghc-admin-quota-warning">
+          <AdminStatusChip variant="warn">quota</AdminStatusChip>
+          <span>
+            {quotaPct}% of combined token quota used ({totalQuotaUsed.toLocaleString()} /{' '}
+            {totalQuotaLimit.toLocaleString()}).
+          </span>
+        </div>
+      ) : null}
+
+      <p className="ghc-admin-hint">
+        Pool size (currently active in memory): <strong>{activePoolSize}</strong>.
+        Adding a token here creates a DB record only — to activate it, add the token to{' '}
+        <code>GITHUB_TOKENS</code> env var or <code>GITHUB_TOKENS_FILE</code> and restart
+        the service.
       </p>
 
-      <h2>Add a token</h2>
-      <AddTokenForm />
+      <section>
+        <h2 className="ghc-admin-section-title">Add a token</h2>
+        <AddTokenForm />
+      </section>
 
-      <h2>Registered tokens</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Label</th>
-            <th>First 4</th>
-            <th>Last 4</th>
-            <th>Status</th>
-            <th>Pool state</th>
-            <th>Used / Limit</th>
-            <th>Last used</th>
-            <th>Created</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {tokens.length === 0 ? (
-            <tr>
-              <td colSpan={9}>No tokens registered.</td>
-            </tr>
-          ) : (
-            tokens.map((t) => {
-              const inPool = poolHasHash(t.tokenHash);
-              return (
-                <tr key={t.id.toString()}>
-                  <td>{t.label}</td>
-                  <td>
-                    <code>{t.tokenFirst4}</code>
-                  </td>
-                  <td>
-                    <code>{t.tokenLast4}</code>
-                  </td>
-                  <td>{t.status}</td>
-                  <td>
-                    {inPool ? (
-                      <span style={{ color: 'green' }}>active in pool</span>
-                    ) : (
-                      <span style={{ color: 'orange' }}>pending activation</span>
-                    )}
-                  </td>
-                  <td>
-                    {t.requestsUsed} / {t.requestsLimit}
-                  </td>
-                  <td>{t.lastUsedAt?.toISOString() ?? '—'}</td>
-                  <td>{t.createdAt.toISOString()}</td>
-                  <td>
-                    <TokenActions
-                      tokenId={t.id.toString()}
-                      currentStatus={t.status}
-                    />
-                  </td>
-                </tr>
-              );
-            })
-          )}
-        </tbody>
-      </table>
+      <section>
+        <h2 className="ghc-admin-section-title">
+          Registered tokens <span className="ghc-admin-section-count">({tokens.length})</span>
+        </h2>
+        <AdminTable<TokenRow>
+          columns={columns}
+          rows={tokens}
+          emptyTitle="No GitHub tokens registered"
+          emptyDescription="Add one with the form above to enable refresh."
+          ariaLabel="GitHub tokens"
+        />
+      </section>
     </div>
   );
 }
