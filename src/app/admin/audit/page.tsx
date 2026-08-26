@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { validateSession } from '@/lib/auth/session';
 import { queryAuditLog, getActorEmails } from '@/lib/db/audit';
+import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { AuditFilters } from './_components/audit-filters';
 import { AuditTable } from './_components/audit-table';
 
@@ -98,8 +99,12 @@ export default async function AdminAuditPage({
   }));
 
   return (
-    <div className="space-y-6 p-6">
-      <h1 className="text-2xl font-bold">Audit log</h1>
+    <div className="ghc-admin-page">
+      <AdminPageHeader
+        breadcrumb={[{ label: 'Admin', href: '/admin' }, { label: 'Audit' }]}
+        title="Audit log"
+        description="Search across every admin action. Filters update the URL — bookmark or share a view."
+      />
       <AuditFilters />
       <AuditTable rows={tableRows} total={total} limit={limit} offset={offset} />
     </div>

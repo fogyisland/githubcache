@@ -12,6 +12,7 @@ import {
   topKeys,
   tokenQuotaUsage,
 } from '@/lib/reports/queries';
+import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { KpiCards } from './_components/kpi-cards';
 import { RequestsOverTimeChart } from './_components/requests-over-time-chart';
 import { TopReposTable } from './_components/top-repos-table';
@@ -63,8 +64,12 @@ export default async function AdminReportsPage(): Promise<ReactElement> {
   ]);
 
   return (
-    <div className="space-y-6 p-6">
-      <h1 className="text-2xl font-bold">Reports (last 24h)</h1>
+    <div className="ghc-admin-page">
+      <AdminPageHeader
+        breadcrumb={[{ label: 'Admin', href: '/admin' }, { label: 'Reports' }]}
+        title="Reports"
+        description="Aggregated usage, cache performance, and quota over the last 24 hours."
+      />
       <KpiCards
         totalRequests={total}
         cacheHitRate={hitRate}

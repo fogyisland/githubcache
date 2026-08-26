@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { validateSession } from '@/lib/auth/session';
 import { listPendingJobs, listRepositoriesForPicker } from '@/lib/db/refresh-jobs';
 import { isPaused, getPausedAt } from '@/lib/scheduler';
+import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { RefreshControls } from './_components/refresh-controls';
 import { PendingJobsTable } from './_components/pending-jobs-table';
 
@@ -47,8 +48,12 @@ export default async function AdminRefreshPage(): Promise<ReactElement> {
   const pausedAt = getPausedAt();
 
   return (
-    <div className="space-y-6 p-6">
-      <h1 className="text-2xl font-bold">Manual refresh</h1>
+    <div className="ghc-admin-page">
+      <AdminPageHeader
+        breadcrumb={[{ label: 'Admin', href: '/admin' }, { label: 'Refresh' }]}
+        title="Manual refresh"
+        description="Trigger a refresh for any repo, pause the scheduler, and watch the pending queue."
+      />
       <RefreshControls
         isPaused={paused}
         pausedAt={pausedAt?.toISOString() ?? null}
