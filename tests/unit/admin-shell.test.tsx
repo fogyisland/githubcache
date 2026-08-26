@@ -1,0 +1,119 @@
+import { describe, expect, it } from 'vitest';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { createElement } from 'react';
+import { AdminShell } from '@/app/admin/_components/admin-shell';
+import type { AdminVariantId } from '@/lib/admin/variant';
+
+const user = { email: 'op@example.com', role: 'operator' as const };
+const initialStatus = {
+  dbPingMs: 12,
+  queueDepth: 3,
+  schedulerState: 'RUNNING' as const,
+  recentAuditCount: 7,
+  user,
+  variant: 'mission_control' as AdminVariantId,
+  fetchedAt: '2026-08-27T12:00:00.000Z',
+};
+
+describe('AdminShell', () => {
+  it('renders children inside the main content area', () => {
+    const html = renderToStaticMarkup(
+      createElement(AdminShell, {
+        current: 'dashboard',
+        variant: 'mission_control',
+        user,
+        initialStatus,
+        children: createElement('div', { 'data-testid': 'page' }, 'Hello page'),
+      }),
+    );
+    expect(html).toContain('Hello page');
+    expect(html).toContain('data-testid="page"');
+  });
+
+  it('renders sidebar with 7 sections', () => {
+    const html = renderToStaticMarkup(
+      createElement(AdminShell, {
+        current: 'dashboard',
+        variant: 'mission_control',
+        user: { email: 'a@b', role: 'admin' as const },
+        initialStatus,
+        children: createElement('span', null, 'x'),
+      }),
+    );
+    expect(html).toContain('Dashboard');
+    expect(html).toContain('Users');
+    expect(html).toContain('API Keys');
+    expect(html).toContain('GitHub Tokens');
+    expect(html).toContain('Reports');
+    expect(html).toContain('Audit');
+    expect(html).toContain('Refresh');
+  });
+
+  it('marks the current section with an indicator', () => {
+    const html = renderToStaticMarkup(
+      createElement(AdminShell, {
+        current: 'users',
+        variant: 'mission_control',
+        user: { email: 'a@b', role: 'admin' as const },
+        initialStatus,
+        children: createElement('span', null, 'x'),
+      }),
+    );
+    // current section gets ghc-admin-sidebar-current class
+    expect(html).toContain('ghc-admin-sidebar-current');
+    expect(html).toMatch(/ghc-admin-sidebar-current[^>]*href="\/admin\/users"/);
+  });
+
+  it('hides admin-only sections from operators', () => {
+    const html = renderToStaticMarkup(
+      createElement(AdminShell, {
+        current: 'dashboard',
+        variant: 'mission_control',
+        user, // role: operator
+        initialStatus,
+        children: createElement('span', null, 'x'),
+      }),
+    );
+    expect(html).not.toContain('href="/admin/users"');
+    expect(html).not.toContain('href="/admin/audit"');
+    expect(html).not.toContain('href="/admin/refresh"');
+    // operator-visible:
+    expect(html).toContain('href="/admin/api-keys"');
+    expect(html).toContain('href="/admin/reports"');
+  });
+
+  it('renders status bar only for mission_control variant', () => {
+    const mcHtml = renderToStaticMarkup(
+      createElement(AdminShell, {
+        current: 'dashboard',
+        variant: 'mission_control',
+        user,
+        initialStatus,
+        children: createElement('span', null, 'x'),
+      }),
+    );
+    expect(mcHtml).toContain('ghc-admin-statusbar');
+
+    const insHtml = renderToStaticMarkup(
+      createElement(AdminShell, {
+        current: 'dashboard',
+        variant: 'inspector',
+        user,
+        initialStatus,
+        children: createElement('span', null, 'x'),
+      }),
+    );
+    expect(insHtml).not.toContain('ghc-admin-statusbar');
+
+    const wbHtml = renderToStaticMarkup(
+      createElement(AdminShell, {
+        current: 'dashboard',
+        variant: 'workbench',
+        user,
+        initialStatus,
+        children: createElement('span', null, 'x'),
+      }),
+    );
+    expect(wbHtml).not.toContain('ghc-admin-statusbar');
+  });
+});

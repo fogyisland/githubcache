@@ -960,4 +960,125 @@ a {
     text-transform: uppercase;
     letter-spacing: -0.03em;
   }
+
+  /* ============================================================
+   * Admin shell + 3-variant layer (M11.6)
+   * Each variant sets its own --admin-* tokens; the same component
+   * markup reads them, so we don't fork components per variant.
+   * ============================================================ */
+
+  .ghc-admin-shell {
+    display: flex;
+    flex-direction: row;
+    min-height: calc(100vh - 0px);
+  }
+
+  .ghc-admin-sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--admin-rule);
+    background: var(--admin-bg);
+    padding: 1rem 0.5rem;
+  }
+  @media (max-width: 1023px) {
+    .ghc-admin-shell { flex-direction: column; }
+    .ghc-admin-sidebar {
+      width: 100%;
+      border-right: none;
+      border-bottom: 1px solid var(--admin-rule);
+    }
+  }
+
+  .ghc-admin-sidebar-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  @media (max-width: 1023px) {
+    .ghc-admin-sidebar-list {
+      flex-direction: row;
+      overflow-x: auto;
+    }
+  }
+
+  .ghc-admin-sidebar-item { margin: 0; }
+
+  .ghc-admin-sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.5rem 0.75rem;
+    border-left: 3px solid transparent;
+    border-radius: var(--radius-button, 6px);
+    color: var(--admin-ink);
+    text-decoration: none;
+    font-family: var(--admin-mono, var(--font-mono-active, monospace));
+    font-size: 0.875rem;
+    transition: background 120ms ease-out, border-color 120ms ease-out;
+  }
+  .ghc-admin-sidebar-link:hover {
+    background: color-mix(in srgb, var(--admin-accent) 10%, transparent);
+  }
+  .ghc-admin-sidebar-current {
+    border-left-color: var(--admin-accent);
+    background: color-mix(in srgb, var(--admin-accent) 14%, transparent);
+    color: var(--admin-accent);
+    font-weight: 600;
+  }
+  .ghc-admin-sidebar-icon {
+    width: 1rem;
+    text-align: center;
+    color: var(--admin-accent);
+    flex-shrink: 0;
+  }
+
+  .ghc-admin-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .ghc-admin-main-inner {
+    flex: 1;
+    padding: 1.5rem;
+  }
+
+  /* --- Mission Control: slate + amber + mono --- */
+  [data-admin="mission_control"] {
+    --admin-bg: #0f172a;
+    --admin-ink: #e2e8f0;
+    --admin-accent: #f59e0b;
+    --admin-rule: #334155;
+    --admin-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --admin-display: ui-monospace, "SFMono-Regular", Menlo, monospace;
+    background: var(--admin-bg);
+    color: var(--admin-ink);
+  }
+
+  /* --- Inspector: cream + ink + serif --- */
+  [data-admin="inspector"] {
+    --admin-bg: #f5f1e8;
+    --admin-ink: #1f1d18;
+    --admin-accent: #b91c1c;
+    --admin-rule: #d6cdb8;
+    --admin-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --admin-display: "Source Serif Pro", "Iowan Old Style", Georgia, serif;
+    background: var(--admin-bg);
+    color: var(--admin-ink);
+  }
+
+  /* --- Workbench: white + electric blue + Space Grotesk --- */
+  [data-admin="workbench"] {
+    --admin-bg: #ffffff;
+    --admin-ink: #0f172a;
+    --admin-accent: #2563eb;
+    --admin-rule: #e2e8f0;
+    --admin-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --admin-display: "Space Grotesk", system-ui, -apple-system, sans-serif;
+    background: var(--admin-bg);
+    color: var(--admin-ink);
+  }
 }
