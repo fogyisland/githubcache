@@ -206,3 +206,19 @@ model RateLimitBucket {
   @@index([windowStart])
   @@map("rate_limit_buckets")
 }
+
+// Parallel to RateLimitBucket but keyed by client IP. Used by the public
+// lookup form (/, /repo/[owner]/[name]) where callers do not bring an
+// X-API-Key. Per-IP limits (PUBLIC_LOOKUP_RATE_PER_MIN env) protect the
+// GitHub token pool from anonymous abuse.
+model IpRateLimitBucket {
+  id          BigInt   @id @default(autoincrement())
+  ip          String   @unique @db.VarChar(45)
+  windowStart DateTime @map("window_start")
+  count       Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([windowStart])
+  @@map("ip_rate_limit_buckets")
+}
