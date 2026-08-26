@@ -59,6 +59,36 @@ detail page. Existing `/api/query` API-key path and admin SPA unchanged.
 None. All M9 features are additive. `/api/query` refactored to use
 `lookupRepo` internally — same wire contract.
 
+### Changed (post-tag polish)
+
+- Full CSS / UI overhaul after M9 SHIP. Inter via `next/font/google`;
+  `globals.css` adds theme tokens (`--color-bg`, `--color-surface`, ...),
+  custom `@layer components` (`ghc-card`, `ghc-card-hover`, `ghc-link`,
+  `ghc-stat`, `ghc-chip`, `ghc-input`, `ghc-btn-primary`, `ghc-btn-ghost`),
+  and animations (`ghc-shimmer`, `ghc-hero-gradient`, `ghc-fade-up`,
+  `:focus-visible` ring).
+- New `<SiteHeader />` — sticky top nav with brand logo, "Status" / "Admin"
+  links; rendered in root layout.
+- Detail page `loading.tsx` upgraded from generic pulse to a structured
+  shimmer skeleton (hero + stats + cards).
+- Detail page `not-found.tsx` styled as a centered empty-state.
+- Lookup form / result card / recent-lookups list re-skinned with the new
+  component classes and inline SVG icons (alert, warning, clipboard,
+  external-link, GitHub mark).
+
+### Fixed
+
+- Detail page + lookup result card + recent-lookups list were reading raw
+  GitHub field names (`stargazers_count`, `forks_count`, ...) but the cache
+  stores the **parsed** shape (`stars`, `forks`, ...) from
+  `parseRepoResponse`. Stars/Forks/Watchers/License all rendered as `–`.
+  New `src/lib/repo/metadata.ts` exposes typed getters
+  (`getStars`, `getForks`, `getWatchers`, `getDefaultBranch`,
+  `getLanguage`, `getLicenseName`, `getTopics`, `getHomepage`, `getCreatedAt`,
+  `getUpdatedAt`, `getPushedAt`, `getHtmlUrl`, `formatCount`, `formatDate`)
+  — detail page, lookup-result-card, recent-lookups-list now use them.
+  28 unit tests in `tests/unit/repo-metadata.test.ts`.
+
 ---
 
 ## [m8-prod-ready] — 2026-08-26

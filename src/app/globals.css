@@ -1,7 +1,157 @@
 @import "tailwindcss";
 
-/* Project-wide CSS variables / reset if needed */
+/* Inter font (self-hosted via next/font in layout.tsx) — referenced as
+ * --font-inter in the html element, applied to body via @theme inline. */
+
+@theme inline {
+  --font-sans: var(--font-inter, ui-sans-serif, system-ui, sans-serif);
+  --color-bg: #fafbfc;
+  --color-surface: #ffffff;
+  --color-fg: #0f172a;
+  --color-muted: #64748b;
+  --color-border: #e2e8f0;
+  --color-accent: #2563eb;
+  --color-accent-fg: #ffffff;
+  --color-accent-soft: #eff6ff;
+}
+
+/* Project-wide base styles */
 :root {
-  --color-text: #111;
-  --color-bg: #f9fafb;
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+  text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-fg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar (WebKit + Firefox) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+  background-clip: padding-box;
+  border: 2px solid transparent;
+}
+
+/* Selection color */
+::selection {
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+
+/* Reusable component classes (Tailwind composition is verbose — these
+ * give us project-wide visual conventions) */
+@layer components {
+  .ghc-card {
+    @apply rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-200;
+  }
+  .ghc-card-hover {
+    @apply hover:border-blue-300 hover:shadow-md hover:-translate-y-0.5;
+  }
+  .ghc-link {
+    @apply font-medium text-blue-600 transition-colors hover:text-blue-800;
+  }
+  .ghc-stat {
+    @apply rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow;
+  }
+  .ghc-chip {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium;
+  }
+  .ghc-input {
+    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-slate-900 shadow-sm transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20;
+  }
+  .ghc-btn-primary {
+    @apply inline-flex items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-blue-700 hover:shadow focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .ghc-btn-ghost {
+    @apply inline-flex items-center justify-center rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100;
+  }
+}
+
+/* Loading shimmer animation */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+.ghc-shimmer {
+  background: linear-gradient(
+    90deg,
+    #f1f5f9 0%,
+    #e2e8f0 50%,
+    #f1f5f9 100%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/* Hero gradient animation */
+@keyframes gradient-shift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+.ghc-hero-gradient {
+  background: linear-gradient(
+    135deg,
+    #eff6ff 0%,
+    #dbeafe 25%,
+    #f0f9ff 50%,
+    #ede9fe 75%,
+    #eff6ff 100%
+  );
+  background-size: 200% 200%;
+  animation: gradient-shift 12s ease infinite;
+}
+
+/* Card entrance animation */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.ghc-fade-up {
+  animation: fade-up 0.4s ease-out both;
+}
+
+/* Focus visible ring for keyboard users */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }

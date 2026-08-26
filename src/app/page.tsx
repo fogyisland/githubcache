@@ -14,40 +14,54 @@ export const metadata: Metadata = {
 export default async function HomePage() {
   const recent = await recentLookups(8);
   return (
-    <main className="mx-auto max-w-4xl px-4 py-12 sm:py-16">
-      <header className="mb-10 text-center">
-        <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-          GitHub Metadata Cache
-        </h1>
-        <p className="mt-3 text-base text-gray-600 sm:text-lg">
-          Submit an owner / repository, get fresh metadata in milliseconds.
-          Backed by a managed cache — no GitHub rate-limit pressure on your side.
-        </p>
-      </header>
+    <main>
+      {/* Hero */}
+      <section className="ghc-hero-gradient border-b border-slate-200/60">
+        <div className="mx-auto max-w-4xl px-4 py-16 text-center sm:py-20">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-blue-200/60 bg-white/70 px-3 py-1 text-xs font-medium text-blue-700 backdrop-blur">
+            <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+            Managed cache · per-IP rate-limited · open API
+          </div>
+          <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
+            GitHub Metadata Cache
+          </h1>
+          <p className="mx-auto mt-4 max-w-2xl text-base text-slate-600 sm:text-lg">
+            Submit an owner / repository, get fresh metadata in milliseconds.
+            Backed by a managed cache — no GitHub rate-limit pressure on your side.
+          </p>
+        </div>
+      </section>
 
-      <section aria-label="Look up a repository">
+      {/* Lookup form */}
+      <section className="mx-auto -mt-8 max-w-3xl px-4">
         <LookupForm />
       </section>
 
-      <section aria-label="Recent lookups" className="mt-12">
-        <h2 className="mb-4 text-lg font-semibold text-gray-900">Recent lookups</h2>
+      {/* Recent lookups */}
+      <section className="mx-auto mt-16 max-w-6xl px-4 pb-16">
+        <div className="mb-6 flex items-baseline justify-between">
+          <h2 className="text-xl font-semibold tracking-tight text-slate-900">Recent lookups</h2>
+          <span className="text-sm text-slate-500">{recent.length} cached</span>
+        </div>
         <RecentLookupsList repos={recent} />
       </section>
 
-      <footer className="mt-16 border-t border-gray-200 pt-6 text-center text-sm text-gray-500">
-        <p>
-          Need the raw API?{' '}
-          <a
-            href="/api/v1/status"
-            className="font-medium text-blue-600 hover:text-blue-800"
-          >
-            /api/v1/status
-          </a>{' '}
-          for health ·{' '}
-          <a href="/login" className="font-medium text-blue-600 hover:text-blue-800">
-            admin login
-          </a>
-        </p>
+      {/* Footer */}
+      <footer className="border-t border-slate-200 bg-white">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-6 text-sm text-slate-500">
+          <p>
+            Need the raw API?{' '}
+            <a href="/api/v1/status" className="ghc-link">
+              /api/v1/status
+            </a>{' '}
+            for health.
+          </p>
+          <p>
+            <a href="/login" className="ghc-link">
+              Admin login →
+            </a>
+          </p>
+        </div>
       </footer>
     </main>
   );

@@ -1,5 +1,13 @@
 import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import { SiteHeader } from './_components/site-header';
 import './globals.css';
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'GitHub Metadata Cache',
@@ -8,8 +16,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" className={inter.variable}>
+      <body className="min-h-screen bg-slate-50 font-sans text-slate-900 antialiased">
+        <SiteHeader />
+        {children}
+      </body>
     </html>
   );
 }
