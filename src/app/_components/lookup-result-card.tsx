@@ -8,6 +8,7 @@ import {
   formatDate,
   getDefaultBranch,
   getDescription,
+  getFetchStatusLabel,
   getForks,
   getHtmlUrl,
   getLanguage,
@@ -29,7 +30,7 @@ function CopyButton({ text }: { text: string }) {
           setTimeout(() => setCopied(false), 1500);
         });
       }}
-      className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-xs text-slate-500 transition-colors hover:bg-slate-200 hover:text-slate-700"
+      className="inline-flex items-center gap-1 px-1.5 py-0.5 font-mono text-xs text-[color:var(--color-ink-muted)] transition-colors hover:text-[color:var(--color-ink)]"
       aria-label={`Copy ${text}`}
     >
       {copied ? (
@@ -38,7 +39,7 @@ function CopyButton({ text }: { text: string }) {
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
             fill="currentColor"
-            className="h-3.5 w-3.5 text-green-600"
+            className="h-3.5 w-3.5 text-[color:var(--color-accent)]"
             aria-hidden="true"
           >
             <path
@@ -77,16 +78,22 @@ function CopyButton({ text }: { text: string }) {
 export function LookupResultCard({ result }: Props) {
   if (result.fetch_status === 'not_found') {
     return (
-      <div className="ghc-fade-up mt-5 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-        <span className="font-mono font-semibold">{result.canonical}</span> — {result.error}
+      <div className="ghc-fade-up mt-5 border border-[color:var(--color-rule)] px-4 py-3 text-sm text-[color:var(--color-ink-muted)]">
+        <span className="font-mono font-semibold">
+          <span className="ghc-status ghc-status-not_found">[404]</span> {result.canonical}
+        </span>{' '}
+        — {result.error}
       </div>
     );
   }
   // ResultOk is the only branch with `stale` discriminator; narrow on it.
   if (!('stale' in result)) {
     return (
-      <div className="ghc-fade-up mt-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-        <span className="font-mono font-semibold">{result.canonical}</span> — {result.error}
+      <div className="ghc-fade-up mt-5 border border-[color:var(--color-danger)] px-4 py-3 text-sm text-[color:var(--color-danger)]">
+        <span className="font-mono font-semibold">
+          <span className="ghc-status ghc-status-error">[ERR]</span> {result.canonical}
+        </span>{' '}
+        — {result.error}
       </div>
     );
   }
@@ -97,15 +104,16 @@ export function LookupResultCard({ result }: Props) {
   const language = getLanguage(meta);
   const defaultBranch = getDefaultBranch(meta);
   const lastFetchedAt = result.last_fetched_at;
+  const fetchStatus = getFetchStatusLabel(result);
   const [owner, repoName] = result.canonical.split('/');
   const ownerDecoded = decodeURIComponent(owner ?? '');
   const repoNameDecoded = decodeURIComponent(repoName ?? '');
   const htmlUrl = getHtmlUrl(ownerDecoded, repoNameDecoded);
 
   return (
-    <div className="ghc-fade-up mt-5 overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 shadow-sm">
+    <div className="ghc-fade-up ghc-card mt-5 overflow-hidden">
       {result.stale && (
-        <div className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-xs text-amber-800">
+        <div className="border-b border-[color:var(--color-warn)] bg-[color:var(--color-warn)]/10 px-4 py-2 text-xs text-[color:var(--color-warn)]">
           ⚠ {result.warning}
         </div>
       )}
@@ -113,12 +121,15 @@ export function LookupResultCard({ result }: Props) {
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <h3 className="truncate font-mono text-lg font-semibold text-slate-900">
+              <span className="ghc-status ghc-status-ok">[{fetchStatus}]</span>
+              <h3 className="ghc-display-name truncate text-[1.25rem]">
                 {result.canonical}
               </h3>
               <CopyButton text={result.canonical} />
             </div>
-            {description && <p className="mt-1.5 text-sm text-slate-700">{description}</p>}
+            {description && (
+              <p className="mt-1.5 text-sm text-[color:var(--color-ink-muted)]">{description}</p>
+            )}
           </div>
           <a
             href={htmlUrl}
@@ -141,17 +152,17 @@ export function LookupResultCard({ result }: Props) {
         </div>
 
         <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Stat label="Stars" value={formatCount(stars)} icon="★" />
-          <Stat label="Forks" value={formatCount(forks)} icon="⑂" />
+          <Stat label="Stars" value={formatCount(stars)} />
+          <Stat label="Forks" value={formatCount(forks)} />
           <Stat label="Language" value={language ?? '–'} />
           <Stat label="Default branch" value={defaultBranch ?? '–'} />
         </dl>
       </div>
 
-      <div className="flex items-center justify-between border-t border-slate-200 bg-white/60 px-5 py-2.5 text-xs text-slate-500">
+      <div className="flex items-center justify-between border-t border-[color:var(--color-rule)] px-5 py-2.5 text-xs text-[color:var(--color-ink-muted)]">
         <span>
           Last fetched{' '}
-          <time dateTime={formatDate(lastFetchedAt)} className="font-medium text-slate-700">
+          <time dateTime={formatDate(lastFetchedAt)} className="font-medium text-[color:var(--color-ink)]">
             {formatDate(lastFetchedAt)}
           </time>
         </span>
@@ -166,14 +177,11 @@ export function LookupResultCard({ result }: Props) {
   );
 }
 
-function Stat({ label, value, icon }: { label: string; value: string; icon?: string }) {
+function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2.5">
-      <div className="text-xs uppercase tracking-wide text-slate-500">{label}</div>
-      <div className="mt-0.5 flex items-baseline gap-1">
-        {icon && <span className="text-sm text-slate-400">{icon}</span>}
-        <span className="font-semibold text-slate-900">{value}</span>
-      </div>
+    <div className="ghc-stat">
+      <div className="ghc-eyebrow">{label}</div>
+      <div className="ghc-stat-number mt-0.5">{value}</div>
     </div>
   );
 }

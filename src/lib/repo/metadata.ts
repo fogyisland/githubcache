@@ -6,6 +6,8 @@
  * via the helpers below so they keep working when parseRepoResponse evolves.
  */
 
+import type { QueryResult } from '@/lib/cache/lookup';
+
 interface ParsedLicense {
   name?: unknown;
   spdx_id?: unknown;
@@ -120,6 +122,16 @@ export function getArchived(meta: unknown): boolean {
 
 export function getDisabled(meta: unknown): boolean {
   return asParsed(meta).disabled === true;
+}
+
+/**
+ * 3-letter label for a QueryResult — used by the [OK]/[404]/[ERR] badge
+ * in lookup-result-card (terminal theme signature element).
+ */
+export function getFetchStatusLabel(r: QueryResult): string {
+  if (r.fetch_status === 'not_found') return '404';
+  if (r.fetch_status === 'error') return 'ERR';
+  return 'OK';
 }
 
 export function getHtmlUrl(owner: string, name: string): string {

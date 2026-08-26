@@ -4,6 +4,8 @@ import Link from 'next/link';
 import type { ReactElement, ReactNode } from 'react';
 import { validateSession } from '@/lib/auth/session';
 import { LogoutButton } from '@/app/admin/logout-button';
+import { ThemeSwitcher } from '@/app/_components/theme-switcher';
+import { readThemeFromCookieHeader } from '@/lib/theme/cookie';
 
 /**
  * Layout for all /admin/* pages.
@@ -13,6 +15,9 @@ import { LogoutButton } from '@/app/admin/logout-button';
  * the full DB-backed `validateSession` (expiry, sliding renewal, user status)
  * and redirects to /login on failure. No CSRF check here — CSRF only applies
  * to state-changing API routes, not to GET page renders.
+ *
+ * Styling: admin chrome re-uses the theme tokens via `ghc-*` classes so the
+ * admin app picks up the same theme the operator chose on the public surface.
  */
 export default async function AdminLayout({
   children,
@@ -36,42 +41,58 @@ export default async function AdminLayout({
   const isAdmin = user.role === 'admin';
   const isAdminOrOperator = isAdmin || user.role === 'operator';
 
+  // Theme cookie for the admin chrome — admin pages are inside the same
+  // <html data-theme> as the public surface, so we just read the same value.
+  const headerStore = cookies();
+  const currentTheme = readThemeFromCookieHeader(headerStore.get('cookie')?.value ?? null);
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '1rem',
-          borderBottom: '1px solid #ccc',
-        }}
-      >
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <Link href="/admin">Dashboard</Link>
-          {isAdmin && <Link href="/admin/users">Users</Link>}
-          {isAdminOrOperator && (
-            // M7.2 ships this page — link target reserved
-            <Link href="/admin/api-keys">API Keys</Link>
+    <div>
+      <nav className="ghc-card flex flex-wrap items-center justify-between gap-2 border-x-0 border-t-0 rounded-none px-4 py-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/admin" className="ghc-btn-ghost">
+            Dashboard
+          </Link>
+          {isAdmin && (
+            <Link href="/admin/users" className="ghc-btn-ghost">
+              Users
+            </Link>
           )}
           {isAdminOrOperator && (
-            // M7.3 ships this page — link target reserved
-            <Link href="/admin/github-tokens">GitHub Tokens</Link>
+            <Link href="/admin/api-keys" className="ghc-btn-ghost">
+              API Keys
+            </Link>
+          )}
+          {isAdminOrOperator && (
+            <Link href="/admin/github-tokens" className="ghc-btn-ghost">
+              GitHub Tokens
+            </Link>
           )}
           {(user.role === 'admin' || user.role === 'operator') && (
-            <Link href="/admin/reports">Reports</Link>
+            <Link href="/admin/reports" className="ghc-btn-ghost">
+              Reports
+            </Link>
           )}
-          {user.role === 'admin' && <Link href="/admin/audit">Audit</Link>}
-          {user.role === 'admin' && <Link href="/admin/refresh">Refresh</Link>}
+          {user.role === 'admin' && (
+            <Link href="/admin/audit" className="ghc-btn-ghost">
+              Audit
+            </Link>
+          )}
+          {user.role === 'admin' && (
+            <Link href="/admin/refresh" className="ghc-btn-ghost">
+              Refresh
+            </Link>
+          )}
         </div>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <span>
+        <div className="flex items-center gap-2">
+          <ThemeSwitcher current={currentTheme} />
+          <span className="text-sm">
             {user.email} ({user.role})
           </span>
           <LogoutButton />
         </div>
       </nav>
-      <main style={{ padding: '1rem' }}>{children}</main>
+      <main className="p-4">{children}</main>
     </div>
   );
 }

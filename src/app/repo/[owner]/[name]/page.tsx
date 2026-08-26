@@ -98,47 +98,58 @@ function RepoOkView({
   return (
     <article className="ghc-fade-up">
       {/* Hero */}
-      <header className="ghc-hero-gradient border-b border-slate-200/60">
+      <header className="ghc-hero-gradient">
         <div className="mx-auto max-w-4xl px-4 py-10 sm:py-14">
-          <nav className="mb-4 text-sm text-slate-600">
-            <Link href="/" className="hover:text-slate-900">
+          <div className="ghc-masthead mb-3">
+            repository · cached metadata
+          </div>
+          <nav className="mb-4 text-sm">
+            <Link href="/" className="ghc-link">
               ← All repositories
             </Link>
           </nav>
           <div className="flex flex-wrap items-baseline justify-between gap-3">
-            <h1 className="font-mono text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-              {result.canonical}
-            </h1>
+            <h1 className="ghc-display-name">{result.canonical}</h1>
             <a
               href={htmlUrl}
               target="_blank"
               rel="noreferrer noopener"
-              className="ghc-btn-ghost border border-slate-200 bg-white/80 backdrop-blur"
+              className="ghc-btn-ghost"
             >
               <GitHubMarkIcon />
               View on GitHub
             </a>
           </div>
           {result.stale && result.warning && (
-            <div className="ghc-fade-up mt-4 inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            <div className="ghc-fade-up mt-4 inline-flex items-center gap-2 border border-[color:var(--color-warn)] px-3 py-2 text-sm text-[color:var(--color-warn)]">
               ⚠ {result.warning}
             </div>
           )}
-          {description && <p className="mt-3 max-w-3xl text-base text-slate-700">{description}</p>}
+          {description && (
+            <p className="mt-3 max-w-3xl text-base text-[color:var(--color-ink-muted)]">
+              {description}
+            </p>
+          )}
           <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
             {language && (
-              <span className="ghc-chip bg-blue-50 text-blue-700">
-                <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+              <span className="ghc-chip">
+                <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--color-accent)]" />
                 {language}
               </span>
             )}
-            {licenseName && (
-              <span className="ghc-chip bg-slate-100 text-slate-700">{licenseName}</span>
+            {licenseName && <span className="ghc-chip">{licenseName}</span>}
+            {archived && (
+              <span className="ghc-chip border-[color:var(--color-warn)] text-[color:var(--color-warn)]">
+                Archived
+              </span>
             )}
-            {archived && <span className="ghc-chip bg-amber-50 text-amber-700">Archived</span>}
-            {disabled && <span className="ghc-chip bg-rose-50 text-rose-700">Disabled</span>}
+            {disabled && (
+              <span className="ghc-chip border-[color:var(--color-danger)] text-[color:var(--color-danger)]">
+                Disabled
+              </span>
+            )}
             {topics.map((t) => (
-              <span key={t} className="ghc-chip bg-violet-50 text-violet-700">
+              <span key={t} className="ghc-chip">
                 {t}
               </span>
             ))}
@@ -148,10 +159,10 @@ function RepoOkView({
 
       {/* Stats grid */}
       <section className="mx-auto max-w-4xl px-4 py-8">
-        <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
-          <Stat label="Stars" value={formatCount(stars)} accent="amber" />
-          <Stat label="Forks" value={formatCount(forks)} accent="emerald" />
-          <Stat label="Watchers" value={formatCount(watchers)} accent="violet" />
+        <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+          <Stat label="Stars" value={formatCount(stars)} />
+          <Stat label="Forks" value={formatCount(forks)} />
+          <Stat label="Watchers" value={formatCount(watchers)} />
         </dl>
       </section>
 
@@ -159,13 +170,13 @@ function RepoOkView({
       <section className="mx-auto max-w-4xl px-4 pb-12">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="ghc-card p-5">
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+            <h2 className="mb-3 flex items-center gap-2 ghc-eyebrow">
               <MetaIcon d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776" />
               Repository
             </h2>
-            <dl className="mt-3 space-y-2.5 text-sm">
+            <dl className="space-y-2.5 text-sm">
               <Row label="Default branch" value={defaultBranch ?? '–'} />
-              <Row label="GitHub URL" value={htmlUrl} mono={false} />
+              <Row label="GitHub URL" value={htmlUrl} mono />
               {homepage && (
                 <Row
                   label="Homepage"
@@ -189,11 +200,11 @@ function RepoOkView({
             </dl>
           </div>
           <div className="ghc-card p-5">
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+            <h2 className="mb-3 flex items-center gap-2 ghc-eyebrow">
               <MetaIcon d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
               Activity
             </h2>
-            <dl className="mt-3 space-y-2.5 text-sm">
+            <dl className="space-y-2.5 text-sm">
               <Row label="Created" value={formatDate(createdAt)} />
               <Row label="Updated" value={formatDate(updatedAt)} />
               <Row label="Last push" value={formatDate(pushedAt)} />
@@ -202,13 +213,13 @@ function RepoOkView({
         </div>
       </section>
 
-      <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2 px-4 py-4 text-xs text-slate-500">
+      <footer className="border-t border-[color:var(--color-rule)]">
+        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2 px-4 py-4 text-xs text-[color:var(--color-ink-muted)]">
           <span>
             Last fetched:{' '}
             <time
               dateTime={result.last_fetched_at?.toISOString() ?? ''}
-              className="font-medium text-slate-700"
+              className="font-medium text-[color:var(--color-ink)]"
             >
               {result.last_fetched_at?.toISOString().slice(0, 16).replace('T', ' ') ?? '–'}
             </time>
@@ -222,25 +233,11 @@ function RepoOkView({
   );
 }
 
-function Stat({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: string;
-  accent: 'amber' | 'emerald' | 'violet' | 'rose';
-}) {
-  const accentMap: Record<string, string> = {
-    amber: 'text-amber-600',
-    emerald: 'text-emerald-600',
-    violet: 'text-violet-600',
-    rose: 'text-rose-600',
-  };
+function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="ghc-stat">
-      <dt className="text-xs uppercase tracking-wide text-slate-500">{label}</dt>
-      <dd className={`mt-1 text-3xl font-bold ${accentMap[accent] ?? 'text-slate-900'}`}>{value}</dd>
+      <div className="ghc-eyebrow">{label}</div>
+      <div className="ghc-stat-number mt-1">{value}</div>
     </div>
   );
 }
@@ -248,8 +245,10 @@ function Stat({
 function Row({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
-      <dt className="text-slate-500">{label}</dt>
-      <dd className={`text-right font-medium text-slate-900 ${mono ? 'font-mono text-xs' : ''}`}>
+      <dt className="text-[color:var(--color-ink-muted)]">{label}</dt>
+      <dd
+        className={`text-right font-medium ${mono ? 'font-mono text-xs' : ''}`}
+      >
         {value}
       </dd>
     </div>
@@ -266,14 +265,14 @@ export default async function RepoDetailPage({ params }: PageProps) {
   if (!('stale' in result)) {
     return (
       <main className="mx-auto max-w-3xl px-4 py-12">
-        <nav className="mb-4 text-sm text-slate-600">
-          <Link href="/" className="hover:text-slate-900">
+        <nav className="mb-4 text-sm">
+          <Link href="/" className="ghc-link">
             ← All repositories
           </Link>
         </nav>
-        <h1 className="font-mono text-2xl font-bold text-slate-900">{result.canonical}</h1>
+        <h1 className="ghc-display-name text-2xl">{result.canonical}</h1>
         <p
-          className="ghc-fade-up mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          className="ghc-fade-up mt-4 border border-[color:var(--color-danger)] px-4 py-3 text-sm text-[color:var(--color-danger)]"
           role="alert"
         >
           {result.error}

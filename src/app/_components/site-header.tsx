@@ -1,18 +1,27 @@
 import Link from 'next/link';
+import { headers } from 'next/headers';
+import { ThemeSwitcher } from '@/app/_components/theme-switcher';
+import { readThemeFromCookieHeader } from '@/lib/theme/cookie';
 
 /**
- * Top navigation bar. Sticky, light, with brand logo on the left and
- * status/admin links on the right. No client-side state — pure server
- * component.
+ * Top navigation bar. Sticky, theme-aware, with brand logo on the left,
+ * Status/Admin links + theme switcher on the right.
+ *
+ * Pure server component: reads the cookie via next/headers and passes the
+ * current theme id down to the (client) ThemeSwitcher so it can render the
+ * active pill.
  */
 export function SiteHeader() {
+  const headerStore = headers();
+  const currentTheme = readThemeFromCookieHeader(headerStore.get('cookie') ?? null);
+
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/70">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2 font-semibold text-slate-900">
+    <header className="ghc-site-header sticky top-0 z-40">
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-3 px-4">
+        <Link href="/" className="flex items-center gap-2 font-semibold">
           <span
             aria-hidden="true"
-            className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-sm"
+            className="flex h-7 w-7 items-center justify-center rounded-md bg-[var(--color-accent)] text-[var(--color-accent-ink)]"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -26,6 +35,7 @@ export function SiteHeader() {
           <span className="text-base">GitHub Metadata Cache</span>
         </Link>
         <nav className="flex items-center gap-1">
+          <ThemeSwitcher current={currentTheme} />
           <Link href="/api/v1/status" className="ghc-btn-ghost">
             Status
           </Link>

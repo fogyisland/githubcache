@@ -16,16 +16,16 @@ export default async function HomePage() {
   return (
     <main>
       {/* Hero */}
-      <section className="ghc-hero-gradient border-b border-slate-200/60">
+      <section className="ghc-hero-gradient">
         <div className="mx-auto max-w-4xl px-4 py-16 text-center sm:py-20">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-blue-200/60 bg-white/70 px-3 py-1 text-xs font-medium text-blue-700 backdrop-blur">
-            <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+          <div className="ghc-eyebrow mb-4 inline-flex items-center gap-2 px-3 py-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-accent)]" />
             Managed cache · per-IP rate-limited · open API
           </div>
-          <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
+          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
             GitHub Metadata Cache
           </h1>
-          <p className="mx-auto mt-4 max-w-2xl text-base text-slate-600 sm:text-lg">
+          <p className="mx-auto mt-4 max-w-2xl text-base text-[color:var(--color-ink-muted)] sm:text-lg">
             Submit an owner / repository, get fresh metadata in milliseconds.
             Backed by a managed cache — no GitHub rate-limit pressure on your side.
           </p>
@@ -40,15 +40,17 @@ export default async function HomePage() {
       {/* Recent lookups */}
       <section className="mx-auto mt-16 max-w-6xl px-4 pb-16">
         <div className="mb-6 flex items-baseline justify-between">
-          <h2 className="text-xl font-semibold tracking-tight text-slate-900">Recent lookups</h2>
-          <span className="text-sm text-slate-500">{recent.length} cached</span>
+          <h2 className="text-xl font-semibold tracking-tight">Recent lookups</h2>
+          <span className="text-sm text-[color:var(--color-ink-muted)]">
+            {recent.length} cached
+          </span>
         </div>
         <RecentLookupsList repos={recent} />
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-6 text-sm text-slate-500">
+      <footer className="border-t border-[color:var(--color-rule)]">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-6 text-sm text-[color:var(--color-ink-muted)]">
           <p>
             Need the raw API?{' '}
             <a href="/api/v1/status" className="ghc-link">

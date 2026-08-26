@@ -91,6 +91,72 @@ None. All M9 features are additive. `/api/query` refactored to use
 
 ---
 
+## [m10-three-themes] — 2026-08-26
+
+**Three opinionated visual themes + live switcher.** Replaces the single M9
+CSS with three distinct, deliberately-designed themes that any visitor (or
+admin) can switch between. Cookie-persisted for anon visitors, DB-persisted
+on `users.theme` for logged-in users. No flash — the server reads the cookie
+in the layout pass and sets `data-theme="<id>"` before paint.
+
+### Themes
+
+| ID | Mood | Palette anchor | Display | Body | Mono |
+|---|---|---|---|---|---|
+| `terminal` | Late-night dev / shell session | signal green `#7EE787` on near-black `#0A0E0A` | JetBrains Mono | JetBrains Mono | JetBrains Mono |
+| `editorial` | Technical journal, light paper | NYT-style red `#B73E3E` on cream `#FBFAF6` | Fraunces (serif, italic) | IBM Plex Sans | IBM Plex Mono |
+| `brutalist` | Bold geometric, oversized numerals | electric blue `#0033FF` on paper white | Space Grotesk 700 | Inter | JetBrains Mono |
+
+Editorial uses the serif *only* on the detail-page repo name (single accent
+on each page). Brutalist bumps stat numerals to `clamp(3.5rem, 7vw, 6.5rem)`.
+
+### Added
+
+- `Theme` Prisma enum + `users.theme` column (`m10_user_theme` migration).
+  Default = `terminal`.
+- `src/lib/theme/themes.ts` — single source of truth: `THEME_IDS`, `THEMES`
+  metadata (label / blurb / mood / font tokens), `isThemeId`, `resolveTheme`.
+- `src/lib/theme/cookie.ts` — `readThemeFromCookieHeader`, `readThemeFromRequest`,
+  `buildThemeSetCookie`. Validates against registry, falls back to default.
+- `src/app/_actions/theme.ts` — `setThemeAction` server action. Always sets
+  the cookie; if the viewer is logged in, also persists `users.theme` so the
+  preference follows them across devices. `revalidatePath('/', 'layout')`
+  for instant repaint.
+- `src/app/_components/theme-switcher.tsx` — three pill buttons (T / E / B)
+  with `aria-pressed` reflecting current theme. Uses `useFormState` +
+  `useFormStatus` for pending state.
+- Embedded in `<SiteHeader />` (visible to every visitor, top-right) and in
+  the admin layout chrome.
+- New theme-attribute CSS layer in `globals.css` with three token sets
+  (`--color-bg`, `--color-accent`, `--font-display`, `--font-serif`, etc.)
+  plus per-theme overrides for `ghc-display-headline`, `ghc-display-name`,
+  `ghc-stat-number`. Component classes (`ghc-card`, `ghc-btn-primary`,
+  `ghc-link`, `ghc-chip`, `ghc-input`) read from variables — one-attr change.
+- New `ghc-status` chip + `[OK]/[404]/[ERR]` prefix on result cards (terminal
+  signature), `ghc-prompt` + blinking cursor (terminal hero), `ghc-rule` /
+  `ghc-eyebrow` / `ghc-masthead` (editorial density), `ghc-mega-stat` /
+  `ghc-block-accent` (brutalist scale), `ghc-theme-row` / `ghc-theme-pill`
+  (switcher UI itself).
+
+### Migration
+
+- `npx prisma migrate deploy` to apply `m10_user_theme`. New `users.theme`
+  column defaults to `terminal` for existing rows.
+
+### Stats
+
+- 12 commits, 8 new files, 6 modified
+- 17 new theme unit tests (`tests/unit/theme.test.ts`)
+- 232 vitest tests total (offline-compatible suite)
+
+### Breaking changes
+
+None. The previous M9 polish CSS is replaced wholesale; component class
+names (`ghc-card`, `ghc-btn-primary`, etc.) remain so no callers needed
+updates.
+
+---
+
 ## [m8-prod-ready] — 2026-08-26
 
 **Deployment + Observability.** Production-ready observability surface, durable rate-limit,

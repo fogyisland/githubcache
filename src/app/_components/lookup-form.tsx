@@ -18,7 +18,7 @@ export function LookupForm() {
         aria-label="Look up a GitHub repository"
       >
         <label className="flex flex-1 flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-700">Owner</span>
+          <span className="ghc-eyebrow">Owner</span>
           <input
             type="text"
             name="owner"
@@ -30,7 +30,7 @@ export function LookupForm() {
           />
         </label>
         <label className="flex flex-1 flex-col gap-1.5">
-          <span className="text-sm font-medium text-slate-700">Repository</span>
+          <span className="ghc-eyebrow">Repository</span>
           <input
             type="text"
             name="name"
@@ -49,7 +49,7 @@ export function LookupForm() {
       {state.status === 'invalid' && (
         <div
           role="alert"
-          className="ghc-fade-up mt-5 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700"
+          className="ghc-fade-up mt-5 flex items-start gap-2 border border-[color:var(--color-danger)] px-3 py-2.5 text-sm text-[color:var(--color-danger)]"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -70,7 +70,7 @@ export function LookupForm() {
       {state.status === 'rate_limited' && (
         <div
           role="alert"
-          className="ghc-fade-up mt-5 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800"
+          className="ghc-fade-up mt-5 flex items-start gap-2 border border-[color:var(--color-warn)] px-3 py-2.5 text-sm text-[color:var(--color-warn)]"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -91,7 +91,7 @@ export function LookupForm() {
       {state.status === 'error' && (
         <div
           role="alert"
-          className="ghc-fade-up mt-5 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700"
+          className="ghc-fade-up mt-5 flex items-start gap-2 border border-[color:var(--color-danger)] px-3 py-2.5 text-sm text-[color:var(--color-danger)]"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

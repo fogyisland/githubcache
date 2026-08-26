@@ -40,6 +40,7 @@ model User {
   status       UserStatus @default(active) @map("user_status")
   createdAt    DateTime   @default(now()) @map("created_at")
   lastLoginAt  DateTime?  @map("last_login_at")
+  theme        Theme      @default(terminal)
 
   apiKeys      ApiKey[]    @relation("owner")
   approvedKeys ApiKey[]    @relation("approver")
@@ -57,6 +58,15 @@ enum Role {
 enum UserStatus {
   active
   disabled
+}
+
+// Visual theme preference for the public surface. Persisted on User; also
+// mirrored to a non-HTTP-only cookie (see src/lib/theme/cookie.ts) so the
+// SSR pass can apply `data-theme="<id>"` before the page paints.
+enum Theme {
+  terminal
+  editorial
+  brutalist
 }
 
 model ApiKey {
