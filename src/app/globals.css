@@ -627,6 +627,126 @@ a {
     margin-top: 0.375rem;
   }
 
+  /* Admin table + filter bar (M11.4) — generic typed table with empty /
+     loading / pagination states, plus URL-synced filter form. */
+
+  .ghc-admin-table-wrap {
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    overflow: hidden;
+  }
+  .ghc-admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+  .ghc-admin-table thead th {
+    font-family: var(--font-mono-active);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-ink-muted);
+    text-align: left;
+    padding: 0.625rem 1rem;
+    border-bottom: 1px solid var(--color-rule);
+    background: var(--color-surface-2);
+  }
+  .ghc-admin-table tbody td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--color-rule);
+    color: var(--color-ink);
+    vertical-align: middle;
+  }
+  .ghc-admin-table tbody tr:last-child td { border-bottom: 0; }
+  .ghc-admin-table-row:hover td { background: var(--color-surface-2); }
+  .ghc-admin-table-row-link { cursor: pointer; }
+  .ghc-admin-table-row-link:hover td { background: var(--color-surface-2); }
+  .ghc-admin-table-link {
+    color: var(--color-accent);
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .ghc-admin-table-link:hover { text-decoration: underline; }
+
+  .ghc-admin-table td.text-right,
+  .ghc-admin-table th.text-right {
+    text-align: right;
+  }
+
+  .ghc-admin-skeleton-row td { padding: 0.75rem 1rem; }
+  .ghc-admin-skeleton {
+    display: block;
+    height: 1rem;
+    background: var(--color-surface-2);
+    border-radius: var(--radius-button);
+    animation: ghc-admin-pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes ghc-admin-pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 0.3; }
+  }
+
+  .ghc-admin-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--color-rule);
+    background: var(--color-surface-2);
+  }
+  .ghc-admin-pagination-range {
+    font-family: var(--font-mono-active);
+    font-size: 0.75rem;
+    color: var(--color-ink-muted);
+  }
+  .ghc-admin-pagination-links {
+    display: inline-flex;
+    gap: 0.5rem;
+  }
+  .ghc-btn-ghost.is-disabled {
+    opacity: 0.4;
+    pointer-events: none;
+    cursor: not-allowed;
+  }
+
+  .ghc-admin-filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+  }
+  .ghc-admin-filter-label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 8rem;
+  }
+  .ghc-admin-filter-text {
+    font-family: var(--font-mono-active);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-ink-muted);
+  }
+  .ghc-admin-filter-select {
+    appearance: none;
+    background: var(--color-bg);
+    color: var(--color-ink);
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-button);
+    padding: 0.375rem 0.625rem;
+    font-size: 0.875rem;
+    line-height: 1.25;
+  }
+
   /* Status code chip — terminal signature element */
   .ghc-status {
     display: inline-flex;
