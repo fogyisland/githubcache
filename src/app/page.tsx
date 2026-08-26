@@ -2,6 +2,9 @@ import type { Metadata } from 'next';
 import { recentLookups } from '@/lib/db/repositories';
 import { LookupForm } from './_components/lookup-form';
 import { RecentLookupsList } from './_components/recent-lookups-list';
+import { StatsBar } from './_components/stats-bar';
+import { FeaturesSection } from './_components/features-section';
+import { HowItWorks } from './_components/how-it-works';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,6 +38,21 @@ export default async function HomePage() {
       {/* Lookup form */}
       <section className="mx-auto -mt-8 max-w-3xl px-4">
         <LookupForm />
+      </section>
+
+      {/* Stats bar — live counts from /api/v1/status, animated on mount. */}
+      <section className="mx-auto mt-12 max-w-6xl px-4">
+        <StatsBar />
+      </section>
+
+      {/* Features — 3-up grid (Instant / Cached / Rate-limited + API). */}
+      <section className="mx-auto mt-16 max-w-6xl px-4">
+        <FeaturesSection />
+      </section>
+
+      {/* How it works — 3 numbered steps with inline SVG diagrams. */}
+      <section className="mx-auto mt-16 max-w-6xl px-4">
+        <HowItWorks />
       </section>
 
       {/* Recent lookups */}
