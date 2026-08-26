@@ -1,27 +1,69 @@
 import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
-import Link from 'next/link';
+import { cookies, headers } from 'next/headers';
 import type { ReactElement, ReactNode } from 'react';
 import { validateSession } from '@/lib/auth/session';
 import { LogoutButton } from '@/app/admin/logout-button';
 import { ThemeSwitcher } from '@/app/_components/theme-switcher';
 import { AdminVariantSwitcher } from '@/app/_components/admin-variant-switcher';
-import { readThemeFromCookieHeader } from '@/lib/theme/cookie';
-import { readAdminVariantFromCookieHeader } from '@/lib/admin/cookie';
+import {
+  DEFAULT_THEME,
+  isThemeId,
+  type ThemeId,
+} from '@/lib/theme/themes';
+import { THEME_COOKIE } from '@/lib/theme/cookie';
+import {
+  ADMIN_VARIANT_COOKIE,
+} from '@/lib/admin/cookie';
+import {
+  isAdminVariant,
+  DEFAULT_ADMIN_VARIANT,
+  type AdminVariantId,
+} from '@/lib/admin/variant';
+import { AdminShell } from '@/app/admin/_components/admin-shell';
+import { CommandPalette } from '@/app/admin/_components/command-palette';
+import {
+  ADMIN_SECTIONS,
+  type AdminSectionSlug,
+} from '@/app/admin/_components/admin-sidebar';
+import { prisma } from '@/lib/db/client';
+import { isPaused } from '@/lib/scheduler/state';
+import { queryAuditLog, getActorEmails } from '@/lib/db/audit';
+import type { AdminStatusBarData } from '@/app/admin/_components/admin-status-bar';
+import type { PaletteData } from '@/app/admin/_components/command-palette';
+
+/**
+ * Map a request pathname to the matching sidebar slug. Returns
+ * 'dashboard' as the fallback for any unrecognised admin path.
+ */
+function sectionForPath(pathname: string): AdminSectionSlug {
+  if (pathname === '/admin' || pathname === '/admin/') return 'dashboard';
+  // Order matters — more specific slugs first.
+  const matches = ADMIN_SECTIONS.filter((s) => s.slug !== 'dashboard');
+  for (const s of matches) {
+    if (pathname === s.href || pathname.startsWith(`${s.href}/`)) return s.slug;
+  }
+  return 'dashboard';
+}
 
 /**
  * Layout for all /admin/* pages.
  *
- * Auth: the Edge middleware already redirects to /login when the session
- * cookie is absent, but that is only a cookie-presence check. This layout does
- * the full DB-backed `validateSession` (expiry, sliding renewal, user status)
- * and redirects to /login on failure. No CSRF check here — CSRF only applies
- * to state-changing API routes, not to GET page renders.
+ * Auth: middleware already redirects to /login on missing session cookie,
+ * but that is only a cookie-presence check. This layout performs the
+ * full DB-backed `validateSession` (expiry, sliding renewal, user
+ * status) and redirects on failure. No CSRF check here — CSRF only
+ * applies to state-changing API routes, not to GET page renders.
  *
- * Styling: admin chrome re-uses the theme tokens via `ghc-*` classes so the
- * admin app picks up the same theme the operator chose on the public surface.
- * M11 adds the admin variant switcher (mission_control / inspector / workbench);
- * the actual `[data-admin]` chrome lands in M11.6.
+ * M11 wiring:
+ *  - <AdminShell> wraps page children with the role-gated sidebar +
+ *    variant-specific chrome + (mission_control only) status bar.
+ *  - <CommandPalette> mounts once at layout root; SSR-prefetched with
+ *    palette data so first paint has results.
+ *  - Status-bar data is also SSR-prefetched (DB ping, queue depth,
+ *    scheduler state) so the bar renders without a flash before its
+ *    client poll kicks in.
+ *  - Active sidebar section is derived from the pathname header set
+ *    by middleware.
  */
 export default async function AdminLayout({
   children,
@@ -42,64 +84,89 @@ export default async function AdminLayout({
     redirect('/login');
   }
 
-  const isAdmin = user.role === 'admin';
-  const isAdminOrOperator = isAdmin || user.role === 'operator';
+  const currentTheme: ThemeId = isThemeId(cookieStore.get(THEME_COOKIE)?.value)
+    ? (cookieStore.get(THEME_COOKIE)!.value as ThemeId)
+    : DEFAULT_THEME;
+  const currentAdminVariant: AdminVariantId = isAdminVariant(
+    cookieStore.get(ADMIN_VARIANT_COOKIE)?.value,
+  )
+    ? (cookieStore.get(ADMIN_VARIANT_COOKIE)!.value as AdminVariantId)
+    : DEFAULT_ADMIN_VARIANT;
 
-  // Theme cookie for the admin chrome — admin pages are inside the same
-  // <html data-theme> as the public surface, so we just read the same value.
-  const currentTheme = readThemeFromCookieHeader(cookieStore.get('cookie')?.value ?? null);
-  const currentAdminVariant = readAdminVariantFromCookieHeader(
-    cookieStore.get('cookie')?.value ?? null,
+  // Pathname header set by middleware (so the server component knows the
+  // active route without a client roundtrip).
+  const headerStore = headers();
+  const pathname = headerStore.get('x-pathname') ?? '/admin';
+  const currentSection = sectionForPath(pathname);
+
+  // Prefetch status-bar + palette data in parallel.
+  const [pingStart, paletteAudit] = await Promise.all([
+    Promise.resolve(Date.now()).then((t) => ({ start: t })),
+    queryAuditLog({ limit: 5, offset: 0 }),
+  ]);
+  await prisma.$queryRaw`SELECT 1`;
+  const dbPingMs = Date.now() - pingStart.start;
+
+  const [queueDepth, recentAuditCount] = await Promise.all([
+    prisma.refreshJob.count({ where: { status: 'pending' } }),
+    prisma.auditLog.count({
+      where: { createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
+    }),
+  ]);
+
+  const initialStatus: AdminStatusBarData = {
+    dbPingMs,
+    queueDepth,
+    schedulerState: isPaused() ? 'PAUSED' : 'RUNNING',
+    recentAuditCount,
+    user: { email: user.email, role: user.role },
+    variant: currentAdminVariant,
+    fetchedAt: new Date().toISOString(),
+  };
+
+  const actorIds = [
+    ...new Set(
+      paletteAudit.rows
+        .map((r) => r.actorUserId)
+        .filter((id): id is bigint => id !== null),
+    ),
+  ];
+  const actorEmails = await getActorEmails(actorIds);
+
+  const paletteSections = ADMIN_SECTIONS.filter((s) => s.roles.includes(user.role)).map(
+    (s) => ({ slug: s.slug, title: s.title, icon: s.icon, href: s.href }),
   );
+  const paletteData: PaletteData = {
+    sections: paletteSections,
+    recentAudit: paletteAudit.rows.map((r) => ({
+      id: r.id.toString(),
+      action: r.action,
+      actor: r.actorUserId ? (actorEmails.get(r.actorUserId) ?? null) : null,
+      createdAt: r.createdAt.toISOString(),
+    })),
+  };
 
   return (
-    <div data-admin={currentAdminVariant}>
-      <nav className="ghc-card flex flex-wrap items-center justify-between gap-2 border-x-0 border-t-0 rounded-none px-4 py-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <Link href="/admin" className="ghc-btn-ghost">
-            Dashboard
-          </Link>
-          {isAdmin && (
-            <Link href="/admin/users" className="ghc-btn-ghost">
-              Users
-            </Link>
-          )}
-          {isAdminOrOperator && (
-            <Link href="/admin/api-keys" className="ghc-btn-ghost">
-              API Keys
-            </Link>
-          )}
-          {isAdminOrOperator && (
-            <Link href="/admin/github-tokens" className="ghc-btn-ghost">
-              GitHub Tokens
-            </Link>
-          )}
-          {(user.role === 'admin' || user.role === 'operator') && (
-            <Link href="/admin/reports" className="ghc-btn-ghost">
-              Reports
-            </Link>
-          )}
-          {user.role === 'admin' && (
-            <Link href="/admin/audit" className="ghc-btn-ghost">
-              Audit
-            </Link>
-          )}
-          {user.role === 'admin' && (
-            <Link href="/admin/refresh" className="ghc-btn-ghost">
-              Refresh
-            </Link>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <AdminVariantSwitcher current={currentAdminVariant} />
-          <ThemeSwitcher current={currentTheme} />
-          <span className="text-sm">
-            {user.email} ({user.role})
-          </span>
-          <LogoutButton />
-        </div>
-      </nav>
-      <main className="p-4">{children}</main>
+    <div>
+      {/* Top utility bar (theme switcher + variant switcher + logout) — kept
+          outside AdminShell so it stays on top across all variants. */}
+      <div className="ghc-admin-utility">
+        <span className="text-sm">
+          {user.email} ({user.role})
+        </span>
+        <AdminVariantSwitcher current={currentAdminVariant} />
+        <ThemeSwitcher current={currentTheme} />
+        <LogoutButton />
+      </div>
+      <AdminShell
+        current={currentSection}
+        variant={currentAdminVariant}
+        user={{ email: user.email, role: user.role }}
+        initialStatus={initialStatus}
+      >
+        {children}
+      </AdminShell>
+      <CommandPalette data={paletteData} />
     </div>
   );
 }

@@ -973,6 +973,20 @@ a {
     min-height: calc(100vh - 0px);
   }
 
+  /* Utility bar (top-right) — theme + variant switcher + logout. Lives above
+     AdminShell so the chrome (sidebar/status bar) sits flush below it. */
+  .ghc-admin-utility {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--color-rule);
+    background: var(--color-surface-2);
+    font-size: 0.875rem;
+    color: var(--color-ink);
+  }
+
   .ghc-admin-sidebar {
     width: 240px;
     flex-shrink: 0;

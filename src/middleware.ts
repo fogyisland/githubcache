@@ -36,7 +36,11 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     }
     // Cookie exists — let the page render. Page-level validation will
     // do the DB lookup and handle expired/forged cookies.
-    return NextResponse.next();
+    const res = NextResponse.next();
+    // Expose pathname to server components (used by admin layout to
+    // highlight the active sidebar section).
+    res.headers.set('x-pathname', path);
+    return res;
   }
 
   // API-level CSRF: block non-GET /api/admin/* without valid CSRF
