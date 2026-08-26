@@ -492,6 +492,141 @@ a {
     color: var(--color-ink);
   }
 
+  /* Admin atom components (M11.3) — chip, empty, page-header, kpi-card.
+     All read from theme tokens; per-variant chrome (mission_control / inspector
+     / workbench) overrides land in M11.6. */
+
+  .ghc-admin-chip {
+    display: inline-flex;
+    align-items: center;
+    font-family: var(--font-mono-active);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    padding: 0.125rem 0.5rem;
+    border-radius: var(--radius-button);
+    border: 1px solid var(--color-rule);
+    color: var(--color-ink-muted);
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+  .ghc-admin-chip-ok { color: var(--color-accent); border-color: var(--color-accent); }
+  .ghc-admin-chip-warn { color: var(--color-warn); border-color: var(--color-warn); }
+  .ghc-admin-chip-danger { color: var(--color-danger); border-color: var(--color-danger); }
+  .ghc-admin-chip-info { color: var(--color-accent); border-color: var(--color-rule); }
+  .ghc-admin-chip-neutral { color: var(--color-ink-muted); }
+
+  .ghc-admin-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 3rem 1.5rem;
+    border: 1px dashed var(--color-rule);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+  }
+  .ghc-admin-empty-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+    color: var(--color-ink-muted);
+    margin-bottom: 0.75rem;
+  }
+  .ghc-admin-empty-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-ink);
+    margin: 0 0 0.25rem;
+  }
+  .ghc-admin-empty-desc {
+    font-size: 0.875rem;
+    color: var(--color-ink-muted);
+    margin: 0 0 1rem;
+    max-width: 28rem;
+  }
+  .ghc-admin-empty-action { margin-top: 0.5rem; }
+
+  .ghc-admin-page-header {
+    margin-bottom: 1.5rem;
+  }
+  .ghc-admin-breadcrumb {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+    font-family: var(--font-mono-active);
+    font-size: 0.75rem;
+    color: var(--color-ink-muted);
+    margin-bottom: 0.5rem;
+  }
+  .ghc-admin-breadcrumb-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+  }
+  .ghc-admin-breadcrumb-sep {
+    color: var(--color-rule);
+    user-select: none;
+  }
+  .ghc-admin-page-header-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .ghc-admin-page-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-ink);
+    margin: 0;
+    line-height: 1.2;
+  }
+  .ghc-admin-page-desc {
+    font-size: 0.875rem;
+    color: var(--color-ink-muted);
+    margin: 0.25rem 0 0;
+    max-width: 42rem;
+  }
+  .ghc-admin-page-actions {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .ghc-admin-kpi {
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    padding: 1rem 1.25rem;
+  }
+  .ghc-admin-kpi-label {
+    font-family: var(--font-mono-active);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-ink-muted);
+  }
+  .ghc-admin-kpi-value {
+    font-family: var(--font-mono-active);
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--color-ink);
+    line-height: 1.1;
+    margin-top: 0.375rem;
+  }
+  .ghc-admin-kpi-value.tone-positive { color: var(--color-accent); }
+  .ghc-admin-kpi-value.tone-negative { color: var(--color-danger); }
+  .ghc-admin-kpi-hint {
+    font-size: 0.75rem;
+    color: var(--color-ink-muted);
+    margin-top: 0.375rem;
+  }
+
   /* Status code chip — terminal signature element */
   .ghc-status {
     display: inline-flex;

@@ -7,10 +7,13 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  esbuild: {
+    jsx: 'automatic',
+  },
   test: {
     globals: false,
     environment: 'node',
-    include: ['tests/**/*.test.ts'],
+    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
     setupFiles: ['./tests/setup.ts'],
     // Live MySQL is shared across tests. The scheduler/refresh tests queue
     // jobs into the shared refresh_jobs table, and other tests' beforeEach
