@@ -16,6 +16,13 @@ const schema = z.object({
   SCHEDULER_TICK_MS: z.coerce.number().int().positive().default(60_000),
   NIGHTLY_SWEEP_INTERVAL_MS: z.coerce.number().int().positive().default(24 * 60 * 60_000),
   SCHEDULER_ENABLED: z.coerce.boolean().default(true),
+  // Per-IP rate limit for the public lookup form (no X-API-Key required).
+  // Protects the GitHub token pool from anonymous abuse.
+  PUBLIC_LOOKUP_RATE_PER_MIN: z.coerce.number().int().positive().default(30),
+  // When behind a proxy / load balancer, trust X-Forwarded-For for the
+  // client IP used in per-IP rate-limit + audit logs. Set to 1 only when
+  // the upstream proxy strips/sets client IP correctly.
+  TRUST_PROXY: z.coerce.boolean().default(false),
 });
 
 export const env = schema.parse(process.env);
