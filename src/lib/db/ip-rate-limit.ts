@@ -1,54 +1,71 @@
 import { prisma } from '@/lib/db/client';
 import { windowStartFor, retryAfterSeconds } from '@/lib/db/rate-limit';
 
+/** Detect MySQL Error 1213 (deadlock) on a thrown error. */
+function isDeadlock(e: unknown): boolean {
+  if (!e || typeof e !== 'object') return false;
+  const meta = (e as { meta?: { code?: string; message?: string } }).meta;
+  if (!meta) return false;
+  return meta.code === '1213' || String(meta.message ?? '').includes('Deadlock');
+}
+
+async function withDeadlockRetry<T>(
+  fn: () => Promise<T>,
+  maxAttempts = 5,
+): Promise<T> {
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (e: unknown) {
+      if (!isDeadlock(e) || attempt === maxAttempts) {
+        throw e;
+      }
+      lastErr = e;
+      const ms = Math.floor(Math.random() * 20 * attempt);
+      await new Promise((r) => setTimeout(r, ms));
+    }
+  }
+  throw lastErr;
+}
+
 /**
- * Atomic increment of the per-IP rate-limit bucket. Same semantics as
- * incrementBucket (M8.1) but keyed by client IP instead of apiKeyId. Used
- * by the public lookup form where callers do not bring an X-API-Key.
- *
- * Fixed 60-second window aligned to wall-clock minute boundaries. Returns
- * the count AFTER increment.
- *
- * Uses SELECT ... FOR UPDATE inside a prisma.$transaction so concurrent
- * requests from the same IP are serialized per row. Works on MySQL 5.7+
- * (no SKIP LOCKED).
+ * Atomic increment of the per-IP rate-limit bucket. See incrementBucket
+ * (rate-limit.ts) for the full single-statement-upsert + same-connection
+ * read concurrency model.
  */
 export async function incrementIpBucket(ip: string, windowStart: Date): Promise<number> {
-  return prisma.$transaction(async (tx) => {
-    const rows = await tx.$queryRaw<Array<{ count: number; window_start: Date }>>`
-      SELECT count, window_start
-      FROM ip_rate_limit_buckets
-      WHERE ip = ${ip}
-      FOR UPDATE
-    `;
-    const existing = rows[0];
-    if (!existing) {
-      // First request from this IP — insert and return count=1
-      const now = new Date();
-      await tx.$executeRaw`
-        INSERT INTO ip_rate_limit_buckets (ip, window_start, count, created_at, updated_at)
-        VALUES (${ip}, ${windowStart}, 1, ${now}, ${now})
-      `;
-      return 1;
-    }
-    const now = new Date();
-    if (existing.window_start.getTime() === windowStart.getTime()) {
-      // Same window — increment
-      await tx.$executeRaw`
-        UPDATE ip_rate_limit_buckets
-        SET count = count + 1, updated_at = ${now}
-        WHERE ip = ${ip}
-      `;
-      return existing.count + 1;
-    }
-    // New window — reset count to 1 and update window_start
-    await tx.$executeRaw`
-      UPDATE ip_rate_limit_buckets
-      SET count = 1, window_start = ${windowStart}, updated_at = ${now}
-      WHERE ip = ${ip}
-    `;
-    return 1;
-  });
+  return withDeadlockRetry(() =>
+    prisma.$transaction(
+      async (tx) => {
+        const now = new Date();
+        await tx.$executeRaw`
+          INSERT INTO ip_rate_limit_buckets
+            (ip, window_start, count, created_at, updated_at)
+          VALUES
+            (${ip}, ${windowStart}, 1, ${now}, ${now})
+          ON DUPLICATE KEY UPDATE
+            count = IF(window_start = VALUES(window_start), count + 1, 1),
+            window_start = VALUES(window_start),
+            updated_at = VALUES(updated_at)
+        `;
+        const rows = await tx.$queryRaw<Array<{ count: number }>>`
+          SELECT count FROM ip_rate_limit_buckets WHERE ip = ${ip}
+        `;
+        const row = rows[0];
+        if (!row) {
+          throw new Error(
+            `ip_rate_limit_buckets row missing for ip=${ip} after upsert`,
+          );
+        }
+        return row.count;
+      },
+      {
+        maxWait: 30_000,
+        timeout: 30_000,
+      },
+    ),
+  );
 }
 
 /**
