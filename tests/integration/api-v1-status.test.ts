@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
-import type { PrismaClient } from '@prisma/client';
 import { GET } from '@/app/api/v1/status/route';
 import { prisma } from '@/lib/db/client';
 
@@ -364,7 +363,3 @@ describe('GET /api/v1/status — full endpoint', () => {
     }
   });
 });
-
-// Type assertion to keep PrismaClient imported (needed for vi.spyOn inference).
-const _typeAssert: PrismaClient | undefined = undefined;
-void _typeAssert;

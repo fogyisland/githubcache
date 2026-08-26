@@ -49,12 +49,22 @@ export async function GET(): Promise<Response> {
     return NextResponse.json(body, { status: 503 });
   }
 
-  const [repoGroups, queueGroups, tokens] = await Promise.all([
+  const [repoGroups, queueGroups, tokens, doneLast24h] = await Promise.all([
     prisma.repository.groupBy({ by: ['fetchStatus'], _count: true }),
     prisma.refreshJob.groupBy({ by: ['status'], _count: true }),
     prisma.githubToken.findMany({
       where: { status: 'active' },
       select: { requestsUsed: true, requestsLimit: true, resetAt: true },
+    }),
+    // The brief asked for `done (last 24h)` — schema has no `completedAt`, so
+    // we filter on `updatedAt` which Prisma auto-bumps on every save. `done`
+    // rows are terminal: they're set to `done` once and never touched again,
+    // so `updatedAt` reflects the moment of completion.
+    prisma.refreshJob.count({
+      where: {
+        status: 'done',
+        updatedAt: { gte: new Date(Date.now() - 24 * 60 * 60_000) },
+      },
     }),
   ]);
 
@@ -62,15 +72,6 @@ export async function GET(): Promise<Response> {
     repoGroups.find((g) => g.fetchStatus === s)?._count ?? 0;
   const queueCount = (s: string): number =>
     queueGroups.find((g) => g.status === s)?._count ?? 0;
-
-  // The brief asked for `done (last 24h)` — schema has no `completedAt`, so
-  // we filter on `updatedAt` which Prisma auto-bumps on every save. `done`
-  // rows are terminal: they're set to `done` once and never touched again,
-  // so `updatedAt` reflects the moment of completion.
-  const dayAgo = new Date(Date.now() - 24 * 60 * 60_000);
-  const doneLast24h = await prisma.refreshJob.count({
-    where: { status: 'done', updatedAt: { gte: dayAgo } },
-  });
 
   const now = Date.now();
   const exhausted = tokens.filter(
