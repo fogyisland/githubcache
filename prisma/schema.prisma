@@ -41,6 +41,7 @@ model User {
   createdAt    DateTime   @default(now()) @map("created_at")
   lastLoginAt  DateTime?  @map("last_login_at")
   theme        Theme      @default(terminal)
+  adminVariant AdminVariant @default(mission_control) @map("admin_variant")
 
   apiKeys      ApiKey[]    @relation("owner")
   approvedKeys ApiKey[]    @relation("approver")
@@ -67,6 +68,18 @@ enum Theme {
   terminal
   editorial
   brutalist
+}
+
+// Visual variant for the admin surface (M11). Three opinionated directions:
+// mission_control (ops bridge / radar HUD), inspector (forensic audit),
+// workbench (assembly manual). Independent of the public Theme — operator
+// can be in workbench admin + editorial public. Mirrored to a non-HTTP-only
+// cookie (see src/lib/admin/cookie.ts) so the SSR pass can apply
+// `data-admin="<id>"` before paint.
+enum AdminVariant {
+  mission_control @map("mission_control")
+  inspector
+  workbench
 }
 
 model ApiKey {
