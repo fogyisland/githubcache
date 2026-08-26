@@ -157,6 +157,158 @@ updates.
 
 ---
 
+## [m11-detailed-surfaces] — 2026-08-27
+
+**Detailed admin redesign + public site rework.** Three independent admin
+design directions (mission_control / inspector / workbench), parallel to the
+three-theme public system. Cookie + DB dual persistence, URL-synced filter
+bars, command palette, native `<dialog>` confirm flow, live status bar, and
+four new public depth sections (stats / features / how-it-works / API doc /
+quick-try / footer).
+
+### Admin variants
+
+| ID | Mood | Palette anchor | Display | Body | Mono |
+|---|---|---|---|---|---|
+| `mission_control` | 24/7 ops bridge, signal-saturated | signal amber `#F5A524` on slate `#0F172A` | JetBrains Mono | Inter | JetBrains Mono |
+| `inspector` | Quiet case-file study, generous whitespace | ink black `#1A1815` on cream `#F4EFE6` | IBM Plex Serif | Inter | IBM Plex Mono |
+| `workbench` | Maker's bench, precise + airy | electric blue `#1D4ED8` on paper white | Space Grotesk | Inter | JetBrains Mono |
+
+Each variant sets its own `--admin-*` tokens; the same component markup
+reads them, so we don't fork components per variant. Mission Control is
+the default and gets a persistent bottom status bar (db ms / queue depth /
+scheduler state / 24h audit count / operator meta). Inspector and
+Workbench get a clean nav strip. All three share the command palette
+(⌘K / Ctrl+K) and the role-gated sidebar.
+
+### Added
+
+**Variant foundation**
+- `AdminVariant` Prisma enum + `users.admin_variant` column
+  (`m11_user_admin_variant` migration). Default = `mission_control`.
+- `src/lib/admin/variant.ts` — registry, `resolveAdminVariant`,
+  `ADMIN_VARIANT_IDS`, `DEFAULT_ADMIN_VARIANT`. Mirror of theme module.
+- `src/lib/admin/cookie.ts` — `ghc_admin_variant` cookie helpers
+  (`readAdminVariantFromCookieHeader`, `readAdminVariantFromRequest`,
+  `buildAdminVariantSetCookie`).
+- `src/app/_actions/admin-variant.ts` — `setAdminVariantAction` server
+  action. Cookie always; `users.admin_variant` for logged-in users.
+  `revalidatePath('/', 'layout')` for instant repaint.
+
+**Admin atoms (M11.3)**
+- `<AdminChip>`, `<AdminEmptyState>`, `<AdminPageHeader>` (breadcrumb /
+  title / eyebrow / actions slot), `<AdminKpiCard>` (label / value / hint /
+  tone). All variant-aware via `--admin-*` tokens.
+
+**Admin table + filter (M11.4)**
+- Generic typed `<AdminTable<T>>` with `<AdminColumn<T>>` row template
+  binding. Row-level `rowHref` for click-through to detail.
+- `<AdminFilterBar>` — URL-synced GET form with role/status chips. Preserves
+  pagination on submit.
+
+**Status bar + confirm dialog + palette/status APIs (M11.5)**
+- `GET /api/admin/status` — db ping ms / queue depth / scheduler state /
+  recent audit count / operator meta. Polls every 10 s from client.
+- `GET /api/admin/palette` — sections (role-gated) + 5 most recent audit
+  entries. Prefetched server-side; consumed by command palette.
+- `<AdminStatusBar>` — 5-up status column row, only renders for
+  `mission_control`. PAUSED scheduler state gets warn-tone accent.
+- `<AdminConfirmDialog>` — native `<dialog>`, `useFormStatus` pending
+  state, no third-party modal lib.
+
+**Shell + sidebar + 3-variant CSS layer (M11.6)**
+- `<AdminShell>` (sidebar + main) + `<AdminSidebar>` (7 sections,
+  client-side role filter, `ghc-admin-sidebar-current` active accent +
+  `aria-current`). 3-variant CSS attribute layer
+  (`[data-admin="mission_control"]` / `[data-admin="inspector"]` /
+  `[data-admin="workbench"]`).
+
+**Command palette (M11.7)**
+- Native `<dialog>`. Listens for ⌘K/Ctrl+K + `ghc:open-palette` window
+  event. Case-insensitive filter across section title/slug + audit
+  action/actor. Arrow-key highlight, Enter navigates. SSR-prefetched data.
+
+**Layout rewrite (M11.8)**
+- `admin/layout.tsx` now wraps children in `<AdminShell>` +
+  `<CommandPalette>` + utility bar (variant/theme switcher + logout).
+- Middleware (`src/middleware.ts`) sets `x-pathname` on `/admin/*` so the
+  server layout can highlight the active sidebar section without a
+  client round-trip.
+
+**Admin page rewrites (M11.9–M11.12)**
+- Dashboard: 4 `<AdminKpiCard>` (cached repos / active users / active API
+  keys / active GitHub tokens with contextual hints + tones) + 6h bar
+  chart (CSS-flexbox column bars with inline height) + recent-activity
+  feed (top-5 audit entries with chips).
+- Users list (`/admin/users`): filter (role/status) + `<AdminTable<User>>`
+  (rowHref → detail) + InviteForm + pending invitations table.
+- API Keys list (`/admin/api-keys`): status filter + `<AdminTable<KeyRow>>`
+  with chips (active=ok / pending=warn / revoked=danger).
+- GitHub Tokens list (`/admin/github-tokens`): quota warning when ≥ 80 %
+  utilisation + pool-size hint + AddTokenForm +
+  `<AdminTable<TokenRow>>` (status + pool-state chips + usage %).
+- Detail pages: `/admin/users/[id]`, `/admin/api-keys/[id]`,
+  `/admin/github-tokens/[id]`. `<AdminPageHeader>` breadcrumb + profile
+  `<dl>` + role actions + recent-activity table.
+- Minimal-touch: `/admin/reports`, `/admin/audit`, `/admin/refresh`
+  (`<AdminPageHeader>` + `ghc-admin-page` wrapper).
+
+**Public site depth (M11.13–M11.15)**
+- `<StatsBar>` — live counts from `/api/v1/status`, animated
+  count-up via `requestAnimationFrame` + cubic ease. Renders 0s
+  immediately (no layout shift).
+- `<FeaturesSection>` — 3-up grid (Instant / Cached / Rate-limited + API)
+  with inline SVG icons.
+- `<HowItWorks>` — 3 numbered steps with inline SVG diagrams (form /
+  cache / JSON). Numbered rail only because order is load-bearing here.
+- `<ApiDocSection>` — curl example + trimmed JSON response shape
+  (request/response two-card grid).
+- `<QuickTry>` — 3 server-action buttons (torvalds/linux, microsoft/vscode,
+  vitejs/vite). Each fires the existing `lookupAction` and routes to
+  `/repo/{owner}/{name}` on success.
+- `<SiteFooter>` — 3-column meta strip (brand + tagline / version +
+  GitHub link / status JSON + admin login). Version read from
+  `package.json` at build time.
+- `<ApiShape>` — collapsible `<details>` block on `/repo/[owner]/[name]`
+  with the full JSON dump and a `GET /api/v1/repos/...` reference link.
+- `<SiteHeader>` Status / Admin links demoted from `ghc-btn-ghost` to
+  the new muted `ghc-header-util-link` style (smaller, lower-contrast,
+  focus-visible ring).
+- CSS additions: `.ghc-api-doc` / `.ghc-code-block` / `.ghc-quick-try` /
+  `.ghc-quick-try-btn` / `.ghc-site-footer` (with `*-col`, `*-brand`,
+  `*-heading`, `*-list`, `*-fine`) / `.ghc-header-util-link` /
+  `.ghc-api-shape` (collapsible details + summary chevron).
+
+### Env
+
+None added. Variant + theme preference persistence uses the existing
+cookie + `users.*` columns.
+
+### Migration
+
+- `npx prisma migrate deploy` to apply `m11_user_admin_variant`. New
+  `users.admin_variant` column defaults to `mission_control` for existing
+  rows.
+
+### Stats
+
+- 16 commits (M11.1 → M11.15), ~30 new files, ~20 modified
+- ~2 500 lines of code added (CSS heavy — three full visual variants +
+  six new public depth sections)
+- 518 passing tests (61 test files). Two pre-existing MySQL-concurrency
+  deadlock flakes in `api-rate-limit-durable.test.ts` and
+  `ip-rate-limit.test.ts` are unrelated to M11 (they were last touched in
+  M8 / M9.2 and fail intermittently under shared-DB contention).
+
+### Breaking changes
+
+None. The variant attribute switches the admin visual layer only; no
+admin route, form, or API contract changed. Public site additions are
+purely additive (no existing classes or routes modified besides
+`<SiteHeader>` link styling).
+
+---
+
 ## [m8-prod-ready] — 2026-08-26
 
 **Deployment + Observability.** Production-ready observability surface, durable rate-limit,

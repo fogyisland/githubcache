@@ -19,7 +19,11 @@ vi.mock('next/server', async () => {
         body,
         status: init?.status ?? 200,
       })),
-      next: vi.fn(() => ({ type: 'next', status: 200 })),
+      next: vi.fn(() => ({
+        type: 'next',
+        status: 200,
+        headers: { set: (_name: string, _value: string) => undefined },
+      })),
     },
   };
 });
