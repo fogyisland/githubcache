@@ -1,39 +1,149 @@
 # GitHub Metadata Cache
 
-A Node.js + Next.js service that caches GitHub repository metadata behind a public query API, with a multi-token pool, background refresh scheduler, and admin panel.
+> A Node.js + Next.js service that caches GitHub repository metadata behind a public
+> query API, with a multi-token pool, background refresh scheduler, and admin panel.
 
-## Status
+## Features
 
-This project is under active development. See `docs/superpowers/` for the design spec, implementation strategy, and implementation plan.
+- POST /api/query — public GraphQL-style batch lookup for {owner, name} repos
+- Per-key rate limiting (durable, DB-backed)
+- Multi-token GitHub pool with quota persistence
+- Background refresh scheduler with graceful stale-fallback when GitHub is down
+- Cookie-session admin panel (users, api-keys, github-tokens, audit log, reports)
+- Manual refresh + scheduler pause controls
+- Docker image (multi-stage, non-root)
 
-## 5-minute startup
+## Quick Start
 
-1. Clone the repo (or `cd` into an existing checkout).
-2. `cp .env.example .env` and fill in `DATABASE_URL` and `SESSION_SECRET`.
-3. `pnpm install`
-4. `pnpm dev`
-5. In another terminal: `curl http://localhost:3000/api/v1/status` — expect `{"ok":true,"db":"up","tokens":{"active":0,"exhausted":0}}`.
-6. Open `http://localhost:3000/` for the landing page.
+1. `cp .env.example .env` and fill in `DATABASE_URL` and `SESSION_SECRET`
+2. `npm install`
+3. `npx prisma migrate deploy`
+4. `npm run dev`
+5. `curl http://localhost:3000/api/v1/status`
 
 ## Scripts
 
-- `pnpm dev` — start Next.js dev server on port 3000
-- `pnpm build` — production build
-- `pnpm start` — start production server
-- `pnpm typecheck` — TypeScript strict mode check
-- `pnpm lint` — ESLint
-- `pnpm format` — Prettier check (does not modify files)
-- `pnpm format:write` — Prettier write
-- `pnpm test` — Vitest unit tests
+- `npm run dev` — Next.js dev server (port 3000)
+- `npm run dev:server` — dev mode with scheduler + pool (`tsx watch src/server.ts`)
+- `npm run build` — production build (next build)
+- `npm run start:server` — custom production server (Next + scheduler + pool)
+- `npm run start` — Next.js production server only
+- `npm run typecheck` — TypeScript strict-mode check
+- `npm run lint` — ESLint
+- `npm run format` — Prettier check (does not modify files)
+- `npm run format:write` — Prettier write
+- `npm test` — Vitest unit + integration tests
+- `npm run test:e2e` — Playwright (requires dev server; not run in CI yet)
+- `npm run dev:fetch` — dev helper for fetch debugging
 
-## Layout
+## Environment Variables
 
-- `src/app/` — Next.js App Router pages and API routes
-- `src/lib/` — framework-agnostic business logic (no Next imports)
+All env vars are validated by `src/lib/config/env.ts` (zod schema).
+
+| Var | Required | Default | Description |
+|---|---|---|---|
+| `DATABASE_URL` | yes | — | MySQL connection URL |
+| `SESSION_SECRET` | yes | dev fallback (≥32 chars) | Session cookie signing key |
+| `PORT` | no | `3000` | HTTP port |
+| `NODE_ENV` | no | `development` | Runtime mode (`development` / `production` / `test`) |
+| `LOG_LEVEL` | no | `info` | pino log level (`fatal` / `error` / `warn` / `info` / `debug` / `trace`) |
+| `GITHUB_TOKEN` | one required* | — | Legacy single GitHub token (M1) |
+| `GITHUB_TOKENS` | one required* | — | Comma-separated GitHub tokens (M4 pool) |
+| `GITHUB_TOKENS_FILE` | one required* | — | Path to file with one token per line (takes precedence over `GITHUB_TOKENS`) |
+| `SCHEDULER_BATCH_SIZE` | no | `10` | Refresh jobs per scheduler tick |
+| `SCHEDULER_TICK_MS` | no | `60000` | Scheduler tick interval (ms) |
+| `NIGHTLY_SWEEP_INTERVAL_MS` | no | `86400000` | Full re-check interval (ms) |
+| `SCHEDULER_ENABLED` | no | `true` | Set `false` to disable background refresh |
+
+*At least one of `GITHUB_TOKEN`, `GITHUB_TOKENS`, or `GITHUB_TOKENS_FILE` must be set.
+
+## Deploy
+
+### Docker (recommended)
+
+```bash
+docker build -t githubcache:latest .
+docker run -d \
+  -p 3000:3000 \
+  -e DATABASE_URL=mysql://user:pass@db:3306/githubcache \
+  -e SESSION_SECRET=$(openssl rand -hex 32) \
+  -e GITHUB_TOKENS=ghp_xxx,ghp_yyy \
+  --name githubcache \
+  githubcache:latest
+```
+
+After first deploy, run migrations:
+
+```bash
+docker exec githubcache npx prisma migrate deploy
+```
+
+In Kubernetes, run this from a one-shot init container or pre-deploy job.
+
+The image runs as a non-root user and includes a built-in `HEALTHCHECK` against
+`GET /api/v1/status`.
+
+### Manual (Node)
+
+```bash
+npm ci
+npx prisma migrate deploy
+npm run build
+npm run start:server
+```
+
+`start:server` boots the custom server (`src/server.ts`) which mounts Next.js
+together with the scheduler and the GitHub token pool.
+
+### Health Check
+
+`GET /api/v1/status` returns:
+
+- **200** with full body: `ok`, `db`, `tokens.{active,exhausted,total}`,
+  `queue.{pending,in_progress,done,failed}`, `repositories.{total,ok,not_found,forbidden,error}`,
+  `version.{commit,startedAt,nodeVersion}`, `timestamp`
+- **503** with `ok: false`, `db: "down"` if the database is unreachable
+
+Point your load balancer / orchestrator health check at this endpoint.
+
+## Operations
+
+For alerts, deploys, migrations, and incident response, see
+**[docs/runbook.md](docs/runbook.md)**.
+
+## Architecture
+
+- `src/app/` — Next.js App Router pages and API routes (`src/app/api/v1/status`,
+  `src/app/api/query`, `src/app/admin/*`)
+- `src/lib/` — framework-agnostic business logic (no Next imports); modules
+  include `lib/github/pool`, `lib/refresh/scheduler`, `lib/rate-limit/*`,
+  `lib/audit/*`, `lib/auth/*`
+- `src/server.ts` — custom server entry; mounts Next + scheduler + token pool
+- `prisma/schema.prisma` — data model: `Repository`, `User`, `ApiKey`,
+  `GithubToken`, `RefreshJob`, `AuditLog`, `Session`, `RateLimitBucket`,
+  `Invitation`
+- `prisma/migrations/` — versioned SQL migrations (apply with `prisma migrate deploy`)
 - `tests/unit/` — Vitest unit tests
 - `tests/integration/` — Vitest route-level tests
-- `docs/superpowers/specs/` — design documents
-- `docs/superpowers/plans/` — implementation plans
+- `tests/e2e/` — Playwright end-to-end tests
+- `docs/runbook.md` — operator runbook
+- `docs/superpowers/` — design specs and implementation plan (SDD artifacts)
+
+## Development
+
+Local quality gates (CI enforces these):
+
+- `npm run typecheck` — TypeScript strict + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes`
+- `npm run lint` — ESLint
+- `npm test` — Vitest unit + integration
+- `npm run build` — Next.js production build
+
+End-to-end tests (not in CI yet):
+
+- `npm run test:e2e` — Playwright; requires a dev server running
+
+CI: `.github/workflows/ci.yml` runs `lint` + `typecheck` + `unit` + `integration`
++ `build` on every pull request.
 
 ## License
 
