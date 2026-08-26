@@ -19,7 +19,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "dev:fetch": "tsx scripts/dev-fetch.ts"
+    "dev:fetch": "tsx scripts/dev-fetch.ts",
+    "create:admin": "tsx --env-file=.env scripts/create-admin.ts"
   },
   "dependencies": {
     "@octokit/rest": "^22.0.1",
