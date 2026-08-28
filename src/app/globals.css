@@ -1943,3 +1943,73 @@ a {
 }
 .ghc-doc-method-GET  { background: color-mix(in srgb, var(--color-accent) 20%, transparent); color: var(--color-accent); }
 .ghc-doc-method-POST { background: color-mix(in srgb, #B8a040 20%, transparent); color: #B8a040; }
+
+/* endpoint page (M12.7) */
+.ghc-doc-endpoint { padding: 0; }
+.ghc-doc-path {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  word-break: break-all;
+}
+.ghc-doc-description { color: var(--color-text-muted); margin: 0 0 var(--space-4); }
+
+.ghc-doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+  margin: var(--space-3) 0;
+}
+.ghc-doc-table th,
+.ghc-doc-table td {
+  text-align: left;
+  padding: var(--space-2, 0.5rem) var(--space-3, 0.75rem);
+  border-bottom: 1px solid var(--color-border, rgba(127,127,127,0.2));
+  vertical-align: top;
+}
+.ghc-doc-table th {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+.ghc-doc-table-row-required { font-weight: 600; }
+
+.ghc-doc-code-block {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  background: var(--color-bg-elevated, rgba(127,127,127,0.08));
+  padding: var(--space-3, 0.75rem);
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: var(--space-2, 0.5rem) 0;
+}
+.ghc-doc-code-block code { background: none; padding: 0; }
+
+.ghc-json-key    { color: var(--color-accent); font-weight: 600; }
+.ghc-json-string { color: var(--color-text); }
+.ghc-json-number { color: #d97757; }
+.ghc-json-bool   { color: #d97757; font-weight: 600; }
+.ghc-json-null   { color: var(--color-text-muted); font-style: italic; }
+
+.ghc-doc-copy {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  padding: 4px 10px;
+  border: 1px solid var(--color-border, rgba(127,127,127,0.3));
+  border-radius: 3px;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  margin-left: var(--space-2);
+}
+.ghc-doc-copy:hover { background: var(--color-bg-elevated, rgba(127,127,127,0.1)); }
+
+.ghc-doc-curl {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.ghc-doc-curl .ghc-doc-code-block { flex: 1; min-width: 0; }
+.ghc-doc-empty { color: var(--color-text-muted); font-style: italic; }
