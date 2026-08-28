@@ -20,9 +20,10 @@ export function ApiShape({ owner, name, metadata }: ApiShapeProps): ReactElement
       <details className="ghc-api-shape-details">
         <summary className="ghc-api-shape-summary">
           <span className="ghc-section-eyebrow">Raw API shape</span>
-          <span className="ghc-api-shape-hint">
-            GET <code>{apiPath}</code> → same JSON
-          </span>
+          <a className="ghc-api-shape-hint" href={`/docs/api/v1-repos`}>
+            GET <code>{apiPath}</code> → see{' '}
+            <span className="ghc-api-shape-link">/docs/api/v1-repos</span> for full schema
+          </a>
         </summary>
         <pre className="ghc-code-block ghc-api-shape-pre">
           <code>{json}</code>
