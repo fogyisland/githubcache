@@ -1839,3 +1839,107 @@ a {
     font-family: inherit;
   }
 }
+
+/* =========================================================================
+ * DOCS (M12) — aliases to existing theme tokens. The docs CSS uses
+ * --color-text / --color-text-muted / --color-bg-elevated / --color-border
+ * so it stays decoupled from --color-ink naming while still inheriting
+ * three-theme compatibility.
+ * ======================================================================= */
+:root {
+  --color-text: var(--color-ink);
+  --color-text-muted: var(--color-ink-muted);
+  --color-bg-elevated: var(--color-surface);
+  --color-border: var(--color-rule);
+}
+
+/* docs (M12) */
+.ghc-doc-shell {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: var(--space-8, 2rem);
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-6, 1.5rem);
+}
+@media (max-width: 720px) {
+  .ghc-doc-shell { grid-template-columns: 1fr; }
+}
+
+.ghc-doc-sidebar {
+  position: sticky;
+  top: var(--space-6, 1.5rem);
+  align-self: start;
+}
+.ghc-doc-sidebar-heading {
+  font-family: var(--font-display);
+  font-size: 0.875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-3, 0.75rem);
+}
+.ghc-doc-sidebar-list { list-style: none; padding: 0; margin: 0; }
+.ghc-doc-sidebar-list li { margin-bottom: var(--space-2, 0.5rem); }
+.ghc-doc-sidebar-list a {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2, 0.5rem);
+  padding: var(--space-1, 0.25rem) var(--space-2, 0.5rem);
+  border-radius: 4px;
+  text-decoration: none;
+  color: var(--color-text);
+}
+.ghc-doc-sidebar-list a:hover {
+  background: var(--color-bg-elevated, rgba(127,127,127,0.1));
+}
+.ghc-doc-sidebar-current {
+  background: var(--color-bg-elevated, rgba(127,127,127,0.1));
+  font-weight: 600;
+}
+.ghc-doc-sidebar-path { font-family: var(--font-mono); font-size: 0.875rem; }
+
+.ghc-doc-main { min-width: 0; }
+.ghc-doc-landing { padding: 0; }
+.ghc-doc-h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3rem);
+  margin: 0 0 var(--space-3, 0.75rem);
+}
+.ghc-doc-h2 {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  margin: var(--space-6, 1.5rem) 0 var(--space-3, 0.75rem);
+}
+.ghc-doc-lede {
+  font-size: 1.125rem;
+  color: var(--color-text-muted);
+  max-width: 60ch;
+}
+.ghc-doc-section { margin-bottom: var(--space-6, 1.5rem); }
+.ghc-doc-endpoint-list { list-style: none; padding: 0; margin: 0; }
+.ghc-doc-endpoint-list-item { margin-bottom: var(--space-4, 1rem); }
+.ghc-doc-endpoint-list-item a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+  font-family: var(--font-mono);
+  text-decoration: none;
+  color: var(--color-text);
+}
+.ghc-doc-endpoint-summary {
+  margin: var(--space-1, 0.25rem) 0 0;
+  color: var(--color-text-muted);
+}
+
+.ghc-doc-method {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.04em;
+}
+.ghc-doc-method-GET  { background: color-mix(in srgb, var(--color-accent) 20%, transparent); color: var(--color-accent); }
+.ghc-doc-method-POST { background: color-mix(in srgb, #B8a040 20%, transparent); color: #B8a040; }
