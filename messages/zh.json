@@ -201,6 +201,15 @@
           "when": "时间",
           "action": "操作"
         },
+        "role": {
+          "admin": "管理员",
+          "operator": "操作员"
+        },
+        "status": {
+          "active": "活跃",
+          "disabled": "已禁用",
+          "pending": "待处理"
+        },
         "profile": {
           "role": "角色",
           "status": "状态",

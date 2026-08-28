@@ -201,6 +201,15 @@
           "when": "When",
           "action": "Action"
         },
+        "role": {
+          "admin": "admin",
+          "operator": "operator"
+        },
+        "status": {
+          "active": "active",
+          "disabled": "disabled",
+          "pending": "pending"
+        },
         "profile": {
           "role": "Role",
           "status": "Status",
