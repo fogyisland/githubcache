@@ -21,6 +21,13 @@ vi.mock('next-intl/server', () => ({
   getTranslations: async () => (key: string) => key,
 }));
 
+// Stub next-intl (client) — LookupForm uses useTranslations and would
+// otherwise require NextIntlClientProvider, which is not wired up in
+// this test render context. Identity passthrough matches the server mock.
+vi.mock('next-intl', () => ({
+  useTranslations: () => (key: string) => key,
+}));
+
 // Stub next/navigation so QuickTry's useRouter() can render server-side
 // without needing an app-router runtime.
 vi.mock('next/navigation', () => ({
@@ -42,6 +49,19 @@ vi.mock('@/app/_actions/lookup', () => ({
 // resolve this, but vitest needs a hint).
 vi.mock('../../../package.json', () => ({
   default: { version: '0.0.0-test' },
+}));
+
+// Stub async server components — React 18's renderToStaticMarkup cannot
+// resolve Promises returned by async server components in JSX. The
+// individual component translations are verified in tests/unit/home-i18n.test.tsx.
+vi.mock('@/app/_components/recent-lookups-list', () => ({
+  RecentLookupsList: () => null,
+}));
+vi.mock('@/app/_components/features-section', () => ({
+  FeaturesSection: () => null,
+}));
+vi.mock('@/app/_components/how-it-works', () => ({
+  HowItWorks: () => null,
 }));
 
 import HomePage from '@/app/page';

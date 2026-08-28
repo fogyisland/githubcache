@@ -3,6 +3,7 @@
 import { z } from 'zod';
 import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
+import { getTranslations } from 'next-intl/server';
 import { lookupRepo, type QueryResult } from '@/lib/cache/lookup';
 import { checkIpRateLimit } from '@/lib/rate-limit/ip-bucket';
 import { clientIpFromHeaders } from '@/lib/http/client-ip';
@@ -28,6 +29,20 @@ export interface LookupFormState {
   result?: QueryResult;
 }
 
+function ownerErrorKey(issue: z.ZodIssue): 'ownerRequired' | 'ownerTooLong' | 'ownerFormat' | 'ownerInvalid' {
+  if (issue.code === 'too_small') return 'ownerRequired';
+  if (issue.code === 'too_big') return 'ownerTooLong';
+  if (issue.code === 'invalid_format') return 'ownerFormat';
+  return 'ownerInvalid';
+}
+
+function nameErrorKey(issue: z.ZodIssue): 'nameRequired' | 'nameTooLong' | 'nameFormat' | 'nameInvalid' {
+  if (issue.code === 'too_small') return 'nameRequired';
+  if (issue.code === 'too_big') return 'nameTooLong';
+  if (issue.code === 'invalid_format') return 'nameFormat';
+  return 'nameInvalid';
+}
+
 /**
  * Server action invoked from the public homepage form (/) and the
  * /repo/[owner]/[name] lookup controls. Validates input, enforces the
@@ -41,19 +56,21 @@ export async function lookupAction(
   _prev: LookupFormState,
   formData: FormData,
 ): Promise<LookupFormState> {
+  const t = await getTranslations('home.lookup.errors');
+
   // 1. Validate
   const parsedOwner = OwnerSchema.safeParse(formData.get('owner'));
   if (!parsedOwner.success) {
     return {
       status: 'invalid',
-      message: parsedOwner.error.issues[0]?.message ?? 'invalid owner',
+      message: t(ownerErrorKey(parsedOwner.error.issues[0]!)),
     };
   }
   const parsedName = NameSchema.safeParse(formData.get('name'));
   if (!parsedName.success) {
     return {
       status: 'invalid',
-      message: parsedName.error.issues[0]?.message ?? 'invalid name',
+      message: t(nameErrorKey(parsedName.error.issues[0]!)),
     };
   }
   const owner = parsedOwner.data;
@@ -76,7 +93,7 @@ export async function lookupAction(
     return {
       status: 'rate_limited',
       retryAfterSeconds: rl.retryAfterSeconds,
-      message: `Too many lookups. Try again in ${rl.retryAfterSeconds}s.`,
+      message: t('rateLimited', { seconds: rl.retryAfterSeconds }),
     };
   }
 
@@ -90,8 +107,7 @@ export async function lookupAction(
     }
     return { status: 'ok', result };
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : 'unknown';
     logger.error({ err: e, ip, owner, name }, 'public lookup failed');
-    return { status: 'error', message: msg };
+    return { status: 'error', message: t('generic') };
   }
 }

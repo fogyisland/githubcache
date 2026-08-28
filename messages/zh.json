@@ -556,5 +556,113 @@
         "account_disabled": "您的账号已被禁用，请联系管理员。"
       }
     }
+  },
+  "home": {
+    "meta": {
+      "title": "GitHub 元数据缓存",
+      "description": "从托管缓存中即时查询 GitHub 仓库元数据 — stars、forks、语言等。"
+    },
+    "hero": {
+      "eyebrow": "托管缓存 · 每 IP 限速 · 开放 API",
+      "title": "GitHub 元数据缓存",
+      "tagline": "输入 owner / repository,毫秒级获取最新元数据。由托管缓存支撑 — 您这一侧没有 GitHub 限速压力。"
+    },
+    "lookup": {
+      "form": {
+        "ariaLabel": "查询 GitHub 仓库",
+        "ownerLabel": "Owner",
+        "ownerPlaceholder": "例如 facebook",
+        "repoLabel": "仓库",
+        "repoPlaceholder": "例如 react"
+      },
+      "errors": {
+        "ownerRequired": "Owner 不能为空。",
+        "ownerTooLong": "Owner 名称过长。",
+        "ownerFormat": "Owner 包含非法字符。",
+        "ownerInvalid": "Owner 无效。",
+        "nameRequired": "仓库名不能为空。",
+        "nameTooLong": "仓库名过长。",
+        "nameFormat": "仓库名包含非法字符。",
+        "nameInvalid": "仓库名无效。",
+        "rateLimited": "查询次数过多，请在 {seconds} 秒后重试。",
+        "generic": "查询失败，请重试。"
+      }
+    },
+    "result": {
+      "copy": "复制",
+      "copied": "已复制",
+      "copyAria": "复制 {text}",
+      "viewOnGithub": "在 GitHub 上查看",
+      "stars": "Stars",
+      "forks": "Forks",
+      "language": "语言",
+      "defaultBranch": "默认分支",
+      "dash": "–",
+      "lastFetched": "最后获取",
+      "viewDetails": "查看详情 →",
+      "staleWarning": "⚠ {message}"
+    },
+    "stats": {
+      "cachedRepositories": "已缓存仓库",
+      "cachedRepositoriesHint": "实时数量",
+      "healthyRepos": "健康仓库",
+      "healthyReposHint": "fetch_status = ok",
+      "activeTokens": "活跃 GitHub 令牌",
+      "activeTokensHint": "轮换中",
+      "refreshes": "刷新次数 (24h)",
+      "refreshesHint": "已完成任务"
+    },
+    "features": {
+      "eyebrow": "能力",
+      "heading": "为 GitHub 分流的缓存。",
+      "items": {
+        "instant": {
+          "title": "即时",
+          "demo": "中位数 ~12 ms",
+          "body": "大多数查询直接从本地 DB 返回 — 不走 GitHub,不等待限速。"
+        },
+        "cached": {
+          "title": "已缓存",
+          "demo": "元数据 + 节点树",
+          "body": "以 JSON 存储在 MySQL 中 — 与您从 GitHub REST API 构建的载荷一致。"
+        },
+        "rateLimited": {
+          "title": "限速 + API",
+          "demo": "60 次/分钟 · 1万/天",
+          "body": "按 Key 配额保护缓存。REST 端点与 GitHub 形态一致,现有客户端可直接接入。"
+        }
+      }
+    },
+    "howItWorks": {
+      "eyebrow": "工作流程",
+      "heading": "从请求到 JSON,三步完成。",
+      "steps": {
+        "submit": {
+          "title": "提交 owner/repo",
+          "body": "首页表单,或任意位置对 /api/v1/repos/{owner}/{name} 发起一次 GET。"
+        },
+        "cacheOrFetch": {
+          "title": "命中缓存或实时拉取",
+          "body": "如果记录是新鲜的,毫秒级返回。否则我们调用 GitHub、写入 MySQL,并返回相同的结构。"
+        },
+        "json": {
+          "title": "JSON 响应",
+          "body": "与 GitHub REST API 返回的字段一致 — id、full_name、stargazers_count、language、default_branch,以及递归的节点树。"
+        }
+      }
+    },
+    "recent": {
+      "heading": "最近查询",
+      "countCached": "已缓存 {count} 条",
+      "empty": "暂无缓存的仓库,请在上方提交。",
+      "starsPrefix": "★ "
+    },
+    "timeAgo": {
+      "justNow": "刚刚",
+      "minutesAgo": "{m} 分钟前",
+      "hoursAgo": "{h} 小时前",
+      "daysAgo": "{d} 天前",
+      "dash": "–"
+    }
   }
 }

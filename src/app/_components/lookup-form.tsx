@@ -1,6 +1,7 @@
 'use client';
 
 import { useFormState } from 'react-dom';
+import { useTranslations } from 'next-intl';
 import { lookupAction, type LookupFormState } from '@/app/_actions/lookup';
 import { LookupResultCard } from './lookup-result-card';
 import { SubmitButton } from './submit-button';
@@ -8,6 +9,7 @@ import { SubmitButton } from './submit-button';
 const initialState: LookupFormState = { status: 'idle' };
 
 export function LookupForm() {
+  const t = useTranslations('home.lookup.form');
   const [state, formAction] = useFormState(lookupAction, initialState);
 
   return (
@@ -15,14 +17,14 @@ export function LookupForm() {
       <form
         action={formAction}
         className="flex flex-col gap-4 sm:flex-row sm:items-end"
-        aria-label="Look up a GitHub repository"
+        aria-label={t('ariaLabel')}
       >
         <label className="flex flex-1 flex-col gap-1.5">
-          <span className="ghc-eyebrow">Owner</span>
+          <span className="ghc-eyebrow">{t('ownerLabel')}</span>
           <input
             type="text"
             name="owner"
-            placeholder="e.g. facebook"
+            placeholder={t('ownerPlaceholder')}
             required
             autoComplete="off"
             spellCheck={false}
@@ -30,11 +32,11 @@ export function LookupForm() {
           />
         </label>
         <label className="flex flex-1 flex-col gap-1.5">
-          <span className="ghc-eyebrow">Repository</span>
+          <span className="ghc-eyebrow">{t('repoLabel')}</span>
           <input
             type="text"
             name="name"
-            placeholder="e.g. react"
+            placeholder={t('repoPlaceholder')}
             required
             autoComplete="off"
             spellCheck={false}

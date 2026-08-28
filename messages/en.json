@@ -556,5 +556,113 @@
         "account_disabled": "Your account has been disabled. Contact an administrator."
       }
     }
+  },
+  "home": {
+    "meta": {
+      "title": "GitHub Metadata Cache",
+      "description": "Look up GitHub repository metadata — stars, forks, language, and more — instantly from a managed cache."
+    },
+    "hero": {
+      "eyebrow": "Managed cache · per-IP rate-limited · open API",
+      "title": "GitHub Metadata Cache",
+      "tagline": "Submit an owner / repository, get fresh metadata in milliseconds. Backed by a managed cache — no GitHub rate-limit pressure on your side."
+    },
+    "lookup": {
+      "form": {
+        "ariaLabel": "Look up a GitHub repository",
+        "ownerLabel": "Owner",
+        "ownerPlaceholder": "e.g. facebook",
+        "repoLabel": "Repository",
+        "repoPlaceholder": "e.g. react"
+      },
+      "errors": {
+        "ownerRequired": "Owner is required.",
+        "ownerTooLong": "Owner name is too long.",
+        "ownerFormat": "Owner contains invalid characters.",
+        "ownerInvalid": "Invalid owner.",
+        "nameRequired": "Repository name is required.",
+        "nameTooLong": "Repository name is too long.",
+        "nameFormat": "Repository name contains invalid characters.",
+        "nameInvalid": "Invalid repository name.",
+        "rateLimited": "Too many lookups. Try again in {seconds} seconds.",
+        "generic": "Lookup failed. Please try again."
+      }
+    },
+    "result": {
+      "copy": "Copy",
+      "copied": "Copied",
+      "copyAria": "Copy {text}",
+      "viewOnGithub": "View on GitHub",
+      "stars": "Stars",
+      "forks": "Forks",
+      "language": "Language",
+      "defaultBranch": "Default branch",
+      "dash": "–",
+      "lastFetched": "Last fetched",
+      "viewDetails": "View details →",
+      "staleWarning": "⚠ {message}"
+    },
+    "stats": {
+      "cachedRepositories": "Cached repositories",
+      "cachedRepositoriesHint": "live count",
+      "healthyRepos": "Healthy repos",
+      "healthyReposHint": "fetch_status = ok",
+      "activeTokens": "Active GitHub tokens",
+      "activeTokensHint": "in the rotation",
+      "refreshes": "Refreshes (24h)",
+      "refreshesHint": "completed jobs"
+    },
+    "features": {
+      "eyebrow": "What you get",
+      "heading": "A cache that takes the load off GitHub.",
+      "items": {
+        "instant": {
+          "title": "Instant",
+          "demo": "~12 ms median",
+          "body": "Most lookups come straight from the local DB — no roundtrip to GitHub, no rate-limit waiting."
+        },
+        "cached": {
+          "title": "Cached",
+          "demo": "metadata + node tree",
+          "body": "Stored as JSON in MySQL — the same payload you would have built from the GitHub REST API."
+        },
+        "rateLimited": {
+          "title": "Rate-limited + API",
+          "demo": "60 req/min · 10k/day",
+          "body": "Per-key quotas protect the cache. A clean REST endpoint mirrors the GitHub shape so existing clients work."
+        }
+      }
+    },
+    "howItWorks": {
+      "eyebrow": "How it works",
+      "heading": "Three steps from request to JSON.",
+      "steps": {
+        "submit": {
+          "title": "You submit owner/repo",
+          "body": "A simple form on the homepage, or a single GET to /api/v1/repos/{owner}/{name} from anywhere."
+        },
+        "cacheOrFetch": {
+          "title": "Cache hit or live fetch",
+          "body": "If the row is fresh, you get it back in milliseconds. Otherwise we call GitHub, write to MySQL, and return the same shape."
+        },
+        "json": {
+          "title": "JSON response",
+          "body": "The same fields the GitHub REST API returns — id, full_name, stargazers_count, language, default_branch, plus a recursive tree node."
+        }
+      }
+    },
+    "recent": {
+      "heading": "Recent lookups",
+      "countCached": "{count} cached",
+      "empty": "No repositories cached yet. Try submitting a repo above.",
+      "starsPrefix": "★ "
+    },
+    "timeAgo": {
+      "justNow": "just now",
+      "minutesAgo": "{m}m ago",
+      "hoursAgo": "{h}h ago",
+      "daysAgo": "{d}d ago",
+      "dash": "–"
+    }
   }
 }

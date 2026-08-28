@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
 import { recentLookups } from '@/lib/db/repositories';
 import { LookupForm } from './_components/lookup-form';
 import { RecentLookupsList } from './_components/recent-lookups-list';
@@ -11,13 +12,16 @@ import { SiteFooter } from './_components/site-footer';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
-  title: 'GitHub Metadata Cache',
-  description:
-    'Look up GitHub repository metadata — stars, forks, language, and more — instantly from a managed cache.',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('home.meta');
+  return {
+    title: t('title'),
+    description: t('description'),
+  };
+}
 
 export default async function HomePage() {
+  const t = await getTranslations('home');
   const recent = await recentLookups(8);
   // SiteFooter is async (uses getTranslations) — await it before embedding
   // in JSX so non-RSC renderers (e.g. vitest's renderToStaticMarkup) can
@@ -31,14 +35,13 @@ export default async function HomePage() {
         <div className="mx-auto max-w-4xl px-4 py-16 text-center sm:py-20">
           <div className="ghc-eyebrow mb-4 inline-flex items-center gap-2 px-3 py-1">
             <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-accent)]" />
-            Managed cache · per-IP rate-limited · open API
+            {t('hero.eyebrow')}
           </div>
           <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-            GitHub Metadata Cache
+            {t('hero.title')}
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base text-[color:var(--color-ink-muted)] sm:text-lg">
-            Submit an owner / repository, get fresh metadata in milliseconds.
-            Backed by a managed cache — no GitHub rate-limit pressure on your side.
+            {t('hero.tagline')}
           </p>
         </div>
       </section>
@@ -76,9 +79,9 @@ export default async function HomePage() {
       {/* Recent lookups */}
       <section className="mx-auto mt-16 max-w-6xl px-4 pb-16">
         <div className="mb-6 flex items-baseline justify-between">
-          <h2 className="text-xl font-semibold tracking-tight">Recent lookups</h2>
+          <h2 className="text-xl font-semibold tracking-tight">{t('recent.heading')}</h2>
           <span className="text-sm text-[color:var(--color-ink-muted)]">
-            {recent.length} cached
+            {t('recent.countCached', { count: recent.length })}
           </span>
         </div>
         <RecentLookupsList repos={recent} />

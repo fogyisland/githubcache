@@ -1,21 +1,29 @@
 import Link from 'next/link';
+import type { ReactElement } from 'react';
 import type { Repository } from '@prisma/client';
+import { getTranslations } from 'next-intl/server';
 import { getDescription, getLanguage, getStars } from '@/lib/repo/metadata';
 
 interface Props {
   repos: Repository[];
 }
 
-function timeAgo(d: Date | null): string {
-  if (!d) return '–';
-  const ms = Date.now() - d.getTime();
-  if (ms < 60_000) return 'just now';
-  if (ms < 3_600_000) return `${Math.floor(ms / 60_000)}m ago`;
-  if (ms < 86_400_000) return `${Math.floor(ms / 3_600_000)}h ago`;
-  return `${Math.floor(ms / 86_400_000)}d ago`;
-}
+export async function RecentLookupsList({ repos }: Props): Promise<ReactElement> {
+  const t = await getTranslations('home');
+  const tTime = await getTranslations('home.timeAgo');
 
-export function RecentLookupsList({ repos }: Props) {
+  function timeAgo(d: Date | null): string {
+    if (!d) return tTime('dash');
+    // Date.now() is impure but is acceptable in this server-render context
+    // (server components run once during SSR; purity enforcement doesn't apply).
+    // eslint-disable-next-line react-hooks/purity
+    const ms = Date.now() - d.getTime();
+    if (ms < 60_000) return tTime('justNow');
+    if (ms < 3_600_000) return tTime('minutesAgo', { m: Math.floor(ms / 60_000) });
+    if (ms < 86_400_000) return tTime('hoursAgo', { h: Math.floor(ms / 3_600_000) });
+    return tTime('daysAgo', { d: Math.floor(ms / 86_400_000) });
+  }
+
   if (repos.length === 0) {
     return (
       <div className="ghc-card border-dashed p-12 text-center">
@@ -35,7 +43,7 @@ export function RecentLookupsList({ repos }: Props) {
           />
         </svg>
         <p className="mt-3 text-sm text-[color:var(--color-ink-muted)]">
-          No repositories cached yet. Try submitting a repo above.
+          {t('recent.empty')}
         </p>
       </div>
     );
@@ -75,7 +83,7 @@ export function RecentLookupsList({ repos }: Props) {
                   {language && <span className="ghc-chip">{language}</span>}
                 </div>
                 {stars !== null && (
-                  <span className="font-medium">★ {stars.toLocaleString()}</span>
+                  <span className="font-medium">{t('recent.starsPrefix')}{stars.toLocaleString()}</span>
                 )}
               </div>
             </Link>

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import type { QueryResult } from '@/lib/cache/lookup';
 import {
   formatCount,
@@ -20,6 +21,7 @@ interface Props {
 }
 
 function CopyButton({ text }: { text: string }) {
+  const t = useTranslations('home.result');
   const [copied, setCopied] = useState(false);
   return (
     <button
@@ -31,7 +33,7 @@ function CopyButton({ text }: { text: string }) {
         });
       }}
       className="inline-flex items-center gap-1 px-1.5 py-0.5 font-mono text-xs text-[color:var(--color-ink-muted)] transition-colors hover:text-[color:var(--color-ink)]"
-      aria-label={`Copy ${text}`}
+      aria-label={t('copyAria', { text })}
     >
       {copied ? (
         <>
@@ -48,7 +50,7 @@ function CopyButton({ text }: { text: string }) {
               clipRule="evenodd"
             />
           </svg>
-          <span>Copied</span>
+          <span>{t('copied')}</span>
         </>
       ) : (
         <>
@@ -61,7 +63,7 @@ function CopyButton({ text }: { text: string }) {
           >
             <path d="M7 3.5A1.5 1.5 0 018.5 2h3A1.5 1.5 0 0113 3.5v.5h.75A1.5 1.5 0 0115.25 5.5v9A1.5 1.5 0 0113.75 16h-7.5A1.5 1.5 0 014.75 14.5v-9A1.5 1.5 0 016.25 4H7v-.5zM6.25 5.5a.25.25 0 00-.25.25v9c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-9a.25.25 0 00-.25-.25H13v.5A1.5 1.5 0 0111.5 7h-3A1.5 1.5 0 017 5.5v-.5h-.75z" />
           </svg>
-          <span>Copy</span>
+          <span>{t('copy')}</span>
         </>
       )}
     </button>
@@ -76,6 +78,7 @@ function CopyButton({ text }: { text: string }) {
  *   "data may be delayed" warning banner (M8.2)
  */
 export function LookupResultCard({ result }: Props) {
+  const t = useTranslations('home.result');
   if (result.fetch_status === 'not_found') {
     return (
       <div className="ghc-fade-up mt-5 border border-[color:var(--color-rule)] px-4 py-3 text-sm text-[color:var(--color-ink-muted)]">
@@ -114,7 +117,7 @@ export function LookupResultCard({ result }: Props) {
     <div className="ghc-fade-up ghc-card mt-5 overflow-hidden">
       {result.stale && (
         <div className="border-b border-[color:var(--color-warn)] bg-[color:var(--color-warn)]/10 px-4 py-2 text-xs text-[color:var(--color-warn)]">
-          ⚠ {result.warning}
+          {t('staleWarning', { ...(result.warning ? { message: result.warning } : {}) })}
         </div>
       )}
       <div className="p-5">
@@ -136,7 +139,7 @@ export function LookupResultCard({ result }: Props) {
             target="_blank"
             rel="noreferrer noopener"
             className="ghc-btn-ghost shrink-0"
-            aria-label="View on GitHub"
+            aria-label={t('viewOnGithub')}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -152,16 +155,16 @@ export function LookupResultCard({ result }: Props) {
         </div>
 
         <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Stat label="Stars" value={formatCount(stars)} />
-          <Stat label="Forks" value={formatCount(forks)} />
-          <Stat label="Language" value={language ?? '–'} />
-          <Stat label="Default branch" value={defaultBranch ?? '–'} />
+          <Stat label={t('stars')} value={formatCount(stars)} />
+          <Stat label={t('forks')} value={formatCount(forks)} />
+          <Stat label={t('language')} value={language ?? t('dash')} />
+          <Stat label={t('defaultBranch')} value={defaultBranch ?? t('dash')} />
         </dl>
       </div>
 
       <div className="flex items-center justify-between border-t border-[color:var(--color-rule)] px-5 py-2.5 text-xs text-[color:var(--color-ink-muted)]">
         <span>
-          Last fetched{' '}
+          {t('lastFetched')}{' '}
           <time dateTime={formatDate(lastFetchedAt)} className="font-medium text-[color:var(--color-ink)]">
             {formatDate(lastFetchedAt)}
           </time>
@@ -170,7 +173,7 @@ export function LookupResultCard({ result }: Props) {
           href={`/repo/${encodeURIComponent(ownerDecoded)}/${encodeURIComponent(repoNameDecoded)}`}
           className="ghc-link"
         >
-          View details →
+          {t('viewDetails')}
         </Link>
       </div>
     </div>

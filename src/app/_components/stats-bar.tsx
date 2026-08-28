@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 
 interface StatusBody {
   repositories: { total: number; ok: number };
@@ -12,23 +13,6 @@ interface Stat {
   label: string;
   value: number;
   hint: string;
-}
-
-function pick(stats: StatusBody | null): Stat[] {
-  if (!stats) {
-    return [
-      { label: 'Cached repositories', value: 0, hint: 'live count' },
-      { label: 'Healthy repos', value: 0, hint: 'fetch_status = ok' },
-      { label: 'Active GitHub tokens', value: 0, hint: 'in the rotation' },
-      { label: 'Refreshes (24h)', value: 0, hint: 'completed jobs' },
-    ];
-  }
-  return [
-    { label: 'Cached repositories', value: stats.repositories.total, hint: 'live count' },
-    { label: 'Healthy repos', value: stats.repositories.ok, hint: 'fetch_status = ok' },
-    { label: 'Active GitHub tokens', value: stats.tokens.active, hint: 'in the rotation' },
-    { label: 'Refreshes (24h)', value: stats.queue.done, hint: 'completed jobs' },
-  ];
 }
 
 function useCountUp(target: number, ms = 900): number {
@@ -69,6 +53,7 @@ function StatCell({ stat }: { stat: Stat }): JSX.Element {
  * layout doesn't shift while the fetch is in flight.
  */
 export function StatsBar(): JSX.Element {
+  const t = useTranslations('home.stats');
   const [stats, setStats] = useState<StatusBody | null>(null);
 
   useEffect(() => {
@@ -86,7 +71,17 @@ export function StatsBar(): JSX.Element {
     };
   }, []);
 
-  const cells = pick(stats);
+  const cells: Stat[] = stats ? [
+    { label: t('cachedRepositories'), value: stats.repositories.total, hint: t('cachedRepositoriesHint') },
+    { label: t('healthyRepos'), value: stats.repositories.ok, hint: t('healthyReposHint') },
+    { label: t('activeTokens'), value: stats.tokens.active, hint: t('activeTokensHint') },
+    { label: t('refreshes'), value: stats.queue.done, hint: t('refreshesHint') },
+  ] : [
+    { label: t('cachedRepositories'), value: 0, hint: t('cachedRepositoriesHint') },
+    { label: t('healthyRepos'), value: 0, hint: t('healthyReposHint') },
+    { label: t('activeTokens'), value: 0, hint: t('activeTokensHint') },
+    { label: t('refreshes'), value: 0, hint: t('refreshesHint') },
+  ];
 
   return (
     <section className="ghc-stats-bar" data-testid="ghc-stats-bar">
