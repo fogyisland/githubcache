@@ -1,9 +1,10 @@
 'use client';
 import { useState, useEffect, type ReactElement } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 /**
- * Client component: per-user admin actions.
+ * Client component: per-user admin actions (M13.4 i18n).
  *
  * Three buttons:
  *   - Reset password (POST /api/admin/users/[id]/reset-password)
@@ -20,6 +21,7 @@ export function UserActions({
   currentStatus: 'active' | 'disabled';
 }): ReactElement {
   const router = useRouter();
+  const t = useTranslations('admin.users.actions');
   const [csrf, setCsrf] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -41,16 +43,16 @@ export function UserActions({
     });
     setBusy(false);
     if (!res.ok) {
-      setMessage(`Failed: ${res.status}`);
+      setMessage(t('failedWithStatus', { status: res.status }));
       return;
     }
-    setMessage(status === 'disabled' ? 'User disabled' : 'User enabled');
+    setMessage(status === 'disabled' ? t('disabledOk') : t('enabledOk'));
     router.refresh();
   }
 
   async function logoutAll(): Promise<void> {
     if (!csrf) return;
-    if (!confirm('Log out all sessions for this user?')) return;
+    if (!confirm(t('confirmLogoutAll'))) return;
     setBusy(true);
     setMessage(null);
     const res = await fetch(`/api/admin/users/${userId}`, {
@@ -60,17 +62,17 @@ export function UserActions({
     });
     setBusy(false);
     if (!res.ok) {
-      setMessage(`Failed: ${res.status}`);
+      setMessage(t('failedWithStatus', { status: res.status }));
       return;
     }
     const data = (await res.json()) as { sessionsInvalidated: number };
-    setMessage(`Logged out ${data.sessionsInvalidated} sessions`);
+    setMessage(t('loggedOutCount', { count: data.sessionsInvalidated }));
     router.refresh();
   }
 
   async function resetPassword(): Promise<void> {
     if (!csrf) return;
-    if (!confirm('Reset password? All sessions will be invalidated.')) return;
+    if (!confirm(t('confirmResetPassword'))) return;
     setBusy(true);
     setMessage(null);
     const res = await fetch(`/api/admin/users/${userId}/reset-password`, {
@@ -80,28 +82,28 @@ export function UserActions({
     });
     setBusy(false);
     if (!res.ok) {
-      setMessage(`Failed: ${res.status}`);
+      setMessage(t('failedWithStatus', { status: res.status }));
       return;
     }
     const data = (await res.json()) as { tempPassword: string };
-    setMessage(`Temp password (copy now, won't be shown again): ${data.tempPassword}`);
+    setMessage(t('tempPasswordMessage', { password: data.tempPassword }));
   }
 
   return (
     <div>
       <button onClick={() => void resetPassword()} disabled={busy || !csrf}>
-        Reset password
+        {t('resetPassword')}
       </button>
       <button
         onClick={() => void patchStatus(currentStatus === 'active' ? 'disabled' : 'active')}
         disabled={busy || !csrf}
       >
-        {currentStatus === 'active' ? 'Disable' : 'Enable'}
+        {currentStatus === 'active' ? t('disable') : t('enable')}
       </button>
       <button onClick={() => void logoutAll()} disabled={busy || !csrf}>
-        Logout all sessions
+        {t('logoutAll')}
       </button>
-      {message && <p>{message}</p>}
+      {message && <p role="status">{message}</p>}
     </div>
   );
 }

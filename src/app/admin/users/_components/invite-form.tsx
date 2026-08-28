@@ -1,14 +1,16 @@
 'use client';
 import { useState, useEffect, type ReactElement, type FormEvent as ReactFormEvent } from 'react';
+import { useTranslations } from 'next-intl';
 
 /**
- * Client component: invite a new user.
+ * Client component: invite a new user (M13.4 i18n).
  *
  * Fetches CSRF on mount, posts to /api/admin/users/invite, displays the
  * returned invitation link. The actual invite UX (consuming the link,
  * choosing a password) lives at /request-access and is M7-deferred.
  */
 export function InviteForm(): ReactElement {
+  const t = useTranslations('admin.users.invite');
   const [csrf, setCsrf] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'admin' | 'operator'>('operator');
@@ -32,7 +34,7 @@ export function InviteForm(): ReactElement {
     });
     if (!res.ok) {
       const err = (await res.json().catch(() => ({}))) as { error?: string };
-      setError(err.error ?? `HTTP ${res.status}`);
+      setError(err.error ?? t('error.http', { status: res.status }));
       return;
     }
     const data = (await res.json()) as { inviteLink: string };
@@ -44,20 +46,20 @@ export function InviteForm(): ReactElement {
     <form onSubmit={onSubmit}>
       <input
         type="email"
-        placeholder="email@example.com"
+        placeholder={t('emailPlaceholder')}
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         required
       />
       <select value={role} onChange={(e) => setRole(e.target.value as 'admin' | 'operator')}>
-        <option value="operator">Operator</option>
-        <option value="admin">Admin</option>
+        <option value="operator">{t('role.operator')}</option>
+        <option value="admin">{t('role.admin')}</option>
       </select>
-      <button type="submit">Send invitation</button>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      <button type="submit">{t('submit')}</button>
+      {error && <p role="alert">{error}</p>}
       {inviteLink && (
         <p>
-          Invitation link: <code>{inviteLink}</code>
+          {t('linkLabel')}: <code>{inviteLink}</code>
         </p>
       )}
     </form>

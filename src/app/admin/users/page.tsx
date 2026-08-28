@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import type { ReactElement } from 'react';
+import { getTranslations } from 'next-intl/server';
 import { validateSession } from '@/lib/auth/session';
 import { listUsers } from '@/lib/db/users';
 import { listInvitations } from '@/lib/db/invitations';
@@ -12,7 +13,7 @@ import { InviteForm } from './_components/invite-form';
 import type { User } from '@prisma/client';
 
 /**
- * Admin → Users page (M7.1, M11.10 rewrite).
+ * Admin → Users page (M7.1, M11.10 rewrite, M13.4 i18n).
  *
  * Three sections:
  *   1. Invite a user (client component)
@@ -40,6 +41,8 @@ export default async function AdminUsersPage({
     redirect('/admin');
   }
 
+  const t = await getTranslations('admin.users');
+
   const filterRole = searchParams.role === 'admin' || searchParams.role === 'operator'
     ? searchParams.role
     : undefined;
@@ -57,34 +60,34 @@ export default async function AdminUsersPage({
   const pending = invitations.filter((i) => !i.consumedAt && i.expiresAt > new Date());
 
   const columns: AdminColumn<User>[] = [
-    { key: 'email', header: 'Email', render: (u) => u.email },
+    { key: 'email', header: t('list.column.email'), render: (u) => u.email },
     {
       key: 'role',
-      header: 'Role',
+      header: t('list.column.role'),
       render: (u) => (
         <AdminStatusChip variant={u.role === 'admin' ? 'info' : 'neutral'}>
-          {u.role}
+          {t(`role.${u.role}` as 'role.admin' | 'role.operator')}
         </AdminStatusChip>
       ),
     },
     {
       key: 'status',
-      header: 'Status',
+      header: t('list.column.status'),
       render: (u) => (
         <AdminStatusChip variant={u.status === 'active' ? 'ok' : 'warn'}>
-          {u.status}
+          {t(`status.${u.status}` as 'status.active' | 'status.disabled')}
         </AdminStatusChip>
       ),
     },
     {
       key: 'lastLogin',
-      header: 'Last login',
+      header: t('list.column.lastLogin'),
       render: (u) =>
-        u.lastLoginAt ? u.lastLoginAt.toISOString().slice(0, 10) : '—',
+        u.lastLoginAt ? u.lastLoginAt.toISOString().slice(0, 10) : t('list.never'),
     },
     {
       key: 'created',
-      header: 'Created',
+      header: t('list.column.created'),
       render: (u) => u.createdAt.toISOString().slice(0, 10),
     },
   ];
@@ -92,37 +95,40 @@ export default async function AdminUsersPage({
   return (
     <div className="ghc-admin-page">
       <AdminPageHeader
-        breadcrumb={[{ label: 'Admin', href: '/admin' }, { label: 'Users' }]}
-        title="Users"
-        description="Manage operators, admins, and pending invitations."
+        breadcrumb={[
+          { label: t('breadcrumbAdmin'), href: '/admin' },
+          { label: t('breadcrumbUsers') },
+        ]}
+        title={t('title')}
+        description={t('description')}
       />
 
       <section>
-        <h2 className="ghc-admin-section-title">Invite a user</h2>
+        <h2 className="ghc-admin-section-title">{t('list.inviteHeading')}</h2>
         <InviteForm />
       </section>
 
       <section>
         <h2 className="ghc-admin-section-title">
-          Existing users{' '}
+          {t('list.existingHeading')}{' '}
           <span className="ghc-admin-section-count">({filteredUsers.length})</span>
         </h2>
         <AdminFilterBar
           filters={[
             {
               name: 'role',
-              label: 'Role',
+              label: t('list.filter.role'),
               options: [
-                { value: 'admin', label: 'Admin' },
-                { value: 'operator', label: 'Operator' },
+                { value: 'admin', label: t('role.admin') },
+                { value: 'operator', label: t('role.operator') },
               ],
             },
             {
               name: 'status',
-              label: 'Status',
+              label: t('list.filter.status'),
               options: [
-                { value: 'active', label: 'Active' },
-                { value: 'disabled', label: 'Disabled' },
+                { value: 'active', label: t('status.active') },
+                { value: 'disabled', label: t('status.disabled') },
               ],
             },
           ]}
@@ -136,49 +142,53 @@ export default async function AdminUsersPage({
           columns={columns}
           rows={filteredUsers}
           rowHref={(u) => `/admin/users/${u.id}`}
-          emptyTitle="No users match these filters"
-          emptyDescription="Try clearing one of the filters above."
-          ariaLabel="Existing users"
+          emptyTitle={t('list.empty.title')}
+          emptyDescription={t('list.empty.description')}
+          ariaLabel={t('list.ariaLabel')}
         />
       </section>
 
       <section>
         <h2 className="ghc-admin-section-title">
-          Pending invitations{' '}
+          {t('list.pendingHeading')}{' '}
           <span className="ghc-admin-section-count">({pending.length})</span>
         </h2>
         <AdminTable
           columns={[
-            { key: 'email', header: 'Email', render: (i) => i.email },
+            { key: 'email', header: t('list.column.email'), render: (i) => i.email },
             {
               key: 'role',
-              header: 'Role',
+              header: t('list.column.role'),
               render: (i) => (
                 <AdminStatusChip variant={i.role === 'admin' ? 'info' : 'neutral'}>
-                  {i.role}
+                  {t(`role.${i.role}` as 'role.admin' | 'role.operator')}
                 </AdminStatusChip>
               ),
             },
-            { key: 'invitedBy', header: 'Invited by', render: (i) => `#${i.invitedBy}` },
+            {
+              key: 'invitedBy',
+              header: t('list.column.invitedBy'),
+              render: (i) => `#${i.invitedBy}`,
+            },
             {
               key: 'expires',
-              header: 'Expires',
+              header: t('list.column.expires'),
               render: (i) => i.expiresAt.toISOString().slice(0, 10),
             },
             {
               key: 'link',
-              header: 'Invite link',
+              header: t('list.column.inviteLink'),
               render: (i) => (
                 <code className="ghc-admin-invite-link">
-                  /request-access?invitation={i.id}
+                  {t('inviteLinkPrefix', { id: i.id })}
                 </code>
               ),
             },
           ]}
           rows={pending}
-          emptyTitle="No pending invitations"
-          emptyDescription="Send one with the form above to get started."
-          ariaLabel="Pending invitations"
+          emptyTitle={t('list.pendingEmpty.title')}
+          emptyDescription={t('list.pendingEmpty.description')}
+          ariaLabel={t('list.pendingAriaLabel')}
         />
       </section>
     </div>

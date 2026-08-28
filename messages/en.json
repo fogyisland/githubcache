@@ -106,6 +106,112 @@
           "totalRecent": "{count, plural, one {# request} other {# requests}}"
         }
       }
+    },
+    "users": {
+      "title": "Users",
+      "description": "Manage operators, admins, and pending invitations.",
+      "breadcrumbAdmin": "Admin",
+      "breadcrumbUsers": "Users",
+      "role": {
+        "admin": "admin",
+        "operator": "operator"
+      },
+      "status": {
+        "active": "active",
+        "disabled": "disabled",
+        "pending": "pending"
+      },
+      "list": {
+        "inviteHeading": "Invite a user",
+        "existingHeading": "Existing users",
+        "pendingHeading": "Pending invitations",
+        "never": "never",
+        "ariaLabel": "Existing users",
+        "pendingAriaLabel": "Pending invitations",
+        "filter": {
+          "role": "Role",
+          "status": "Status"
+        },
+        "column": {
+          "email": "Email",
+          "role": "Role",
+          "status": "Status",
+          "lastLogin": "Last login",
+          "created": "Created",
+          "invitedBy": "Invited by",
+          "expires": "Expires",
+          "inviteLink": "Invite link"
+        },
+        "empty": {
+          "title": "No users match these filters",
+          "description": "Try clearing one of the filters above."
+        },
+        "pendingEmpty": {
+          "title": "No pending invitations",
+          "description": "Send one with the form above to get started."
+        }
+      },
+      "inviteLinkPrefix": "/request-access?invitation={id}",
+      "invite": {
+        "emailPlaceholder": "email@example.com",
+        "role": {
+          "operator": "Operator",
+          "admin": "Admin"
+        },
+        "submit": "Send invitation",
+        "error": {
+          "http": "Request failed: HTTP {status}"
+        },
+        "linkLabel": "Invitation link"
+      },
+      "actions": {
+        "resetPassword": "Reset password",
+        "disable": "Disable",
+        "enable": "Enable",
+        "logoutAll": "Logout all sessions",
+        "confirmLogoutAll": "Log out all sessions for this user?",
+        "confirmResetPassword": "Reset password? All sessions will be invalidated.",
+        "failedWithStatus": "Failed: HTTP {status}",
+        "disabledOk": "User disabled",
+        "enabledOk": "User enabled",
+        "loggedOutCount": "Logged out {count, plural, one {# session} other {# sessions}}",
+        "tempPasswordMessage": "Temp password (copy now, won't be shown again): {password}"
+      },
+      "detail": {
+        "description": "Operator profile, owned keys, and recent activity.",
+        "actionsHeading": "Actions",
+        "keysHeading": "API keys owned",
+        "auditHeading": "Recent activity",
+        "keysEmpty": {
+          "title": "No API keys",
+          "description": "This user has not been issued any keys."
+        },
+        "auditEmpty": {
+          "title": "No recent activity"
+        },
+        "keysAriaLabel": "API keys owned",
+        "auditAriaLabel": "Recent audit entries for this user",
+        "keyColumns": {
+          "name": "Name",
+          "prefix": "Prefix",
+          "status": "Status",
+          "created": "Created"
+        },
+        "auditColumns": {
+          "when": "When",
+          "action": "Action"
+        },
+        "profile": {
+          "role": "Role",
+          "status": "Status",
+          "created": "Created",
+          "lastLogin": "Last login",
+          "activeSessions": "Active sessions",
+          "adminVariant": "Admin variant",
+          "theme": "Theme",
+          "never": "never"
+        }
+      }
     }
   }
 }
