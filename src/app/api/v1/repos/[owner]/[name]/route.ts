@@ -1,0 +1,59 @@
+import { NextResponse } from 'next/server';
+import { lookupRepo } from '@/lib/cache/lookup';
+import { incrementIpBucket, windowStartFor } from '@/lib/db/ip-rate-limit';
+import { clientIpFromHeaders } from '@/lib/http/client-ip';
+import { env } from '@/lib/config/env';
+import { logger } from '@/lib/logger';
+
+interface RouteContext {
+  params: { owner: string; name: string };
+}
+
+export async function GET(req: Request, ctx: RouteContext): Promise<Response> {
+  const { owner, name } = ctx.params;
+  const ip = clientIpFromHeaders(req.headers);
+  const windowStart = windowStartFor(new Date());
+
+  const rl = await incrementIpBucket(ip, windowStart);
+  if (rl > env.PUBLIC_LOOKUP_RATE_PER_MIN) {
+    return NextResponse.json(
+      { error: 'rate limit exceeded', retryAfter: 60 },
+      { status: 429, headers: { 'Retry-After': '60' } },
+    );
+  }
+
+  const result = await lookupRepo(owner, name);
+  if (result.fetch_status === 'not_found') {
+    return NextResponse.json(
+      {
+        repository: { owner, name },
+        fetch_status: 'not_found',
+        error: result.error,
+      },
+      { status: 404 },
+    );
+  }
+  if (result.fetch_status === 'error') {
+    logger.warn({ owner, name, error: result.error }, 'public v1 repo lookup error');
+    return NextResponse.json(
+      {
+        repository: { owner, name },
+        fetch_status: 'error',
+        error: result.error,
+      },
+      { status: 503 },
+    );
+  }
+  return NextResponse.json(
+    {
+      repository: { owner, name },
+      fetch_status: 'ok',
+      fetched_at: result.last_fetched_at,
+      stale: result.stale,
+      canonical: result.canonical,
+      metadata: result.metadata,
+      ...(result.warning ? { warning: result.warning } : {}),
+    },
+    { status: 200 },
+  );
+}
