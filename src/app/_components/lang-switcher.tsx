@@ -15,10 +15,12 @@ const INITIAL: SetLangState = { status: 'idle' };
 function LangButton({
   locale,
   label,
+  ariaLabel,
   active,
 }: {
   locale: Locale;
   label: string;
+  ariaLabel: string;
   active: boolean;
 }) {
   const { pending } = useFormStatus();
@@ -30,7 +32,7 @@ function LangButton({
       className="ghc-lang-btn"
       disabled={pending}
       aria-pressed={active}
-      aria-label={`Switch language to ${label}`}
+      aria-label={ariaLabel}
       data-active={active}
     >
       {label}
@@ -51,10 +53,16 @@ export function LangSwitcher({ current, locales }: LangSwitcherProps): React.Rea
   return (
     <form action={formAction} className="ghc-lang-row" role="radiogroup" aria-label={t('aria')}>
       {locales.map((l) => (
-        <LangButton key={l} locale={l} label={t(`label.${l}`)} active={l === current} />
+        <LangButton
+          key={l}
+          locale={l}
+          label={t(`label.${l}`)}
+          ariaLabel={t('switchTo', { name: t(`fullLabel.${l}`) })}
+          active={l === current}
+        />
       ))}
       <span className="sr-only" data-lang-state={state.status} data-current-lang={current}>
-        {state.status === 'ok' ? `Language is now ${state.locale}` : ''}
+        {state.status === 'ok' ? t('status.ok', { locale: state.locale ?? '' }) : ''}
       </span>
     </form>
   );

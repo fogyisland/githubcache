@@ -4,7 +4,15 @@
       "zh": "中",
       "en": "EN"
     },
-    "aria": "Switch language"
+    "aria": "Switch language",
+    "fullLabel": {
+      "zh": "Chinese",
+      "en": "English"
+    },
+    "switchTo": "Switch to {name}",
+    "status": {
+      "ok": "Language is now {locale}"
+    }
   },
   "common": {
     "save": "Save",
