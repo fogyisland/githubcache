@@ -1,128 +1,41 @@
-'use client';
-
-import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
-
-interface CsrfResponse {
-  csrfToken: string;
-}
-
-interface LoginResponse {
-  ok?: boolean;
-  role?: string;
-  error?: string;
-}
+import { LoginForm } from './_login-form';
 
 /**
  * Admin login page.
  *
- * CSRF flow (double-submit cookie):
- *   1. On mount, GET /api/admin/auth/csrf — sets the `ghc_csrf` cookie AND
- *      returns the token in the body so JS can echo it in the header.
- *   2. On submit, POST /api/admin/auth/login with the token in both the
- *      `x-csrf-token` header (checked by middleware + route) and the body
- *      (belt-and-braces; the route's zod schema requires it).
- *   3. On 200, hard-navigate to /admin so the server component re-reads the
- *      freshly-set session cookie.
+ * The root layout already reads the `ghc_theme` cookie and sets
+ * `data-theme` on `<html>` before paint, so this page inherits the
+ * active public theme (terminal / editorial / brutalist) via the
+ * existing ghc-* classes — no theme-specific code here.
+ *
+ * The form is a client component because CSRF + submit are interactive.
+ * Layout (brand, headline, tagline, card chrome) is server-rendered.
  */
-export default function LoginPage(): ReactElement {
-  const [csrfToken, setCsrfToken] = useState<string>('');
-  const [email, setEmail] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [csrfLoading, setCsrfLoading] = useState<boolean>(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async (): Promise<void> => {
-      try {
-        const res = await fetch('/api/admin/auth/csrf', { credentials: 'same-origin' });
-        const body = (await res.json()) as CsrfResponse;
-        if (!cancelled) {
-          setCsrfToken(body.csrfToken);
-          setCsrfLoading(false);
-        }
-      } catch {
-        if (!cancelled) {
-          setError('Failed to initialize CSRF token. Please refresh.');
-          setCsrfLoading(false);
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  async function handleSubmit(e: FormEvent<HTMLFormElement>): Promise<void> {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-    try {
-      const res = await fetch('/api/admin/auth/login', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: {
-          'content-type': 'application/json',
-          'x-csrf-token': csrfToken,
-        },
-        body: JSON.stringify({ email, password, csrf: csrfToken }),
-      });
-      const body = (await res.json()) as LoginResponse;
-      if (res.ok && body.ok === true) {
-        // Full page navigation — picks up the new session cookie server-side.
-        window.location.href = '/admin';
-        return;
-      }
-      setError(body.error ?? 'Login failed');
-    } catch {
-      setError('Network error. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  }
-
+export default function LoginPage(): React.ReactElement {
   return (
-    <main style={{ maxWidth: 360, margin: '4rem auto', padding: '0 1rem' }}>
-      <h1>Admin login</h1>
-      <form
-        onSubmit={(e) => {
-          void handleSubmit(e);
-        }}
-      >
-        <div style={{ marginBottom: '1rem' }}>
-          <label htmlFor="email">Email</label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-            style={{ display: 'block', width: '100%', padding: '0.5rem' }}
-          />
-        </div>
-        <div style={{ marginBottom: '1rem' }}>
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete="current-password"
-            style={{ display: 'block', width: '100%', padding: '0.5rem' }}
-          />
-        </div>
-        {error !== null && (
-          <div role="alert" style={{ color: 'red', marginBottom: '1rem' }}>
-            {error}
-          </div>
-        )}
-        <button type="submit" disabled={loading || csrfLoading || csrfToken === ''}>
-          {loading ? 'Logging in...' : 'Log in'}
-        </button>
-      </form>
+    <main className="mx-auto max-w-[26rem] py-16 px-4 ghc-fade-up">
+      <header className="mb-8 text-center">
+        <p
+          className="font-mono text-xs tracking-[0.2em] uppercase"
+          style={{ color: 'var(--color-accent)' }}
+        >
+          github metadata cache
+        </p>
+        <h1 className="mt-3 text-2xl font-semibold">Sign in to admin</h1>
+        <p className="mt-2 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
+          Manage tokens, schedule refreshes, audit requests.
+        </p>
+      </header>
+
+      <div className="ghc-card p-6">
+        <LoginForm />
+      </div>
+
+      <p className="mt-6 text-center text-sm">
+        <a href="/" className="ghc-link">
+          ← Back to home
+        </a>
+      </p>
     </main>
   );
 }

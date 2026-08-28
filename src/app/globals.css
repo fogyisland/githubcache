@@ -333,6 +333,22 @@ a {
     color: var(--color-accent);
   }
 
+  /* ghc-alert-danger — themed danger alert block.
+     Background tinted with --color-danger over the surface, foreground in
+     the danger color. Works across all 3 themes via the existing
+     --color-danger token (terminal:#ff6b6b, editorial:#b73e3e,
+     brutalist:#ff0033). */
+  .ghc-alert-danger {
+    background: color-mix(in srgb, var(--color-danger) 12%, var(--color-surface));
+    color: var(--color-danger);
+    border: 1px solid var(--color-danger);
+    border-radius: var(--radius-button);
+    padding: 0.625rem 0.75rem;
+    font-family: var(--font-mono-active);
+    font-size: 0.8125rem;
+    line-height: 1.25rem;
+  }
+
   /* ghc-fade-up — page-load entrance (already wrapped in reduced-motion gate) */
   @keyframes ghc-fade-up {
     from {
