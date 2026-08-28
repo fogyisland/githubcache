@@ -49,5 +49,63 @@
     "repoLink": "GitHub 仓库 →",
     "operations": "运维",
     "fine": "© {year} · 基于 Next.js + Prisma + MySQL 构建。"
+  },
+  "admin": {
+    "shell": {
+      "sidebarAria": "管理菜单",
+      "breadcrumbAria": "面包屑导航",
+      "role": {
+        "admin": "管理员",
+        "operator": "操作员"
+      },
+      "sections": {
+        "dashboard": "仪表盘",
+        "users": "用户",
+        "api-keys": "API 密钥",
+        "github-tokens": "GitHub 令牌",
+        "reports": "报表",
+        "audit": "审计",
+        "refresh": "刷新"
+      },
+      "statusbar": {
+        "db": "数据库",
+        "ms": "毫秒",
+        "queue": "队列",
+        "scheduler": "调度器",
+        "audit24h": "审计 24 小时",
+        "operator": "操作员"
+      },
+      "palette": {
+        "placeholder": "搜索管理 — 菜单、最近操作…",
+        "noMatches": "未找到匹配 \"{query}\"",
+        "sections": "菜单",
+        "recentAudit": "最近审计",
+        "hintNav": "浏览",
+        "hintOpen": "打开",
+        "hintClose": "关闭"
+      },
+      "dashboard": {
+        "breadcrumbAdmin": "管理",
+        "breadcrumbDashboard": "仪表盘",
+        "title": "仪表盘",
+        "description": "缓存仓库、活跃密钥与最近活动的运维视图。",
+        "kpi": {
+          "cachedRepos": "缓存仓库数",
+          "empty": "尚无仓库",
+          "totalInCache": "缓存内总数",
+          "activeUsers": "活跃用户",
+          "usersHint": "状态为活跃的用户数",
+          "activeApiKeys": "活跃 API 密钥",
+          "apiKeysHint": "当前可用密钥数",
+          "activeGithubTokens": "活跃 GitHub 令牌",
+          "githubTokensHint": "未耗尽的令牌数"
+        },
+        "chart": {
+          "title": "近 6 小时请求量",
+          "hoursAgo": "{hours} 小时前",
+          "totalRecent": "{count, plural, other {# 次请求}}"
+        }
+      }
+    }
   }
 }

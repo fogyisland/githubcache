@@ -1,10 +1,15 @@
 import { redirect } from 'next/navigation';
 import { cookies, headers } from 'next/headers';
 import type { ReactElement, ReactNode } from 'react';
+import { getTranslations } from 'next-intl/server';
 import { validateSession } from '@/lib/auth/session';
 import { LogoutButton } from '@/app/admin/logout-button';
 import { ThemeSwitcher } from '@/app/_components/theme-switcher';
 import { AdminVariantSwitcher } from '@/app/_components/admin-variant-switcher';
+import { LangSwitcher } from '@/app/_components/lang-switcher';
+import { LOCALES } from '@/i18n/config';
+import { readLangFromCookieHeader } from '@/lib/lang/cookie';
+import { resolveLocale } from '@/lib/lang/registry';
 import {
   DEFAULT_THEME,
   isThemeId,
@@ -93,6 +98,13 @@ export default async function AdminLayout({
     ? (cookieStore.get(ADMIN_VARIANT_COOKIE)!.value as AdminVariantId)
     : DEFAULT_ADMIN_VARIANT;
 
+  const cookieHeader = cookieStore.get('cookie')?.value ?? null;
+  const currentLang = resolveLocale({
+    cookieValue: cookieHeader ? readLangFromCookieHeader(cookieHeader) : null,
+  });
+
+  const tShell = await getTranslations('admin.shell');
+
   // Pathname header set by middleware (so the server component knows the
   // active route without a client roundtrip).
   const headerStore = headers();
@@ -134,7 +146,7 @@ export default async function AdminLayout({
   const actorEmails = await getActorEmails(actorIds);
 
   const paletteSections = ADMIN_SECTIONS.filter((s) => s.roles.includes(user.role)).map(
-    (s) => ({ slug: s.slug, title: s.title, icon: s.icon, href: s.href }),
+    (s) => ({ slug: s.slug, title: tShell(`sections.${s.slug}`), icon: s.icon, href: s.href }),
   );
   const paletteData: PaletteData = {
     sections: paletteSections,
@@ -148,13 +160,14 @@ export default async function AdminLayout({
 
   return (
     <div>
-      {/* Top utility bar (theme switcher + variant switcher + logout) — kept
-          outside AdminShell so it stays on top across all variants. */}
+      {/* Top utility bar (lang switcher + theme switcher + variant switcher + logout)
+          — kept outside AdminShell so it stays on top across all variants. */}
       <div className="ghc-admin-utility">
         <span className="text-sm">
-          {user.email} ({user.role})
+          {user.email} ({tShell(`role.${user.role}`)})
         </span>
         <AdminVariantSwitcher current={currentAdminVariant} />
+        <LangSwitcher current={currentLang} locales={LOCALES} />
         <ThemeSwitcher current={currentTheme} />
         <LogoutButton />
       </div>

@@ -49,5 +49,63 @@
     "repoLink": "GitHub repo →",
     "operations": "Operations",
     "fine": "© {year} · Built with Next.js + Prisma + MySQL."
+  },
+  "admin": {
+    "shell": {
+      "sidebarAria": "Admin sections",
+      "breadcrumbAria": "Breadcrumb",
+      "role": {
+        "admin": "admin",
+        "operator": "operator"
+      },
+      "sections": {
+        "dashboard": "Dashboard",
+        "users": "Users",
+        "api-keys": "API Keys",
+        "github-tokens": "GitHub Tokens",
+        "reports": "Reports",
+        "audit": "Audit",
+        "refresh": "Refresh"
+      },
+      "statusbar": {
+        "db": "DB",
+        "ms": "ms",
+        "queue": "Queue",
+        "scheduler": "Scheduler",
+        "audit24h": "Audit 24h",
+        "operator": "Operator"
+      },
+      "palette": {
+        "placeholder": "Search admin — sections, recent actions…",
+        "noMatches": "No matches for \"{query}\"",
+        "sections": "Sections",
+        "recentAudit": "Recent audit",
+        "hintNav": "navigate",
+        "hintOpen": "open",
+        "hintClose": "close"
+      },
+      "dashboard": {
+        "breadcrumbAdmin": "Admin",
+        "breadcrumbDashboard": "Dashboard",
+        "title": "Dashboard",
+        "description": "Operational view of cached repos, active keys, and recent activity.",
+        "kpi": {
+          "cachedRepos": "Cached repos",
+          "empty": "No repos yet",
+          "totalInCache": "Total in cache",
+          "activeUsers": "Active users",
+          "usersHint": "Users with active status",
+          "activeApiKeys": "Active API keys",
+          "apiKeysHint": "Keys currently usable",
+          "activeGithubTokens": "Active GitHub tokens",
+          "githubTokensHint": "Tokens not yet exhausted"
+        },
+        "chart": {
+          "title": "Requests in the last 6 hours",
+          "hoursAgo": "{hours}h ago",
+          "totalRecent": "{count, plural, one {# request} other {# requests}}"
+        }
+      }
+    }
   }
 }

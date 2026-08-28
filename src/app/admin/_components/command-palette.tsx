@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useId, useMemo, useRef, useState, type ReactElement } from 'react';
+import { useTranslations } from 'next-intl';
 
 export interface PaletteSection {
   slug: string;
@@ -42,6 +43,8 @@ export function CommandPalette({ data, query: initialQuery = '' }: Props): React
   const inputId = useId();
   const [query, setQuery] = useState(initialQuery);
   const [highlight, setHighlight] = useState(0);
+
+  const t = useTranslations('admin.shell.palette');
 
   const { sectionHits, auditHits } = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -119,7 +122,7 @@ export function CommandPalette({ data, query: initialQuery = '' }: Props): React
             id={inputId}
             ref={inputRef}
             type="search"
-            placeholder="Search admin — sections, recent actions…"
+            placeholder={t('placeholder')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onInputKeyDown}
@@ -128,12 +131,12 @@ export function CommandPalette({ data, query: initialQuery = '' }: Props): React
         </label>
 
         {allHits.length === 0 ? (
-          <div className="ghc-admin-palette-empty">No matches for &quot;{query}&quot;.</div>
+          <div className="ghc-admin-palette-empty">{t('noMatches', { query })}</div>
         ) : (
           <div className="ghc-admin-palette-results">
             {sectionHits.length > 0 ? (
               <div className="ghc-admin-palette-group">
-                <div className="ghc-admin-palette-group-label">Sections</div>
+                <div className="ghc-admin-palette-group-label">{t('sections')}</div>
                 <ul className="ghc-admin-palette-list">
                   {sectionHits.map((s, i) => {
                     const idx = i;
@@ -164,7 +167,7 @@ export function CommandPalette({ data, query: initialQuery = '' }: Props): React
 
             {auditHits.length > 0 ? (
               <div className="ghc-admin-palette-group">
-                <div className="ghc-admin-palette-group-label">Recent audit</div>
+                <div className="ghc-admin-palette-group-label">{t('recentAudit')}</div>
                 <ul className="ghc-admin-palette-list">
                   {auditHits.map((a, i) => {
                     const idx = sectionHits.length + i;
@@ -194,7 +197,7 @@ export function CommandPalette({ data, query: initialQuery = '' }: Props): React
         )}
 
         <div className="ghc-admin-palette-hint">
-          <kbd>↑↓</kbd> navigate · <kbd>↵</kbd> open · <kbd>esc</kbd> close
+          <kbd>↑↓</kbd> {t('hintNav')} · <kbd>↵</kbd> {t('hintOpen')} · <kbd>esc</kbd> {t('hintClose')}
         </div>
       </div>
     </dialog>

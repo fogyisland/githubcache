@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { ReactElement } from 'react';
+import { getTranslations } from 'next-intl/server';
 
 export type AdminSectionSlug =
   | 'dashboard'
@@ -10,41 +11,34 @@ export type AdminSectionSlug =
   | 'audit'
   | 'refresh';
 
+/** Static metadata — `title` lives in messages, not here, so it can translate. */
 export interface AdminSection {
   slug: AdminSectionSlug;
-  title: string;
   icon: string;
   href: string;
-  /** Role names (from the Prisma `Role` enum) allowed to see this section. */
   roles: Array<'admin' | 'operator'>;
 }
 
 export const ADMIN_SECTIONS: AdminSection[] = [
-  { slug: 'dashboard', title: 'Dashboard', icon: '◉', href: '/admin', roles: ['admin', 'operator'] },
-  { slug: 'users', title: 'Users', icon: '◐', href: '/admin/users', roles: ['admin'] },
-  { slug: 'api-keys', title: 'API Keys', icon: '⌬', href: '/admin/api-keys', roles: ['admin', 'operator'] },
-  { slug: 'github-tokens', title: 'GitHub Tokens', icon: '⊕', href: '/admin/github-tokens', roles: ['admin', 'operator'] },
-  { slug: 'reports', title: 'Reports', icon: '⊟', href: '/admin/reports', roles: ['admin', 'operator'] },
-  { slug: 'audit', title: 'Audit', icon: '◭', href: '/admin/audit', roles: ['admin'] },
-  { slug: 'refresh', title: 'Refresh', icon: '↻', href: '/admin/refresh', roles: ['admin'] },
+  { slug: 'dashboard', icon: '◉', href: '/admin', roles: ['admin', 'operator'] },
+  { slug: 'users', icon: '◐', href: '/admin/users', roles: ['admin'] },
+  { slug: 'api-keys', icon: '⌬', href: '/admin/api-keys', roles: ['admin', 'operator'] },
+  { slug: 'github-tokens', icon: '⊕', href: '/admin/github-tokens', roles: ['admin', 'operator'] },
+  { slug: 'reports', icon: '⊟', href: '/admin/reports', roles: ['admin', 'operator'] },
+  { slug: 'audit', icon: '◭', href: '/admin/audit', roles: ['admin'] },
+  { slug: 'refresh', icon: '↻', href: '/admin/refresh', roles: ['admin'] },
 ];
 
 interface Props {
-  /** Slug of the current section (drives the indicator). */
   current: AdminSectionSlug;
-  /** Operator's role — gates visibility of admin-only sections. */
   userRole: 'admin' | 'operator';
 }
 
-/**
- * Admin sidebar. Renders one `<Link>` per section the operator can see.
- * The active section gets `ghc-admin-sidebar-current` for the left-border
- * accent. Designed to live in a fixed-width (240px) column on desktop.
- */
-export function AdminSidebar({ current, userRole }: Props): ReactElement {
+export async function AdminSidebar({ current, userRole }: Props): Promise<ReactElement> {
+  const t = await getTranslations('admin.shell');
   const visible = ADMIN_SECTIONS.filter((s) => s.roles.includes(userRole));
   return (
-    <nav className="ghc-admin-sidebar" aria-label="Admin sections">
+    <nav className="ghc-admin-sidebar" aria-label={t('sidebarAria')}>
       <ul className="ghc-admin-sidebar-list">
         {visible.map((s) => {
           const isCurrent = s.slug === current;
@@ -62,7 +56,7 @@ export function AdminSidebar({ current, userRole }: Props): ReactElement {
                 <span className="ghc-admin-sidebar-icon" aria-hidden="true">
                   {s.icon}
                 </span>
-                <span className="ghc-admin-sidebar-title">{s.title}</span>
+                <span className="ghc-admin-sidebar-title">{t(`sections.${s.slug}`)}</span>
               </Link>
             </li>
           );

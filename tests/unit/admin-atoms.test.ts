@@ -1,6 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import React, { createElement } from 'react';
+
+vi.mock('next-intl/server', () => ({
+  getTranslations: async (_ns: string) => (key: string) => key,
+}));
+
 import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
 import { AdminEmptyState } from '@/app/admin/_components/admin-empty-state';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
@@ -61,20 +66,17 @@ describe('AdminEmptyState', () => {
 });
 
 describe('AdminPageHeader', () => {
-  it('renders breadcrumb + title + description + actions', () => {
+  it('renders breadcrumb + title + description + actions', async () => {
     const html = renderToStaticMarkup(
-      createElement(
-        AdminPageHeader,
-        {
-          breadcrumb: [
-            { label: 'Admin', href: '/admin' },
-            { label: 'Users' },
-          ],
-          title: 'Users',
-          description: 'Manage operators and admins',
-          actions: createElement('button', { type: 'button' }, '+ Invite'),
-        },
-      ),
+      await AdminPageHeader({
+        breadcrumb: [
+          { label: 'Admin', href: '/admin' },
+          { label: 'Users' },
+        ],
+        title: 'Users',
+        description: 'Manage operators and admins',
+        actions: createElement('button', { type: 'button' }, '+ Invite'),
+      }),
     );
     expect(html).toContain('Admin');
     expect(html).toContain('Users');
@@ -84,9 +86,9 @@ describe('AdminPageHeader', () => {
     expect(html).toContain('ghc-admin-breadcrumb');
   });
 
-  it('renders flat title when no breadcrumb', () => {
+  it('renders flat title when no breadcrumb', async () => {
     const html = renderToStaticMarkup(
-      createElement(AdminPageHeader, { title: 'Dashboard' }),
+      await AdminPageHeader({ title: 'Dashboard' }),
     );
     expect(html).toContain('Dashboard');
     expect(html).not.toContain('ghc-admin-breadcrumb');

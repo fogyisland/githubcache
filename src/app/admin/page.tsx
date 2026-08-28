@@ -1,5 +1,6 @@
 import type { ReactElement } from 'react';
 import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
 import { prisma } from '@/lib/db/client';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { AdminKpiCard } from '@/app/admin/_components/admin-kpi-card';
@@ -7,7 +8,7 @@ import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
 import { queryAuditLog, getActorEmails } from '@/lib/db/audit';
 
 /**
- * Admin dashboard (M11.9 rewrite).
+ * Admin dashboard (M11.9 rewrite + M13.3 translation).
  *
  * Layout (top → bottom):
  *   1. AdminPageHeader — Dashboard + no actions (root of admin tree)
@@ -20,6 +21,8 @@ import { queryAuditLog, getActorEmails } from '@/lib/db/audit';
  * no client-side fetch needed.
  */
 export default async function AdminDashboardPage(): Promise<ReactElement> {
+  const t = await getTranslations('admin.shell.dashboard');
+
   const [repoCount, userCount, apiKeyCount, tokenCount, recentAudit] = await Promise.all([
     prisma.repository.count(),
     prisma.user.count({ where: { status: 'active' } }),
@@ -35,7 +38,7 @@ export default async function AdminDashboardPage(): Promise<ReactElement> {
   const buckets = Array.from({ length: 6 }, (_, i) => {
     const start = new Date(now - (6 - i) * 60 * 60 * 1000);
     const end = new Date(now - (5 - i) * 60 * 60 * 1000);
-    return { start, end, label: `${(6 - i)}h ago`, count: 0 };
+    return { start, end, label: t('chart.hoursAgo', { hours: String(6 - i) }), count: 0 };
   });
   const audit6h = await prisma.auditLog.findMany({
     where: { createdAt: { gte: new Date(now - 6 * 60 * 60 * 1000) } },
@@ -63,42 +66,45 @@ export default async function AdminDashboardPage(): Promise<ReactElement> {
   return (
     <div className="ghc-admin-dashboard">
       <AdminPageHeader
-        breadcrumb={[{ label: 'Admin', href: '/admin' }, { label: 'Dashboard' }]}
-        title="Dashboard"
-        description="Operational view of cached repos, active keys, and recent activity."
+        breadcrumb={[
+          { label: t('breadcrumbAdmin'), href: '/admin' },
+          { label: t('breadcrumbDashboard') },
+        ]}
+        title={t('title')}
+        description={t('description')}
       />
 
       <section className="ghc-admin-kpi-row">
         <AdminKpiCard
-          label="Cached repos"
+          label={t('kpi.cachedRepos')}
           value={repoCount}
-          hint={repoCount === 0 ? 'No repos yet' : 'Total in cache'}
+          hint={repoCount === 0 ? t('kpi.empty') : t('kpi.totalInCache')}
         />
         <AdminKpiCard
-          label="Active users"
+          label={t('kpi.activeUsers')}
           value={userCount}
           tone={userCount > 0 ? 'positive' : 'default'}
-          hint="Operators + admins"
+          hint={t('kpi.usersHint')}
         />
         <AdminKpiCard
-          label="Active API keys"
+          label={t('kpi.activeApiKeys')}
           value={apiKeyCount}
           tone={apiKeyCount > 0 ? 'positive' : 'default'}
-          hint="Pending + revoked excluded"
+          hint={t('kpi.apiKeysHint')}
         />
         <AdminKpiCard
-          label="Active GitHub tokens"
+          label={t('kpi.activeGithubTokens')}
           value={tokenCount}
           tone={tokenCount === 0 ? 'negative' : 'positive'}
-          hint={tokenCount === 0 ? 'Refresh will fail' : 'In rotation'}
+          hint={t('kpi.githubTokensHint')}
         />
       </section>
 
       <section className="ghc-admin-dashboard-grid">
         <div className="ghc-admin-dashboard-card">
-          <h2 className="ghc-admin-dashboard-card-title">Requests — last 6 hours</h2>
+          <h2 className="ghc-admin-dashboard-card-title">{t('chart.title')}</h2>
           <p className="ghc-admin-dashboard-card-hint">
-            {totalRecent.toLocaleString()} total · peak {peak.toLocaleString()}/hr
+            {t('chart.totalRecent', { count: totalRecent.toLocaleString() })} · peak {peak.toLocaleString()}/hr
           </p>
           <div className="ghc-admin-dashboard-bars" role="img" aria-label={`Bar chart: ${buckets.map((b) => `${b.label} ${b.count}`).join(', ')}`}>
             {buckets.map((b) => {

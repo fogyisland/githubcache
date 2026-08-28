@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { getTranslations } from 'next-intl/server';
 import type { ReactElement, ReactNode } from 'react';
 
 export interface BreadcrumbItem {
@@ -21,16 +22,17 @@ interface Props {
  * - Title + optional description on the left.
  * - Actions slot on the right (buttons, filters, etc.).
  */
-export function AdminPageHeader({
+export async function AdminPageHeader({
   breadcrumb,
   title,
   description,
   actions,
-}: Props): ReactElement {
+}: Props): Promise<ReactElement> {
+  const t = await getTranslations('admin.shell');
   return (
     <header className="ghc-admin-page-header">
       {breadcrumb && breadcrumb.length > 0 ? (
-        <nav className="ghc-admin-breadcrumb" aria-label="Breadcrumb">
+        <nav className="ghc-admin-breadcrumb" aria-label={t('breadcrumbAria')}>
           {breadcrumb.map((item, i) => (
             <span key={`${item.label}-${i}`} className="ghc-admin-breadcrumb-item">
               {item.href ? (

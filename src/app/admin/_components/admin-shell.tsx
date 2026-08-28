@@ -26,16 +26,17 @@ interface Props {
  * Styling is delegated to `[data-admin="…"]` blocks in globals.css — the
  * shell just sets the attribute on the wrapper.
  */
-export function AdminShell({
+export async function AdminShell({
   current,
   variant,
   user,
   initialStatus,
   children,
-}: Props): ReactElement {
+}: Props): Promise<ReactElement> {
+  const sidebar = await AdminSidebar({ current, userRole: user.role });
   return (
     <div className="ghc-admin-shell" data-admin={variant}>
-      <AdminSidebar current={current} userRole={user.role} />
+      {sidebar}
       <div className="ghc-admin-main">
         <main className="ghc-admin-main-inner">{children}</main>
         {variant === 'mission_control' ? <AdminStatusBar initialData={initialStatus} /> : null}
