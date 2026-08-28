@@ -46,12 +46,10 @@ export async function GET(req: Request, ctx: RouteContext): Promise<Response> {
   }
   return NextResponse.json(
     {
-      repository: { owner, name },
       fetch_status: 'ok',
+      repository: result.metadata,
       fetched_at: result.last_fetched_at,
-      stale: result.stale,
-      canonical: result.canonical,
-      metadata: result.metadata,
+      ...(result.stale ? { stale: true } : {}),
       ...(result.warning ? { warning: result.warning } : {}),
     },
     { status: 200 },

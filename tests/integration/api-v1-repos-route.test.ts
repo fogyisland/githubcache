@@ -22,6 +22,12 @@ describe('GET /api/v1/repos/[owner]/[name]', () => {
     expect(body.fetch_status).toBe('ok');
     expect(body.repository.owner).toBe('octocat');
     expect(body.repository.name).toBe('Hello-World');
+    expect(body.repository.stars).toBe(2000);
+    expect(body.repository.forks).toBe(900);
+    expect(body.repository.watchers).toBe(80);
+    expect(body.repository.language).toBe('TypeScript');
+    expect(body.repository.defaultBranch).toBe('main');
+    expect(body.repository.license).toBe('MIT');
   });
 
   it('returns 404 for repo with fetch_status=not_found', async () => {
