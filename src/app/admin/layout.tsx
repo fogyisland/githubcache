@@ -8,7 +8,7 @@ import { ThemeSwitcher } from '@/app/_components/theme-switcher';
 import { AdminVariantSwitcher } from '@/app/_components/admin-variant-switcher';
 import { LangSwitcher } from '@/app/_components/lang-switcher';
 import { LOCALES } from '@/i18n/config';
-import { readLangFromCookieHeader } from '@/lib/lang/cookie';
+import { LANG_COOKIE } from '@/lib/lang/cookie';
 import { resolveLocale } from '@/lib/lang/registry';
 import {
   DEFAULT_THEME,
@@ -98,9 +98,9 @@ export default async function AdminLayout({
     ? (cookieStore.get(ADMIN_VARIANT_COOKIE)!.value as AdminVariantId)
     : DEFAULT_ADMIN_VARIANT;
 
-  const cookieHeader = cookieStore.get('cookie')?.value ?? null;
   const currentLang = resolveLocale({
-    cookieValue: cookieHeader ? readLangFromCookieHeader(cookieHeader) : null,
+    cookieValue: cookieStore.get(LANG_COOKIE)?.value ?? null,
+    dbValue: user.lang,
   });
 
   const tShell = await getTranslations('admin.shell');
