@@ -1,9 +1,11 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import type { ReactElement } from 'react';
 
 export function AddTokenForm(): ReactElement {
+  const t = useTranslations('admin.githubTokens.addForm');
   const router = useRouter();
   const [csrf, setCsrf] = useState('');
   const [label, setLabel] = useState('');
@@ -32,12 +34,10 @@ export function AddTokenForm(): ReactElement {
     setBusy(false);
     if (!res.ok) {
       const err = (await res.json().catch(() => ({}))) as { error?: string };
-      setError(err.error ?? `HTTP ${res.status}`);
+      setError(err.error ?? t('error.http', { status: res.status }));
       return;
     }
-    setSuccess(
-      'Token registered. Activate by adding to GITHUB_TOKENS env / file and restarting.',
-    );
+    setSuccess(t('success'));
     setLabel('');
     setToken('');
     router.refresh();
@@ -46,31 +46,31 @@ export function AddTokenForm(): ReactElement {
   return (
     <form onSubmit={onSubmit}>
       <label>
-        Label:{' '}
+        {t('labelLabel')}{' '}
         <input
           type="text"
           value={label}
           onChange={(e) => setLabel(e.target.value)}
-          placeholder="e.g. user-ci-token"
+          placeholder={t('labelPlaceholder')}
           required
         />
       </label>
       <label>
-        Token (plaintext, will NOT be stored):{' '}
+        {t('tokenLabel')}{' '}
         <textarea
           value={token}
           onChange={(e) => setToken(e.target.value)}
-          placeholder="ghp_..."
+          placeholder={t('tokenPlaceholder')}
           required
           rows={3}
-          style={{ width: '100%', maxWidth: '500px', fontFamily: 'monospace' }}
+          className="ghc-input-mono"
         />
       </label>
       <button type="submit" disabled={busy || !csrf || !token || !label}>
-        Register token
+        {t('submit')}
       </button>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-      {success && <p style={{ color: 'green' }}>{success}</p>}
+      {error && <p role="alert">{error}</p>}
+      {success && <p role="status">{success}</p>}
     </form>
   );
 }

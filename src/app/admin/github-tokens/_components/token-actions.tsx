@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import type { GithubTokenStatus } from '@prisma/client';
 import type { ReactElement } from 'react';
 
@@ -11,6 +12,7 @@ export function TokenActions({
   tokenId: string;
   currentStatus: GithubTokenStatus;
 }): ReactElement {
+  const t = useTranslations('admin.githubTokens.actions');
   const router = useRouter();
   const [csrf, setCsrf] = useState('');
   const [busy, setBusy] = useState(false);
@@ -34,24 +36,16 @@ export function TokenActions({
     setBusy(false);
     if (!res.ok) {
       const err = (await res.json().catch(() => ({}))) as { error?: string };
-      setMessage(`Failed: ${err.error ?? res.status}`);
+      setMessage(t('failedWithError', { error: err.error ?? String(res.status) }));
       return;
     }
-    setMessage(
-      status === 'disabled'
-        ? 'Token disabled (takes effect on next service restart).'
-        : 'Token enabled.',
-    );
+    setMessage(status === 'disabled' ? t('disabledOk') : t('enabledOk'));
     router.refresh();
   }
 
   async function deleteToken(): Promise<void> {
     if (!csrf) return;
-    if (
-      !confirm(
-        'Delete this token from the DB registry? If it is still in GITHUB_TOKENS env/file, it will re-appear on next restart.',
-      )
-    ) {
+    if (!confirm(t('confirmDelete'))) {
       return;
     }
     setBusy(true);
@@ -64,10 +58,10 @@ export function TokenActions({
     setBusy(false);
     if (!res.ok) {
       const err = (await res.json().catch(() => ({}))) as { error?: string };
-      setMessage(`Failed: ${err.error ?? res.status}`);
+      setMessage(t('failedWithError', { error: err.error ?? String(res.status) }));
       return;
     }
-    setMessage('Token deleted from DB registry.');
+    setMessage(t('deletedOk'));
     router.refresh();
   }
 
@@ -77,10 +71,10 @@ export function TokenActions({
         onClick={() => void patchStatus(currentStatus === 'active' ? 'disabled' : 'active')}
         disabled={busy || !csrf}
       >
-        {currentStatus === 'active' ? 'Disable' : 'Enable'}
+        {currentStatus === 'active' ? t('disable') : t('enable')}
       </button>
       <button onClick={() => void deleteToken()} disabled={busy || !csrf}>
-        Delete
+        {t('delete')}
       </button>
       {message && <p>{message}</p>}
     </div>

@@ -1,5 +1,6 @@
 import { notFound, redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
+import { getTranslations } from 'next-intl/server';
 import type { ReactElement } from 'react';
 import { getTokenById } from '@/lib/db/github-tokens';
 import { poolHasHash } from '@/lib/github/pool';
@@ -44,6 +45,8 @@ export default async function AdminGithubTokenDetailPage({
     redirect('/admin');
   }
 
+  const t = await getTranslations('admin.githubTokens.detail');
+
   let id: bigint;
   try {
     id = BigInt(params.id);
@@ -69,12 +72,12 @@ export default async function AdminGithubTokenDetailPage({
   const auditColumns: AdminColumn<AuditRow>[] = [
     {
       key: 'time',
-      header: 'When',
+      header: t('auditColumns.when'),
       render: (r) => r.createdAt.toISOString().replace('T', ' ').slice(0, 19),
     },
     {
       key: 'action',
-      header: 'Action',
+      header: t('auditColumns.action'),
       render: (r) => (
         <AdminStatusChip variant="neutral">{r.action}</AdminStatusChip>
       ),
@@ -85,86 +88,86 @@ export default async function AdminGithubTokenDetailPage({
     <div className="ghc-admin-page">
       <AdminPageHeader
         breadcrumb={[
-          { label: 'Admin', href: '/admin' },
-          { label: 'GitHub Tokens', href: '/admin/github-tokens' },
+          { label: t('breadcrumbAdmin'), href: '/admin' },
+          { label: t('breadcrumbGithubTokens'), href: '/admin/github-tokens' },
           { label: token.label },
         ]}
         title={token.label}
-        description={`Token ${token.tokenFirst4}…${token.tokenLast4}`}
+        description={t('tokenPrefix', { first4: token.tokenFirst4, last4: token.tokenLast4 })}
       />
 
       <section className="ghc-admin-detail-card">
         <dl className="ghc-admin-detail-dl">
           <div className="ghc-admin-detail-row">
-            <dt>Prefix</dt>
+            <dt>{t('profile.prefix')}</dt>
             <dd>
               <code className="ghc-admin-mono">
                 {token.tokenFirst4}…{token.tokenLast4}
               </code>{' '}
-              <span className="ghc-admin-detail-hint">(full token never stored)</span>
+              <span className="ghc-admin-detail-hint">{t('profile.fullTokenHidden')}</span>
             </dd>
           </div>
           <div className="ghc-admin-detail-row">
-            <dt>Status</dt>
+            <dt>{t('profile.status')}</dt>
             <dd>
               <AdminStatusChip variant={token.status === 'active' ? 'ok' : 'warn'}>
-                {token.status}
+                {t(`status.${token.status}` as 'status.active' | 'status.disabled')}
               </AdminStatusChip>
             </dd>
           </div>
           <div className="ghc-admin-detail-row">
-            <dt>Pool state</dt>
+            <dt>{t('profile.poolState')}</dt>
             <dd>
               <AdminStatusChip variant={inPool ? 'ok' : 'warn'}>
-                {inPool ? 'in pool' : 'pending activation'}
+                {inPool ? t('pool.inPool') : t('pool.pendingActivation')}
               </AdminStatusChip>
             </dd>
           </div>
           <div className="ghc-admin-detail-row">
-            <dt>Usage</dt>
+            <dt>{t('profile.usage')}</dt>
             <dd>
               <strong>{token.requestsUsed.toLocaleString()}</strong> /{' '}
               {token.requestsLimit.toLocaleString()} ({usagePct}%)
             </dd>
           </div>
           <div className="ghc-admin-detail-row">
-            <dt>Last used</dt>
+            <dt>{t('profile.lastUsed')}</dt>
             <dd>
               {token.lastUsedAt
                 ? token.lastUsedAt.toISOString().replace('T', ' ').slice(0, 19)
-                : 'never'}
+                : t('profile.never')}
             </dd>
           </div>
           <div className="ghc-admin-detail-row">
-            <dt>Reset window</dt>
+            <dt>{t('profile.resetWindow')}</dt>
             <dd>
               {token.resetAt
                 ? token.resetAt.toISOString().replace('T', ' ').slice(0, 19)
-                : '—'}
+                : t('profile.dash')}
             </dd>
           </div>
           <div className="ghc-admin-detail-row">
-            <dt>Created</dt>
+            <dt>{t('profile.created')}</dt>
             <dd>{token.createdAt.toISOString().replace('T', ' ').slice(0, 19)}</dd>
           </div>
         </dl>
       </section>
 
       <section>
-        <h2 className="ghc-admin-section-title">Actions</h2>
+        <h2 className="ghc-admin-section-title">{t('actionsHeading')}</h2>
         <TokenActions tokenId={token.id.toString()} currentStatus={token.status} />
       </section>
 
       <section>
         <h2 className="ghc-admin-section-title">
-          Recent activity{' '}
+          {t('auditHeading')}{' '}
           <span className="ghc-admin-section-count">({recentAudit.total})</span>
         </h2>
         <AdminTable<AuditRow>
           columns={auditColumns}
           rows={recentAudit.rows}
-          emptyTitle="No recent activity for this token"
-          ariaLabel="Recent audit entries for this GitHub token"
+          emptyTitle={t('auditEmpty.title')}
+          ariaLabel={t('auditAriaLabel')}
         />
       </section>
     </div>

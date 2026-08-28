@@ -313,6 +313,97 @@
         "updatedOk": "限额已更新。",
         "failedWithError": "失败：{error}"
       }
+    },
+    "githubTokens": {
+      "title": "GitHub 令牌",
+      "description": "管理刷新调度器使用的 GitHub 令牌池。",
+      "breadcrumbAdmin": "管理",
+      "breadcrumbGithubTokens": "GitHub 令牌",
+      "addHeading": "添加令牌",
+      "status": {
+        "active": "活跃",
+        "disabled": "已禁用"
+      },
+      "pool": {
+        "inPool": "池内",
+        "pendingActivation": "待激活"
+      },
+      "quota": {
+        "chip": "配额",
+        "warning": "已使用合并配额的 {pct}%（{used} / {limit}）。"
+      },
+      "poolHint": "池大小（当前内存中活跃）：{size}。在此处添加令牌仅创建数据库记录 — 若要激活，请将令牌加入 {env} 环境变量或 {envFile} 文件并重启服务。",
+      "list": {
+        "heading": "已注册令牌",
+        "ariaLabel": "GitHub 令牌",
+        "never": "从未",
+        "column": {
+          "label": "标签",
+          "prefix": "前缀",
+          "status": "状态",
+          "poolState": "池状态",
+          "usedLimit": "已用 / 限额",
+          "lastUsed": "最后使用"
+        },
+        "empty": {
+          "title": "暂无已注册的 GitHub 令牌",
+          "description": "使用上方表单添加令牌以启用刷新。"
+        }
+      },
+      "addForm": {
+        "labelLabel": "标签：",
+        "labelPlaceholder": "例如 user-ci-token",
+        "tokenLabel": "令牌（明文，不会保存）：",
+        "tokenPlaceholder": "ghp_...",
+        "submit": "注册令牌",
+        "error": {
+          "http": "请求失败：HTTP {status}"
+        },
+        "success": "令牌已注册。激活方法：加入 GITHUB_TOKENS 环境变量或文件后重启服务。"
+      },
+      "actions": {
+        "disable": "禁用",
+        "enable": "启用",
+        "delete": "删除",
+        "confirmDelete": "确认从数据库注册表中删除该令牌？若它仍在 GITHUB_TOKENS 环境变量或文件中，下次重启后会自动重现。",
+        "failedWithError": "失败：{error}",
+        "disabledOk": "令牌已禁用（下次服务重启后生效）。",
+        "enabledOk": "令牌已启用。",
+        "deletedOk": "令牌已从数据库注册表中删除。"
+      },
+      "detail": {
+        "tokenPrefix": "令牌 {first4}…{last4}",
+        "actionsHeading": "操作",
+        "auditHeading": "最近活动",
+        "auditEmpty": {
+          "title": "暂无该令牌的活动记录"
+        },
+        "auditAriaLabel": "该 GitHub 令牌最近审计条目",
+        "auditColumns": {
+          "when": "时间",
+          "action": "操作"
+        },
+        "status": {
+          "active": "活跃",
+          "disabled": "已禁用"
+        },
+        "pool": {
+          "inPool": "池内",
+          "pendingActivation": "待激活"
+        },
+        "profile": {
+          "prefix": "前缀",
+          "fullTokenHidden": "（完整令牌永不存储）",
+          "status": "状态",
+          "poolState": "池状态",
+          "usage": "使用情况",
+          "lastUsed": "最后使用",
+          "never": "从未",
+          "resetWindow": "重置窗口",
+          "dash": "—",
+          "created": "创建时间"
+        }
+      }
     }
   }
 }

@@ -1581,6 +1581,11 @@ a {
     font-family: var(--admin-mono, monospace);
     font-size: 0.8125rem;
   }
+  .ghc-input-mono {
+    width: 100%;
+    max-width: 500px;
+    font-family: var(--admin-mono, monospace);
+  }
   .ghc-admin-invite-link {
     font-family: var(--admin-mono, monospace);
     font-size: 0.75rem;

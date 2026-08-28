@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
+import { getTranslations } from 'next-intl/server';
 import type { ReactElement } from 'react';
 import { listAllTokens } from '@/lib/db/github-tokens';
 import { poolHasHash, poolSize } from '@/lib/github/pool';
@@ -34,54 +35,56 @@ export default async function AdminGithubTokensPage(): Promise<ReactElement> {
     redirect('/admin');
   }
 
+  const t = await getTranslations('admin.githubTokens');
+
   const tokens = await listAllTokens();
   const activePoolSize = poolSize();
-  const totalQuotaUsed = tokens.reduce((a, t) => a + t.requestsUsed, 0);
-  const totalQuotaLimit = tokens.reduce((a, t) => a + t.requestsLimit, 0);
+  const totalQuotaUsed = tokens.reduce((a, tok) => a + tok.requestsUsed, 0);
+  const totalQuotaLimit = tokens.reduce((a, tok) => a + tok.requestsLimit, 0);
   const quotaPct = totalQuotaLimit > 0 ? Math.round((totalQuotaUsed / totalQuotaLimit) * 100) : 0;
 
   const columns: AdminColumn<TokenRow>[] = [
-    { key: 'label', header: 'Label', render: (t) => t.label },
+    { key: 'label', header: t('list.column.label'), render: (tok) => tok.label },
     {
       key: 'prefix',
-      header: 'Prefix',
-      render: (t) => (
+      header: t('list.column.prefix'),
+      render: (tok) => (
         <code className="ghc-admin-mono">
-          {t.tokenFirst4}…{t.tokenLast4}
+          {tok.tokenFirst4}…{tok.tokenLast4}
         </code>
       ),
     },
     {
       key: 'status',
-      header: 'Status',
-      render: (t) => (
-        <AdminStatusChip variant={t.status === 'active' ? 'ok' : 'warn'}>
-          {t.status}
+      header: t('list.column.status'),
+      render: (tok) => (
+        <AdminStatusChip variant={tok.status === 'active' ? 'ok' : 'warn'}>
+          {t(`status.${tok.status}` as 'status.active' | 'status.disabled')}
         </AdminStatusChip>
       ),
     },
     {
       key: 'pool',
-      header: 'Pool state',
-      render: (t) => {
-        const inPool = poolHasHash(t.tokenHash);
+      header: t('list.column.poolState'),
+      render: (tok) => {
+        const inPool = poolHasHash(tok.tokenHash);
         return (
           <AdminStatusChip variant={inPool ? 'ok' : 'warn'}>
-            {inPool ? 'in pool' : 'pending activation'}
+            {inPool ? t('pool.inPool') : t('pool.pendingActivation')}
           </AdminStatusChip>
         );
       },
     },
     {
       key: 'usage',
-      header: 'Used / Limit',
-      render: (t) => {
-        const pct = t.requestsLimit > 0
-          ? Math.round((t.requestsUsed / t.requestsLimit) * 100)
+      header: t('list.column.usedLimit'),
+      render: (tok) => {
+        const pct = tok.requestsLimit > 0
+          ? Math.round((tok.requestsUsed / tok.requestsLimit) * 100)
           : 0;
         return (
           <span className="ghc-admin-usage">
-            {t.requestsUsed.toLocaleString()} / {t.requestsLimit.toLocaleString()}
+            {tok.requestsUsed.toLocaleString()} / {tok.requestsLimit.toLocaleString()}
             <span className="ghc-admin-usage-pct">({pct}%)</span>
           </span>
         );
@@ -90,14 +93,14 @@ export default async function AdminGithubTokensPage(): Promise<ReactElement> {
     },
     {
       key: 'lastUsed',
-      header: 'Last used',
-      render: (t) => (t.lastUsedAt ? t.lastUsedAt.toISOString().slice(0, 10) : '—'),
+      header: t('list.column.lastUsed'),
+      render: (tok) => (tok.lastUsedAt ? tok.lastUsedAt.toISOString().slice(0, 10) : t('list.never')),
     },
     {
       key: 'actions',
       header: '',
-      render: (t) => (
-        <TokenActions tokenId={t.id.toString()} currentStatus={t.status} />
+      render: (tok) => (
+        <TokenActions tokenId={tok.id.toString()} currentStatus={tok.status} />
       ),
     },
   ];
@@ -105,43 +108,51 @@ export default async function AdminGithubTokensPage(): Promise<ReactElement> {
   return (
     <div className="ghc-admin-page">
       <AdminPageHeader
-        breadcrumb={[{ label: 'Admin', href: '/admin' }, { label: 'GitHub Tokens' }]}
-        title="GitHub Tokens"
-        description="Manage the GitHub token pool used by the refresh scheduler."
+        breadcrumb={[
+          { label: t('breadcrumbAdmin'), href: '/admin' },
+          { label: t('breadcrumbGithubTokens') },
+        ]}
+        title={t('title')}
+        description={t('description')}
       />
 
       {tokens.length > 0 && quotaPct >= 80 ? (
         <div className="ghc-admin-quota-warning">
-          <AdminStatusChip variant="warn">quota</AdminStatusChip>
+          <AdminStatusChip variant="warn">{t('quota.chip')}</AdminStatusChip>
           <span>
-            {quotaPct}% of combined token quota used ({totalQuotaUsed.toLocaleString()} /{' '}
-            {totalQuotaLimit.toLocaleString()}).
+            {t('quota.warning', {
+              pct: quotaPct,
+              used: totalQuotaUsed.toLocaleString(),
+              limit: totalQuotaLimit.toLocaleString(),
+            })}
           </span>
         </div>
       ) : null}
 
       <p className="ghc-admin-hint">
-        Pool size (currently active in memory): <strong>{activePoolSize}</strong>.
-        Adding a token here creates a DB record only — to activate it, add the token to{' '}
-        <code>GITHUB_TOKENS</code> env var or <code>GITHUB_TOKENS_FILE</code> and restart
-        the service.
+        {t.rich('poolHint', {
+          size: () => <strong>{activePoolSize}</strong>,
+          env: () => <code>GITHUB_TOKENS</code>,
+          envFile: () => <code>GITHUB_TOKENS_FILE</code>,
+        })}
       </p>
 
       <section>
-        <h2 className="ghc-admin-section-title">Add a token</h2>
+        <h2 className="ghc-admin-section-title">{t('addHeading')}</h2>
         <AddTokenForm />
       </section>
 
       <section>
         <h2 className="ghc-admin-section-title">
-          Registered tokens <span className="ghc-admin-section-count">({tokens.length})</span>
+          {t('list.heading')}{' '}
+          <span className="ghc-admin-section-count">({tokens.length})</span>
         </h2>
         <AdminTable<TokenRow>
           columns={columns}
           rows={tokens}
-          emptyTitle="No GitHub tokens registered"
-          emptyDescription="Add one with the form above to enable refresh."
-          ariaLabel="GitHub tokens"
+          emptyTitle={t('list.empty.title')}
+          emptyDescription={t('list.empty.description')}
+          ariaLabel={t('list.ariaLabel')}
         />
       </section>
     </div>

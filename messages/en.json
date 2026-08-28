@@ -313,6 +313,97 @@
         "updatedOk": "Limits updated.",
         "failedWithError": "Failed: {error}"
       }
+    },
+    "githubTokens": {
+      "title": "GitHub Tokens",
+      "description": "Manage the GitHub token pool used by the refresh scheduler.",
+      "breadcrumbAdmin": "Admin",
+      "breadcrumbGithubTokens": "GitHub Tokens",
+      "addHeading": "Add a token",
+      "status": {
+        "active": "active",
+        "disabled": "disabled"
+      },
+      "pool": {
+        "inPool": "in pool",
+        "pendingActivation": "pending activation"
+      },
+      "quota": {
+        "chip": "quota",
+        "warning": "{pct}% of combined token quota used ({used} / {limit})."
+      },
+      "poolHint": "Pool size (currently active in memory): {size}. Adding a token here creates a DB record only — to activate it, add the token to {env} env var or {envFile} and restart the service.",
+      "list": {
+        "heading": "Registered tokens",
+        "ariaLabel": "GitHub tokens",
+        "never": "never",
+        "column": {
+          "label": "Label",
+          "prefix": "Prefix",
+          "status": "Status",
+          "poolState": "Pool state",
+          "usedLimit": "Used / Limit",
+          "lastUsed": "Last used"
+        },
+        "empty": {
+          "title": "No GitHub tokens registered",
+          "description": "Add one with the form above to enable refresh."
+        }
+      },
+      "addForm": {
+        "labelLabel": "Label:",
+        "labelPlaceholder": "e.g. user-ci-token",
+        "tokenLabel": "Token (plaintext, will NOT be stored):",
+        "tokenPlaceholder": "ghp_...",
+        "submit": "Register token",
+        "error": {
+          "http": "Request failed: HTTP {status}"
+        },
+        "success": "Token registered. Activate by adding to GITHUB_TOKENS env / file and restarting."
+      },
+      "actions": {
+        "disable": "Disable",
+        "enable": "Enable",
+        "delete": "Delete",
+        "confirmDelete": "Delete this token from the DB registry? If it is still in GITHUB_TOKENS env/file, it will re-appear on next restart.",
+        "failedWithError": "Failed: {error}",
+        "disabledOk": "Token disabled (takes effect on next service restart).",
+        "enabledOk": "Token enabled.",
+        "deletedOk": "Token deleted from DB registry."
+      },
+      "detail": {
+        "tokenPrefix": "Token {first4}…{last4}",
+        "actionsHeading": "Actions",
+        "auditHeading": "Recent activity",
+        "auditEmpty": {
+          "title": "No recent activity for this token"
+        },
+        "auditAriaLabel": "Recent audit entries for this GitHub token",
+        "auditColumns": {
+          "when": "When",
+          "action": "Action"
+        },
+        "status": {
+          "active": "active",
+          "disabled": "disabled"
+        },
+        "pool": {
+          "inPool": "in pool",
+          "pendingActivation": "pending activation"
+        },
+        "profile": {
+          "prefix": "Prefix",
+          "fullTokenHidden": "(full token never stored)",
+          "status": "Status",
+          "poolState": "Pool state",
+          "usage": "Usage",
+          "lastUsed": "Last used",
+          "never": "never",
+          "resetWindow": "Reset window",
+          "dash": "—",
+          "created": "Created"
+        }
+      }
     }
   }
 }
