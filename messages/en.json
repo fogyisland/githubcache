@@ -664,5 +664,51 @@
       "daysAgo": "{d}d ago",
       "dash": "–"
     }
+  },
+  "repo": {
+    "meta": {
+      "title": "{owner}/{name} · GitHub Metadata Cache",
+      "description": "Cached metadata for the GitHub repository {owner}/{name}."
+    },
+    "hero": {
+      "masthead": "repository · cached metadata",
+      "backToAll": "← All repositories",
+      "viewOnGithub": "View on GitHub",
+      "chipArchived": "Archived",
+      "chipDisabled": "Disabled"
+    },
+    "stats": {
+      "stars": "Stars",
+      "forks": "Forks",
+      "watchers": "Watchers"
+    },
+    "repositoryCard": {
+      "heading": "Repository",
+      "defaultBranch": "Default branch",
+      "githubUrl": "GitHub URL",
+      "homepage": "Homepage",
+      "path": "Path",
+      "dash": "–"
+    },
+    "activityCard": {
+      "heading": "Activity",
+      "created": "Created",
+      "updated": "Updated",
+      "lastPush": "Last push"
+    },
+    "footer": {
+      "lastFetched": "Last fetched:",
+      "dash": "–",
+      "backToHome": "← back to home"
+    },
+    "apiShape": {
+      "eyebrow": "Raw API shape",
+      "hint": "GET {path} → see {link} for full schema"
+    },
+    "notFound": {
+      "title": "Repository not found",
+      "description": "That repo doesn't exist on GitHub (or is private and not accessible).",
+      "backToHome": "← Back to home"
+    }
   }
 }

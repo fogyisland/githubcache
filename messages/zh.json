@@ -664,5 +664,51 @@
       "daysAgo": "{d} 天前",
       "dash": "–"
     }
+  },
+  "repo": {
+    "meta": {
+      "title": "{owner}/{name} · GitHub 元数据缓存",
+      "description": "GitHub 仓库 {owner}/{name} 的缓存元数据。"
+    },
+    "hero": {
+      "masthead": "仓库 · 缓存元数据",
+      "backToAll": "← 全部仓库",
+      "viewOnGithub": "在 GitHub 上查看",
+      "chipArchived": "已归档",
+      "chipDisabled": "已禁用"
+    },
+    "stats": {
+      "stars": "Stars",
+      "forks": "Forks",
+      "watchers": "Watchers"
+    },
+    "repositoryCard": {
+      "heading": "仓库",
+      "defaultBranch": "默认分支",
+      "githubUrl": "GitHub URL",
+      "homepage": "主页",
+      "path": "路径",
+      "dash": "–"
+    },
+    "activityCard": {
+      "heading": "活动",
+      "created": "创建时间",
+      "updated": "更新时间",
+      "lastPush": "最后推送"
+    },
+    "footer": {
+      "lastFetched": "最后获取:",
+      "dash": "–",
+      "backToHome": "← 返回首页"
+    },
+    "apiShape": {
+      "eyebrow": "原始 API 结构",
+      "hint": "GET {path} → 查看 {link} 获取完整 schema"
+    },
+    "notFound": {
+      "title": "仓库未找到",
+      "description": "该仓库在 GitHub 上不存在 (或为私有仓库,无法访问)。",
+      "backToHome": "← 返回首页"
+    }
   }
 }

@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
+import type { ReactElement } from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { lookupRepo, type QueryResult } from '@/lib/cache/lookup';
 import {
   formatCount,
@@ -32,9 +34,10 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const owner = decodeURIComponent(params.owner);
   const name = decodeURIComponent(params.name);
+  const t = await getTranslations('repo.meta');
   return {
-    title: `${owner}/${name} · GitHub Metadata Cache`,
-    description: `Cached metadata for the GitHub repository ${owner}/${name}.`,
+    title: t('title', { owner, name }),
+    description: t('description', { owner, name }),
   };
 }
 
@@ -70,7 +73,7 @@ function GitHubMarkIcon() {
   );
 }
 
-function RepoOkView({
+async function RepoOkView({
   result,
   owner,
   name,
@@ -78,7 +81,13 @@ function RepoOkView({
   result: Extract<QueryResult, { fetch_status: 'ok' }>;
   owner: string;
   name: string;
-}) {
+}): Promise<ReactElement> {
+  const t = await getTranslations('repo');
+  const tRepo = await getTranslations('repo.repositoryCard');
+  const tAct = await getTranslations('repo.activityCard');
+  const tStat = await getTranslations('repo.stats');
+  const tFoot = await getTranslations('repo.footer');
+
   const meta = result.metadata;
   const description = getDescription(meta);
   const stars = getStars(meta);
@@ -101,12 +110,10 @@ function RepoOkView({
       {/* Hero */}
       <header className="ghc-hero-gradient">
         <div className="mx-auto max-w-4xl px-4 py-10 sm:py-14">
-          <div className="ghc-masthead mb-3">
-            repository · cached metadata
-          </div>
+          <div className="ghc-masthead mb-3">{t('hero.masthead')}</div>
           <nav className="mb-4 text-sm">
             <Link href="/" className="ghc-link">
-              ← All repositories
+              {t('hero.backToAll')}
             </Link>
           </nav>
           <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -118,7 +125,7 @@ function RepoOkView({
               className="ghc-btn-ghost"
             >
               <GitHubMarkIcon />
-              View on GitHub
+              {t('hero.viewOnGithub')}
             </a>
           </div>
           {result.stale && result.warning && (
@@ -141,17 +148,17 @@ function RepoOkView({
             {licenseName && <span className="ghc-chip">{licenseName}</span>}
             {archived && (
               <span className="ghc-chip border-[color:var(--color-warn)] text-[color:var(--color-warn)]">
-                Archived
+                {t('hero.chipArchived')}
               </span>
             )}
             {disabled && (
               <span className="ghc-chip border-[color:var(--color-danger)] text-[color:var(--color-danger)]">
-                Disabled
+                {t('hero.chipDisabled')}
               </span>
             )}
-            {topics.map((t) => (
-              <span key={t} className="ghc-chip">
-                {t}
+            {topics.map((topic) => (
+              <span key={topic} className="ghc-chip">
+                {topic}
               </span>
             ))}
           </div>
@@ -161,9 +168,9 @@ function RepoOkView({
       {/* Stats grid */}
       <section className="mx-auto max-w-4xl px-4 py-8">
         <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-          <Stat label="Stars" value={formatCount(stars)} />
-          <Stat label="Forks" value={formatCount(forks)} />
-          <Stat label="Watchers" value={formatCount(watchers)} />
+          <Stat label={tStat('stars')} value={formatCount(stars)} />
+          <Stat label={tStat('forks')} value={formatCount(forks)} />
+          <Stat label={tStat('watchers')} value={formatCount(watchers)} />
         </dl>
       </section>
 
@@ -173,14 +180,14 @@ function RepoOkView({
           <div className="ghc-card p-5">
             <h2 className="mb-3 flex items-center gap-2 ghc-eyebrow">
               <MetaIcon d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776" />
-              Repository
+              {tRepo('heading')}
             </h2>
             <dl className="space-y-2.5 text-sm">
-              <Row label="Default branch" value={defaultBranch ?? '–'} />
-              <Row label="GitHub URL" value={htmlUrl} mono />
+              <Row label={tRepo('defaultBranch')} value={defaultBranch ?? tRepo('dash')} />
+              <Row label={tRepo('githubUrl')} value={htmlUrl} mono />
               {homepage && (
                 <Row
-                  label="Homepage"
+                  label={tRepo('homepage')}
                   value={
                     <a
                       href={homepage}
@@ -194,7 +201,7 @@ function RepoOkView({
                 />
               )}
               <Row
-                label="Path"
+                label={tRepo('path')}
                 value={`/repo/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`}
                 mono
               />
@@ -203,12 +210,12 @@ function RepoOkView({
           <div className="ghc-card p-5">
             <h2 className="mb-3 flex items-center gap-2 ghc-eyebrow">
               <MetaIcon d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
-              Activity
+              {tAct('heading')}
             </h2>
             <dl className="space-y-2.5 text-sm">
-              <Row label="Created" value={formatDate(createdAt)} />
-              <Row label="Updated" value={formatDate(updatedAt)} />
-              <Row label="Last push" value={formatDate(pushedAt)} />
+              <Row label={tAct('created')} value={formatDate(createdAt)} />
+              <Row label={tAct('updated')} value={formatDate(updatedAt)} />
+              <Row label={tAct('lastPush')} value={formatDate(pushedAt)} />
             </dl>
           </div>
         </div>
@@ -222,16 +229,16 @@ function RepoOkView({
       <footer className="border-t border-[color:var(--color-rule)]">
         <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2 px-4 py-4 text-xs text-[color:var(--color-ink-muted)]">
           <span>
-            Last fetched:{' '}
+            {tFoot('lastFetched')}{' '}
             <time
               dateTime={result.last_fetched_at?.toISOString() ?? ''}
               className="font-medium text-[color:var(--color-ink)]"
             >
-              {result.last_fetched_at?.toISOString().slice(0, 16).replace('T', ' ') ?? '–'}
+              {result.last_fetched_at?.toISOString().slice(0, 16).replace('T', ' ') ?? tFoot('dash')}
             </time>
           </span>
           <Link href="/" className="ghc-link">
-            ← back to home
+            {tFoot('backToHome')}
           </Link>
         </div>
       </footer>
@@ -261,9 +268,10 @@ function Row({ label, value, mono }: { label: string; value: React.ReactNode; mo
   );
 }
 
-export default async function RepoDetailPage({ params }: PageProps) {
+export default async function RepoDetailPage({ params }: PageProps): Promise<ReactElement> {
   const owner = decodeURIComponent(params.owner);
   const name = decodeURIComponent(params.name);
+  const tHero = await getTranslations('repo.hero');
   const result = await lookupRepo(owner, name);
   if (result.fetch_status === 'not_found') {
     notFound();
@@ -273,7 +281,7 @@ export default async function RepoDetailPage({ params }: PageProps) {
       <main className="mx-auto max-w-3xl px-4 py-12">
         <nav className="mb-4 text-sm">
           <Link href="/" className="ghc-link">
-            ← All repositories
+            {tHero('backToAll')}
           </Link>
         </nav>
         <h1 className="ghc-display-name text-2xl">{result.canonical}</h1>
@@ -286,9 +294,9 @@ export default async function RepoDetailPage({ params }: PageProps) {
       </main>
     );
   }
-  return (
-    <main>
-      <RepoOkView result={result} owner={owner} name={name} />
-    </main>
-  );
+  // Pre-await async server components so non-RSC renderers (vitest's
+  // renderToStaticMarkup) can resolve them. Next.js handles this natively
+  // in production; the explicit await is only needed for the test path.
+  const okView = await RepoOkView({ result, owner, name });
+  return <main>{okView}</main>;
 }
