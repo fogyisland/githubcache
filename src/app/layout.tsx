@@ -1,9 +1,12 @@
 import { JetBrains_Mono, IBM_Plex_Sans, IBM_Plex_Mono, Fraunces, Space_Grotesk } from 'next/font/google';
 import { headers } from 'next/headers';
 import type { Metadata } from 'next';
+import { NextIntlClientProvider } from 'next-intl';
 import './globals.css';
 import { SiteHeader } from '@/app/_components/site-header';
 import { readThemeFromCookieHeader } from '@/lib/theme/cookie';
+import { readLangFromCookieHeader } from '@/lib/lang/cookie';
+import { resolveLocale } from '@/lib/lang/registry';
 
 /**
  * Four font stacks. Each one ships as a CSS variable so the three themes
@@ -53,6 +56,9 @@ export const metadata: Metadata = {
 // Root layout — server component, reads the theme cookie via next/headers
 // and writes it as data-theme on <html> so the first paint already has the
 // correct tokens. No flash, no client JS needed for the initial render.
+//
+// Locale resolution lives here too (not in src/middleware.ts — see Task 2
+// brief "Architecture decision"). Order: cookie > Accept-Language > default.
 export default async function RootLayout({
   children,
 }: {
@@ -62,17 +68,28 @@ export default async function RootLayout({
   // Reading the cookie header here is the only way to set data-theme
   // before paint; doing it client-side would cause a flash of default theme.
   const headerStore = headers();
-  const theme = readThemeFromCookieHeader(headerStore.get('cookie') ?? null);
+  const cookieHeader = headerStore.get('cookie') ?? null;
+  const theme = readThemeFromCookieHeader(cookieHeader);
+  const locale = resolveLocale({
+    cookieValue: readLangFromCookieHeader(cookieHeader),
+    acceptLanguage: headerStore.get('accept-language'),
+  });
+
+  // Pre-load messages for the resolved locale — NextIntlClientProvider needs
+  // the full bundle (it's passed via prop, not auto-resolved).
+  const messages = (await import(`../../messages/${locale}.json`)).default;
 
   return (
     <html
-      lang="en"
+      lang={locale}
       data-theme={theme}
       className={`${jetbrainsMono.variable} ${fraunces.variable} ${plexSans.variable} ${plexMono.variable} ${spaceGrotesk.variable}`}
     >
       <body className="min-h-screen font-sans antialiased">
-        <SiteHeader />
-        {children}
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <SiteHeader />
+          {children}
+        </NextIntlClientProvider>
       </body>
     </html>
   );

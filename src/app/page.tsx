@@ -19,6 +19,11 @@ export const metadata: Metadata = {
 
 export default async function HomePage() {
   const recent = await recentLookups(8);
+  // SiteFooter is async (uses getTranslations) — await it before embedding
+  // in JSX so non-RSC renderers (e.g. vitest's renderToStaticMarkup) can
+  // resolve it. Next.js handles this natively in production; the explicit
+  // await is only needed for the test path.
+  const footer = await SiteFooter();
   return (
     <main>
       {/* Hero */}
@@ -80,7 +85,7 @@ export default async function HomePage() {
       </section>
 
       {/* Footer */}
-      <SiteFooter />
+      {footer}
     </main>
   );
 }

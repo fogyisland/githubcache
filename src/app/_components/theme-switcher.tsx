@@ -1,6 +1,7 @@
 'use client';
 
 import { useFormState, useFormStatus } from 'react-dom';
+import { useTranslations } from 'next-intl';
 import { setThemeAction, type SetThemeState } from '@/app/_actions/theme';
 import { THEMES, type ThemeId } from '@/lib/theme/themes';
 
@@ -17,10 +18,12 @@ const INITIAL: SetThemeState = { status: 'idle' };
 function PillButton({
   id,
   label,
+  ariaLabel,
   active,
 }: {
   id: ThemeId;
   label: string;
+  ariaLabel: string;
   active: boolean;
 }) {
   const { pending } = useFormStatus();
@@ -32,7 +35,7 @@ function PillButton({
       className="ghc-theme-pill"
       disabled={pending}
       aria-pressed={active}
-      aria-label={`Switch to ${label} theme`}
+      aria-label={ariaLabel}
     >
       {label}
     </button>
@@ -40,12 +43,19 @@ function PillButton({
 }
 
 export function ThemeSwitcher({ current }: Props) {
+  const t = useTranslations('theme');
   const [state, formAction] = useFormState(setThemeAction, INITIAL);
 
   return (
-    <form action={formAction} className="ghc-theme-row" role="radiogroup" aria-label="Theme">
-      {Object.values(THEMES).map((t) => (
-        <PillButton key={t.id} id={t.id} label={t.shortLabel} active={t.id === current} />
+    <form action={formAction} className="ghc-theme-row" role="radiogroup" aria-label={t('aria')}>
+      {Object.values(THEMES).map((th) => (
+        <PillButton
+          key={th.id}
+          id={th.id}
+          label={t(`label.${th.id}`)}
+          ariaLabel={t('switchTo', { name: t(`fullLabel.${th.id}`) })}
+          active={th.id === current}
+        />
       ))}
       {/* Off-screen status mirror — surfaces form state for tests + a11y. */}
       <span className="sr-only" data-theme-state={state.status} data-current-theme={current}>

@@ -5,5 +5,49 @@
       "en": "EN"
     },
     "aria": "Switch language"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "search": "Search",
+    "loading": "Loading…",
+    "error": "Something went wrong",
+    "back": "Back",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "nav": {
+    "home": "Home",
+    "status": "Status",
+    "admin": "Admin",
+    "docs": "Docs",
+    "login": "Log in",
+    "logout": "Log out",
+    "statusAria": "System status JSON",
+    "adminAria": "Admin login"
+  },
+  "theme": {
+    "aria": "Theme",
+    "label": {
+      "terminal": "Terminal",
+      "editorial": "Editorial",
+      "brutalist": "Brutalist"
+    },
+    "fullLabel": {
+      "terminal": "Terminal theme",
+      "editorial": "Editorial theme",
+      "brutalist": "Brutalist theme"
+    },
+    "switchTo": "Switch to {name} theme"
+  },
+  "footer": {
+    "tagline": "An open cache for GitHub repo metadata. Self-hostable.",
+    "source": "Source",
+    "version": "Version",
+    "repoLink": "GitHub repo →",
+    "operations": "Operations",
+    "fine": "© {year} · Built with Next.js + Prisma + MySQL."
   }
 }

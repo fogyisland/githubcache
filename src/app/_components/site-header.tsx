@@ -1,19 +1,29 @@
 import Link from 'next/link';
 import { headers } from 'next/headers';
+import { getTranslations } from 'next-intl/server';
 import { ThemeSwitcher } from '@/app/_components/theme-switcher';
+import { LangSwitcher } from '@/app/_components/lang-switcher';
 import { readThemeFromCookieHeader } from '@/lib/theme/cookie';
+import { readLangFromCookieHeader } from '@/lib/lang/cookie';
+import { resolveLocale, LOCALES } from '@/lib/lang/registry';
 
 /**
  * Top navigation bar. Sticky, theme-aware, with brand logo on the left,
- * Status/Admin links + theme switcher on the right.
+ * Status/Admin links + theme switcher + lang switcher on the right.
  *
  * Pure server component: reads the cookie via next/headers and passes the
  * current theme id down to the (client) ThemeSwitcher so it can render the
- * active pill.
+ * active pill, and the current locale to the (client) LangSwitcher.
  */
-export function SiteHeader() {
+export async function SiteHeader() {
   const headerStore = headers();
-  const currentTheme = readThemeFromCookieHeader(headerStore.get('cookie') ?? null);
+  const cookieHeader = headerStore.get('cookie') ?? null;
+  const currentTheme = readThemeFromCookieHeader(cookieHeader);
+  const currentLang = resolveLocale({
+    cookieValue: readLangFromCookieHeader(cookieHeader),
+    acceptLanguage: headerStore.get('accept-language'),
+  });
+  const t = await getTranslations('nav');
 
   return (
     <header className="ghc-site-header sticky top-0 z-40">
@@ -35,20 +45,13 @@ export function SiteHeader() {
           <span className="text-base">GitHub Metadata Cache</span>
         </Link>
         <nav className="flex items-center gap-3">
+          <LangSwitcher current={currentLang} locales={LOCALES} />
           <ThemeSwitcher current={currentTheme} />
-          <Link
-            href="/api/v1/status"
-            className="ghc-header-util-link"
-            aria-label="System status JSON"
-          >
-            Status
+          <Link href="/api/v1/status" className="ghc-header-util-link" aria-label={t('statusAria')}>
+            {t('status')}
           </Link>
-          <Link
-            href="/login"
-            className="ghc-header-util-link"
-            aria-label="Admin login"
-          >
-            Admin
+          <Link href="/login" className="ghc-header-util-link" aria-label={t('adminAria')}>
+            {t('admin')}
           </Link>
         </nav>
       </div>

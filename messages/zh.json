@@ -5,5 +5,49 @@
       "en": "EN"
     },
     "aria": "切换语言"
+  },
+  "common": {
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "edit": "编辑",
+    "search": "搜索",
+    "loading": "加载中…",
+    "error": "出错了",
+    "back": "返回",
+    "yes": "是",
+    "no": "否"
+  },
+  "nav": {
+    "home": "首页",
+    "status": "状态",
+    "admin": "管理",
+    "docs": "文档",
+    "login": "登录",
+    "logout": "退出",
+    "statusAria": "系统状态 JSON",
+    "adminAria": "管理员登录"
+  },
+  "theme": {
+    "aria": "主题",
+    "label": {
+      "terminal": "终端",
+      "editorial": "编辑",
+      "brutalist": "粗野"
+    },
+    "fullLabel": {
+      "terminal": "终端主题",
+      "editorial": "编辑主题",
+      "brutalist": "粗野主题"
+    },
+    "switchTo": "切换到{name}"
+  },
+  "footer": {
+    "tagline": "GitHub 仓库元数据开源缓存。可自部署。",
+    "source": "源码",
+    "version": "版本",
+    "repoLink": "GitHub 仓库 →",
+    "operations": "运维",
+    "fine": "© {year} · 基于 Next.js + Prisma + MySQL 构建。"
   }
 }

@@ -12,6 +12,15 @@ vi.mock('react-dom', async () => {
   };
 });
 
+// Stub next-intl/server — renderToStaticMarkup runs in Node without
+// the RSC bundler context, so getTranslations falls through to the
+// "not supported in Client Components" error. The site footer + nav
+// only use translation keys, so identity passthrough is sufficient.
+// getTranslations is async in production; mirror that signature.
+vi.mock('next-intl/server', () => ({
+  getTranslations: async () => (key: string) => key,
+}));
+
 // Stub next/navigation so QuickTry's useRouter() can render server-side
 // without needing an app-router runtime.
 vi.mock('next/navigation', () => ({
@@ -63,8 +72,12 @@ describe('public home page surface', () => {
     const el = await HomePage();
     const html = renderToStaticMarkup(el);
     expect(html).toContain('ghc-site-footer');
-    expect(html).toMatch(/Version<\/span>\s*<code>[^<]+<\/code>/);
+    // Mocked translator returns the key as-is, so we look for "version"
+    // (the key name). In production with real translations this would
+    // be "Version" (en) / "版本" (zh).
+    expect(html).toMatch(/version<\/span>\s*<code>[^<]+<\/code>/i);
     expect(html).toContain('/api/v1/status');
     expect(html).toContain('/login');
   });
 });
+
