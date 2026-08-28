@@ -309,6 +309,59 @@ purely additive (no existing classes or routes modified besides
 
 ---
 
+## [m12-api-docs] — 2026-08-28
+
+**Public, themed API documentation site at `/docs/*`.** Zod schemas are
+the single source of truth for request/response shape — if a route
+changes, the docs are out of sync at typecheck time.
+
+### Added
+
+- **Public routes**: `/docs`, `/docs/api/v1-status`, `/docs/api/v1-repos`,
+  `/docs/api/query`. Themed to share the existing terminal / editorial /
+  brutalist visual system.
+- **New API**: `GET /api/v1/repos/{owner}/{name}` — public single-repo
+  lookup, per-IP rate limited, reuses `lookupRepo` (M9.3). Closes the
+  gap where `api-shape.tsx` referenced a non-existent route.
+- **Schema layer**: `src/lib/api-docs/schemas/{v1-status,v1-repos,query}.ts`
+  — Zod schemas for all 3 endpoints. The status route now validates its
+  outgoing payload against `v1StatusSchema`. The `/api/query` response
+  schema mirrors the actual `QueryResult` shape (canonical, original,
+  found, metadata, last_fetched_at, fetch_status, stale, warning?).
+- **Registry**: `src/lib/api-docs/registry.ts` — `ENDPOINT_DOCS` ordered
+  array of `EndpointDoc`, `findEndpointBySlug(slug)`.
+- **Components**: `<DocsShell>`, `<DocsSidebar>`, `<EndpointPage>`,
+  `<CurlExample>`, `<SchemaViewer>` (recursive Zod walker with union
+  branch labels), `<ResponseExample>`, `<HeadersTable>`, `<ErrorsTable>`,
+  `<CopyButton>`.
+- **CSS**: `ghc-doc-*` classes in `globals.css` reading existing
+  variables. Three-theme compatibility inherited. `--space-*` scale
+  defined in `:root`.
+
+### Out of scope
+
+- Interactive "Try it" (mocked browser execution).
+- OpenAPI export.
+- Admin endpoint documentation.
+
+### Migration
+
+None. Purely additive.
+
+### Stats
+
+- Test count: 547 (522 → 547, +25 across new unit + integration suites).
+- Files added: 17. Files modified: 4.
+- 4 pre-existing MySQL-concurrency flakes (api-rate-limit-durable,
+  ip-rate-limit, admin-refresh, admin-api-keys) are unrelated to M12
+  and last touched in M8 / M9.2.
+
+### Breaking changes
+
+None. `GET /api/v1/repos/{owner}/{name}` is purely additive.
+
+---
+
 ## [m8-prod-ready] — 2026-08-26
 
 **Deployment + Observability.** Production-ready observability surface, durable rate-limit,
