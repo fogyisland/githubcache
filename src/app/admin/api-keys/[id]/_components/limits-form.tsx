@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import type { ReactElement } from 'react';
 
 export function LimitsForm({
@@ -12,6 +13,7 @@ export function LimitsForm({
   currentRateLimit: number;
   currentDailyQuota: number;
 }): ReactElement {
+  const t = useTranslations('admin.apiKeys.limits');
   const router = useRouter();
   const [csrf, setCsrf] = useState('');
   const [rateLimit, setRateLimit] = useState(currentRateLimit);
@@ -44,17 +46,17 @@ export function LimitsForm({
     setBusy(false);
     if (!res.ok) {
       const err = (await res.json().catch(() => ({}))) as { error?: string };
-      setMessage(`Failed: ${err.error ?? res.status}`);
+      setMessage(t('failedWithError', { error: err.error ?? String(res.status) }));
       return;
     }
-    setMessage('Limits updated.');
+    setMessage(t('updatedOk'));
     router.refresh();
   }
 
   return (
     <form onSubmit={onSubmit}>
       <label>
-        Rate limit per min:{' '}
+        {t('rateLimitLabel')}{' '}
         <input
           type="number"
           min={1}
@@ -64,7 +66,7 @@ export function LimitsForm({
         />
       </label>
       <label>
-        Daily quota:{' '}
+        {t('dailyQuotaLabel')}{' '}
         <input
           type="number"
           min={1}
@@ -74,7 +76,7 @@ export function LimitsForm({
         />
       </label>
       <button type="submit" disabled={busy || !csrf || !dirty}>
-        Save limits
+        {t('save')}
       </button>
       {message && <p>{message}</p>}
     </form>

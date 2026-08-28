@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import type { ReactElement } from 'react';
+import { getTranslations } from 'next-intl/server';
 import { getApiKeyById } from '@/lib/db/api-keys';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
@@ -34,6 +35,8 @@ export default async function AdminApiKeyDetailPage({
   const key = await getApiKeyById(id);
   if (!key) notFound();
 
+  const t = await getTranslations('admin.apiKeys.detail');
+
   const recentAudit = await queryAuditLog({
     targetType: 'api_key',
     limit: 10,
@@ -43,12 +46,12 @@ export default async function AdminApiKeyDetailPage({
   const auditColumns: AdminColumn<AuditRow>[] = [
     {
       key: 'time',
-      header: 'When',
+      header: t('auditColumns.when'),
       render: (r) => r.createdAt.toISOString().replace('T', ' ').slice(0, 19),
     },
     {
       key: 'action',
-      header: 'Action',
+      header: t('auditColumns.action'),
       render: (r) => (
         <AdminStatusChip variant="neutral">{r.action}</AdminStatusChip>
       ),
@@ -59,25 +62,25 @@ export default async function AdminApiKeyDetailPage({
     <div className="ghc-admin-page">
       <AdminPageHeader
         breadcrumb={[
-          { label: 'Admin', href: '/admin' },
-          { label: 'API Keys', href: '/admin/api-keys' },
+          { label: t('breadcrumbAdmin'), href: '/admin' },
+          { label: t('breadcrumbApiKeys'), href: '/admin/api-keys' },
           { label: key.name },
         ]}
         title={key.name}
-        description={`Owned by ${key.user.email} (${key.user.role})`}
+        description={t('ownedBy', { email: key.user.email, role: t(`role.${key.user.role}` as 'role.admin' | 'role.operator') })}
       />
 
       <section className="ghc-admin-detail-card">
         <dl className="ghc-admin-detail-dl">
           <div className="ghc-admin-detail-row">
-            <dt>Prefix</dt>
+            <dt>{t('profile.prefix')}</dt>
             <dd>
               <code className="ghc-admin-mono">{key.keyPrefix}…</code>{' '}
-              <span className="ghc-admin-detail-hint">(full key never displayed)</span>
+              <span className="ghc-admin-detail-hint">{t('profile.fullKeyHidden')}</span>
             </dd>
           </div>
           <div className="ghc-admin-detail-row">
-            <dt>Status</dt>
+            <dt>{t('profile.status')}</dt>
             <dd>
               <AdminStatusChip
                 variant={
@@ -88,56 +91,61 @@ export default async function AdminApiKeyDetailPage({
                     : 'danger'
                 }
               >
-                {key.status}
+                {t(`status.${key.status}` as 'status.pending' | 'status.active' | 'status.revoked')}
               </AdminStatusChip>
             </dd>
           </div>
           <div className="ghc-admin-detail-row">
-            <dt>Created</dt>
+            <dt>{t('profile.created')}</dt>
             <dd>{key.createdAt.toISOString().replace('T', ' ').slice(0, 19)}</dd>
           </div>
           <div className="ghc-admin-detail-row">
-            <dt>Approved</dt>
+            <dt>{t('profile.approved')}</dt>
             <dd>
               {key.approvedAt
-                ? `${key.approvedAt.toISOString().replace('T', ' ').slice(0, 19)} by #${key.approvedBy}`
-                : '—'}
+                ? t('profile.approvedAt', {
+                    datetime: key.approvedAt.toISOString().replace('T', ' ').slice(0, 19),
+                    approver: `#${key.approvedBy}`,
+                  })
+                : t('common.dash')}
             </dd>
           </div>
           <div className="ghc-admin-detail-row">
-            <dt>Revoked</dt>
+            <dt>{t('profile.revoked')}</dt>
             <dd>
               {key.revokedAt
                 ? key.revokedAt.toISOString().replace('T', ' ').slice(0, 19)
-                : '—'}
+                : t('common.dash')}
             </dd>
           </div>
           <div className="ghc-admin-detail-row">
-            <dt>Last used</dt>
+            <dt>{t('profile.lastUsed')}</dt>
             <dd>
               {key.lastUsedAt
                 ? key.lastUsedAt.toISOString().replace('T', ' ').slice(0, 19)
-                : 'never'}
+                : t('profile.never')}
             </dd>
           </div>
           <div className="ghc-admin-detail-row">
-            <dt>Requests (24h)</dt>
+            <dt>{t('profile.requests24h')}</dt>
             <dd>
               <strong>{key.requestCountLast24h.toLocaleString()}</strong>
             </dd>
           </div>
           <div className="ghc-admin-detail-row">
-            <dt>Rate limit</dt>
+            <dt>{t('profile.rateLimit')}</dt>
             <dd>
-              {key.rateLimitPerMin.toLocaleString()}/min ·{' '}
-              {key.dailyQuota.toLocaleString()}/day
+              {t('profile.rateLimitValue', {
+                rate: key.rateLimitPerMin.toLocaleString(),
+                quota: key.dailyQuota.toLocaleString(),
+              })}
             </dd>
           </div>
         </dl>
       </section>
 
       <section>
-        <h2 className="ghc-admin-section-title">Limits</h2>
+        <h2 className="ghc-admin-section-title">{t('limitsHeading')}</h2>
         <LimitsForm
           apiKeyId={key.id.toString()}
           currentRateLimit={key.rateLimitPerMin}
@@ -146,20 +154,20 @@ export default async function AdminApiKeyDetailPage({
       </section>
 
       <section>
-        <h2 className="ghc-admin-section-title">Actions</h2>
+        <h2 className="ghc-admin-section-title">{t('actionsHeading')}</h2>
         <KeyActions apiKeyId={key.id.toString()} currentStatus={key.status} />
       </section>
 
       <section>
         <h2 className="ghc-admin-section-title">
-          Recent activity{' '}
+          {t('auditHeading')}{' '}
           <span className="ghc-admin-section-count">({recentAudit.total})</span>
         </h2>
         <AdminTable<AuditRow>
           columns={auditColumns}
           rows={recentAudit.rows}
-          emptyTitle="No recent activity for this key"
-          ariaLabel="Recent audit entries for this API key"
+          emptyTitle={t('auditEmpty.title')}
+          ariaLabel={t('auditAriaLabel')}
         />
       </section>
     </div>

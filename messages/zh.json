@@ -212,6 +212,98 @@
           "never": "从未"
         }
       }
+    },
+    "apiKeys": {
+      "title": "API 密钥",
+      "description": "签发、审批与撤销 API 密钥。按状态筛选可快速定位。",
+      "breadcrumbAdmin": "管理",
+      "breadcrumbApiKeys": "API 密钥",
+      "role": {
+        "admin": "管理员",
+        "operator": "操作员"
+      },
+      "status": {
+        "pending": "待处理",
+        "active": "活跃",
+        "revoked": "已撤销"
+      },
+      "common": {
+        "dash": "—"
+      },
+      "list": {
+        "ariaLabel": "API 密钥",
+        "never": "从未",
+        "filter": {
+          "status": "状态"
+        },
+        "column": {
+          "name": "名称",
+          "prefix": "前缀",
+          "owner": "所有者",
+          "status": "状态",
+          "rate": "速率/分钟",
+          "quota": "日配额",
+          "lastUsed": "最后使用"
+        },
+        "empty": {
+          "title": "没有匹配的 API 密钥",
+          "description": "尝试清除筛选条件或邀请新的操作员。"
+        }
+      },
+      "detail": {
+        "ownedBy": "所有者：{email}（{role}）",
+        "role": {
+          "admin": "管理员",
+          "operator": "操作员"
+        },
+        "status": {
+          "pending": "待处理",
+          "active": "活跃",
+          "revoked": "已撤销"
+        },
+        "actionsHeading": "操作",
+        "limitsHeading": "限额",
+        "auditHeading": "最近活动",
+        "auditEmpty": {
+          "title": "暂无活动记录"
+        },
+        "auditAriaLabel": "该 API 密钥最近审计条目",
+        "auditColumns": {
+          "when": "时间",
+          "action": "操作"
+        },
+        "profile": {
+          "prefix": "前缀",
+          "fullKeyHidden": "（完整密钥永不显示）",
+          "status": "状态",
+          "created": "创建时间",
+          "approved": "审批时间",
+          "approvedAt": "{datetime} 由 {approver} 审批",
+          "revoked": "撤销时间",
+          "lastUsed": "最后使用",
+          "never": "从未",
+          "requests24h": "请求数（24 小时）",
+          "rateLimit": "速率限制",
+          "rateLimitValue": "{rate}/分钟 · {quota}/天"
+        }
+      },
+      "actions": {
+        "approve": "审批",
+        "revoke": "撤销",
+        "alreadyRevoked": "已撤销。",
+        "confirmRevoke": "撤销该密钥？它将立即停止工作。",
+        "approveFailed": "审批失败：{error}",
+        "revokeFailed": "撤销失败：{error}",
+        "approvedOk": "已审批。",
+        "revokedOk": "已撤销。"
+      },
+      "limits": {
+        "rateLimitLabel": "每分钟速率限制：",
+        "dailyQuotaLabel": "日配额：",
+        "save": "保存限额",
+        "updatedOk": "限额已更新。",
+        "failedWithError": "失败：{error}"
+      }
     }
   }
 }

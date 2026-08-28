@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import type { ReactElement } from 'react';
 
 export function KeyActions({
@@ -10,6 +11,7 @@ export function KeyActions({
   apiKeyId: string;
   currentStatus: 'pending' | 'active' | 'revoked';
 }): ReactElement {
+  const t = useTranslations('admin.apiKeys.actions');
   const router = useRouter();
   const [csrf, setCsrf] = useState('');
   const [busy, setBusy] = useState(false);
@@ -33,16 +35,16 @@ export function KeyActions({
     setBusy(false);
     if (!res.ok) {
       const err = (await res.json().catch(() => ({}))) as { error?: string };
-      setMessage(`Approve failed: ${err.error ?? res.status}`);
+      setMessage(t('approveFailed', { error: err.error ?? String(res.status) }));
       return;
     }
-    setMessage('Approved.');
+    setMessage(t('approvedOk'));
     router.refresh();
   }
 
   async function callRevoke(): Promise<void> {
     if (!csrf) return;
-    if (!confirm('Revoke this key? It will stop working immediately.')) return;
+    if (!confirm(t('confirmRevoke'))) return;
     setBusy(true);
     setMessage(null);
     const res = await fetch(`/api/admin/api-keys/${apiKeyId}/revoke`, {
@@ -53,10 +55,10 @@ export function KeyActions({
     setBusy(false);
     if (!res.ok) {
       const err = (await res.json().catch(() => ({}))) as { error?: string };
-      setMessage(`Revoke failed: ${err.error ?? res.status}`);
+      setMessage(t('revokeFailed', { error: err.error ?? String(res.status) }));
       return;
     }
-    setMessage('Revoked.');
+    setMessage(t('revokedOk'));
     router.refresh();
   }
 
@@ -64,15 +66,15 @@ export function KeyActions({
     <div>
       {currentStatus === 'pending' && (
         <button onClick={() => void callApprove()} disabled={busy || !csrf}>
-          Approve
+          {t('approve')}
         </button>
       )}
       {currentStatus === 'active' && (
         <button onClick={() => void callRevoke()} disabled={busy || !csrf}>
-          Revoke
+          {t('revoke')}
         </button>
       )}
-      {currentStatus === 'revoked' && <em>Already revoked.</em>}
+      {currentStatus === 'revoked' && <em>{t('alreadyRevoked')}</em>}
       {message && <p>{message}</p>}
     </div>
   );

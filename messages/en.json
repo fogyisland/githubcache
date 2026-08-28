@@ -212,6 +212,98 @@
           "never": "never"
         }
       }
+    },
+    "apiKeys": {
+      "title": "API Keys",
+      "description": "Issue, approve, and revoke API keys. Filter by status to find specific keys fast.",
+      "breadcrumbAdmin": "Admin",
+      "breadcrumbApiKeys": "API Keys",
+      "role": {
+        "admin": "admin",
+        "operator": "operator"
+      },
+      "status": {
+        "pending": "pending",
+        "active": "active",
+        "revoked": "revoked"
+      },
+      "common": {
+        "dash": "—"
+      },
+      "list": {
+        "ariaLabel": "API keys",
+        "never": "never",
+        "filter": {
+          "status": "Status"
+        },
+        "column": {
+          "name": "Name",
+          "prefix": "Prefix",
+          "owner": "Owner",
+          "status": "Status",
+          "rate": "Rate/min",
+          "quota": "Daily quota",
+          "lastUsed": "Last used"
+        },
+        "empty": {
+          "title": "No API keys match this filter",
+          "description": "Try clearing the filter or invite a new operator."
+        }
+      },
+      "detail": {
+        "ownedBy": "Owned by {email} ({role})",
+        "role": {
+          "admin": "admin",
+          "operator": "operator"
+        },
+        "status": {
+          "pending": "pending",
+          "active": "active",
+          "revoked": "revoked"
+        },
+        "actionsHeading": "Actions",
+        "limitsHeading": "Limits",
+        "auditHeading": "Recent activity",
+        "auditEmpty": {
+          "title": "No recent activity for this key"
+        },
+        "auditAriaLabel": "Recent audit entries for this API key",
+        "auditColumns": {
+          "when": "When",
+          "action": "Action"
+        },
+        "profile": {
+          "prefix": "Prefix",
+          "fullKeyHidden": "(full key never displayed)",
+          "status": "Status",
+          "created": "Created",
+          "approved": "Approved",
+          "approvedAt": "{datetime} by {approver}",
+          "revoked": "Revoked",
+          "lastUsed": "Last used",
+          "never": "never",
+          "requests24h": "Requests (24h)",
+          "rateLimit": "Rate limit",
+          "rateLimitValue": "{rate}/min · {quota}/day"
+        }
+      },
+      "actions": {
+        "approve": "Approve",
+        "revoke": "Revoke",
+        "alreadyRevoked": "Already revoked.",
+        "confirmRevoke": "Revoke this key? It will stop working immediately.",
+        "approveFailed": "Approve failed: {error}",
+        "revokeFailed": "Revoke failed: {error}",
+        "approvedOk": "Approved.",
+        "revokedOk": "Revoked."
+      },
+      "limits": {
+        "rateLimitLabel": "Rate limit per min:",
+        "dailyQuotaLabel": "Daily quota:",
+        "save": "Save limits",
+        "updatedOk": "Limits updated.",
+        "failedWithError": "Failed: {error}"
+      }
     }
   }
 }
