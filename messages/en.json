@@ -534,5 +534,27 @@
         }
       }
     }
+  },
+  "login": {
+    "eyebrow": "github metadata cache",
+    "title": "Sign in to admin",
+    "tagline": "Manage tokens, schedule refreshes, audit requests.",
+    "backToHome": "← Back to home",
+    "form": {
+      "email": "Email",
+      "password": "Password",
+      "submit": "Log in",
+      "submitting": "Logging in…",
+      "csrfInitFailed": "Failed to initialize CSRF token. Please refresh.",
+      "networkError": "Network error. Please try again.",
+      "loginFailed": "Login failed",
+      "error": {
+        "csrf": "Your session expired. Please refresh the page and try again.",
+        "invalid_body": "Invalid request. Please refresh and try again.",
+        "too_many_attempts": "Too many login attempts. Try again in {seconds} seconds.",
+        "invalid_credentials": "Email or password is incorrect.",
+        "account_disabled": "Your account has been disabled. Contact an administrator."
+      }
+    }
   }
 }

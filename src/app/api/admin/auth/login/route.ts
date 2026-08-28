@@ -7,6 +7,8 @@ import { recordLoginAttempt, resetLoginThrottle } from '@/lib/rate-limit/login-t
 import { prisma } from '@/lib/db/client';
 import { writeAudit } from '@/lib/audit/writer';
 import { logger } from '@/lib/logger';
+import { readLangFromCookieHeader } from '@/lib/lang/cookie';
+import { isLocale } from '@/lib/lang/registry';
 
 const loginSchema = z.object({
   email: z.string().email().max(255),
@@ -130,17 +132,26 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   // 8. Success
+  // Read lang cookie so we can persist it on the user record (cross-device lang pref)
+  const cookieHeader = req.headers.get('cookie');
+  const langFromCookie = readLangFromCookieHeader(cookieHeader);
+  const langForUser = isLocale(langFromCookie ?? '') ? langFromCookie : null;
+
   await Promise.all([
     // Update lastLoginAt (awaited — useful for "recently active" admin queries)
     prisma.user.update({
       where: { id: user.id },
-      data: { lastLoginAt: new Date() },
+      data: {
+        lastLoginAt: new Date(),
+        ...(langForUser ? { lang: langForUser } : {}),
+      },
     }),
     // Audit success (awaited — we want this durable before responding)
     writeAudit({
       action: 'login_success',
       targetType: 'user',
       targetId: String(user.id),
+      metadata: langForUser ? { lang: langForUser } : undefined,
       ip,
     }),
   ]);

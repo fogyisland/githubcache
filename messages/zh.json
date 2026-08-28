@@ -534,5 +534,27 @@
         }
       }
     }
+  },
+  "login": {
+    "eyebrow": "github metadata 缓存",
+    "title": "登录到管理后台",
+    "tagline": "管理令牌、调度刷新、审计请求。",
+    "backToHome": "← 返回首页",
+    "form": {
+      "email": "邮箱",
+      "password": "密码",
+      "submit": "登录",
+      "submitting": "登录中…",
+      "csrfInitFailed": "初始化 CSRF 令牌失败，请刷新页面。",
+      "networkError": "网络错误，请重试。",
+      "loginFailed": "登录失败",
+      "error": {
+        "csrf": "会话已过期，请刷新页面后重试。",
+        "invalid_body": "请求无效，请刷新后重试。",
+        "too_many_attempts": "登录尝试次数过多，请在 {seconds} 秒后重试。",
+        "invalid_credentials": "邮箱或密码错误。",
+        "account_disabled": "您的账号已被禁用，请联系管理员。"
+      }
+    }
   }
 }

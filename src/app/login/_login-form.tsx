@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
+import { useTranslations } from 'next-intl';
 
 interface CsrfResponse {
   csrfToken: string;
@@ -10,6 +11,53 @@ interface LoginResponse {
   ok?: boolean;
   role?: string;
   error?: string;
+}
+
+/**
+ * Map server error codes (defined in src/app/api/admin/auth/login/route.ts)
+ * to translation keys under `login.form.error.*`.
+ */
+type ServerErrorCode =
+  | 'csrf'
+  | 'invalid_body'
+  | 'too_many_attempts'
+  | 'invalid_credentials'
+  | 'account_disabled';
+
+const RETRY_AFTER_HEADER = 'retry-after';
+
+/**
+ * Translate a server error code into a localized message.
+ * - Known codes map to `login.form.error.<code>` keys.
+ * - Unknown codes fall through to `login.form.loginFailed`.
+ * - `too_many_attempts` interpolates the Retry-After seconds if present.
+ *
+ * Kept as a free function (not a hook) so the test can drive it directly.
+ */
+export function translateError(
+  code: string | undefined,
+  retryAfter: string | null,
+  tErr: (key: string, values?: Record<string, string | number>) => string,
+  tForm: (key: string) => string,
+): string {
+  if (!code) return tForm('loginFailed');
+  const known: readonly ServerErrorCode[] = [
+    'csrf',
+    'invalid_body',
+    'too_many_attempts',
+    'invalid_credentials',
+    'account_disabled',
+  ] as const;
+  if (known.includes(code as ServerErrorCode)) {
+    if (code === 'too_many_attempts') {
+      const seconds = retryAfter ? Number(retryAfter) : 60;
+      return tErr(`error.${code}`, {
+        seconds: Number.isFinite(seconds) && seconds > 0 ? seconds : 60,
+      });
+    }
+    return tErr(`error.${code}`);
+  }
+  return tForm('loginFailed');
 }
 
 /**
@@ -28,6 +76,8 @@ interface LoginResponse {
  * button and --color-danger for the error alert in all 3 themes.
  */
 export function LoginForm(): ReactElement {
+  const t = useTranslations('login.form');
+  const tErr = useTranslations('login.form.error');
   const [csrfToken, setCsrfToken] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
@@ -39,7 +89,9 @@ export function LoginForm(): ReactElement {
     let cancelled = false;
     void (async (): Promise<void> => {
       try {
-        const res = await fetch('/api/admin/auth/csrf', { credentials: 'same-origin' });
+        const res = await fetch('/api/admin/auth/csrf', {
+          credentials: 'same-origin',
+        });
         const body = (await res.json()) as CsrfResponse;
         if (!cancelled) {
           setCsrfToken(body.csrfToken);
@@ -47,7 +99,7 @@ export function LoginForm(): ReactElement {
         }
       } catch {
         if (!cancelled) {
-          setError('Failed to initialize CSRF token. Please refresh.');
+          setError(t('csrfInitFailed'));
           setCsrfLoading(false);
         }
       }
@@ -55,7 +107,7 @@ export function LoginForm(): ReactElement {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault();
@@ -77,9 +129,16 @@ export function LoginForm(): ReactElement {
         window.location.href = '/admin';
         return;
       }
-      setError(body.error ?? 'Login failed');
+      setError(
+        translateError(
+          body.error,
+          res.headers.get(RETRY_AFTER_HEADER),
+          tErr,
+          t,
+        ),
+      );
     } catch {
-      setError('Network error. Please try again.');
+      setError(t('networkError'));
     } finally {
       setLoading(false);
     }
@@ -93,8 +152,11 @@ export function LoginForm(): ReactElement {
       className="flex flex-col gap-4"
     >
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="email" className="text-xs font-medium tracking-wide uppercase">
-          Email
+        <label
+          htmlFor="email"
+          className="text-xs font-medium tracking-wide uppercase"
+        >
+          {t('email')}
         </label>
         <input
           id="email"
@@ -107,8 +169,11 @@ export function LoginForm(): ReactElement {
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="password" className="text-xs font-medium tracking-wide uppercase">
-          Password
+        <label
+          htmlFor="password"
+          className="text-xs font-medium tracking-wide uppercase"
+        >
+          {t('password')}
         </label>
         <input
           id="password"
@@ -130,7 +195,7 @@ export function LoginForm(): ReactElement {
         className="ghc-btn-primary"
         disabled={loading || csrfLoading || csrfToken === ''}
       >
-        {loading ? 'Logging in…' : 'Log in'}
+        {loading ? t('submitting') : t('submit')}
       </button>
     </form>
   );

@@ -1,3 +1,5 @@
+import type { ReactElement } from 'react';
+import { getTranslations } from 'next-intl/server';
 import { LoginForm } from './_login-form';
 
 /**
@@ -11,7 +13,8 @@ import { LoginForm } from './_login-form';
  * The form is a client component because CSRF + submit are interactive.
  * Layout (brand, headline, tagline, card chrome) is server-rendered.
  */
-export default function LoginPage(): React.ReactElement {
+export default async function LoginPage(): Promise<ReactElement> {
+  const t = await getTranslations('login');
   return (
     <main className="mx-auto max-w-[26rem] py-16 px-4 ghc-fade-up">
       <header className="mb-8 text-center">
@@ -19,11 +22,11 @@ export default function LoginPage(): React.ReactElement {
           className="font-mono text-xs tracking-[0.2em] uppercase"
           style={{ color: 'var(--color-accent)' }}
         >
-          github metadata cache
+          {t('eyebrow')}
         </p>
-        <h1 className="mt-3 text-2xl font-semibold">Sign in to admin</h1>
+        <h1 className="mt-3 text-2xl font-semibold">{t('title')}</h1>
         <p className="mt-2 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-          Manage tokens, schedule refreshes, audit requests.
+          {t('tagline')}
         </p>
       </header>
 
@@ -33,7 +36,7 @@ export default function LoginPage(): React.ReactElement {
 
       <p className="mt-6 text-center text-sm">
         <a href="/" className="ghc-link">
-          ← Back to home
+          {t('backToHome')}
         </a>
       </p>
     </main>

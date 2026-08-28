@@ -8,11 +8,28 @@ vi.mock('@/app/login/_login-form', () => ({
   LoginForm: () => createElement('form', { 'data-testid': 'login-form-stub' }),
 }));
 
+// Stub next-intl/server so the server component can render without
+// pulling in the next-intl runtime. Mirrors the pattern used in
+// admin-shell-i18n.test.ts / admin-api-keys-i18n.test.tsx.
+vi.mock('next-intl/server', () => ({
+  getTranslations: async (ns: string) => {
+    const dicts: Record<string, Record<string, string>> = {
+      login: {
+        eyebrow: 'github metadata cache',
+        title: 'Sign in to admin',
+        tagline: 'Manage tokens, schedule refreshes, audit requests.',
+        backToHome: '← Back to home',
+      },
+    };
+    return (key: string) => dicts[ns]?.[key] ?? key;
+  },
+}));
+
 import LoginPage from '@/app/login/page';
 
 describe('LoginPage (server shell)', () => {
-  it('renders brand mark, headline, tagline, form card, and back-to-home link', () => {
-    const html = renderToStaticMarkup(createElement(LoginPage));
+  it('renders brand mark, headline, tagline, form card, and back-to-home link', async () => {
+    const html = renderToStaticMarkup(await LoginPage());
 
     // Brand wordmark (lowercase eyebrow above headline)
     expect(html).toContain('github metadata cache');
@@ -29,8 +46,8 @@ describe('LoginPage (server shell)', () => {
     expect(html).toContain('href="/"');
   });
 
-  it('uses theme tokens (no hardcoded colors)', () => {
-    const html = renderToStaticMarkup(createElement(LoginPage));
+  it('uses theme tokens (no hardcoded colors)', async () => {
+    const html = renderToStaticMarkup(await LoginPage());
 
     // Eyebrow + tagline should reference tokens, not hex
     expect(html).toContain('var(--color-accent)');
@@ -40,8 +57,8 @@ describe('LoginPage (server shell)', () => {
     expect(html).not.toMatch(/color:\s*#[0-9a-f]{3,6}/i);
   });
 
-  it('has no inline layout styles — only design-system classes', () => {
-    const html = renderToStaticMarkup(createElement(LoginPage));
+  it('has no inline layout styles — only design-system classes', async () => {
+    const html = renderToStaticMarkup(await LoginPage());
 
     // Layout primitives from the framework + our class names. No
     // `style="max-width:..."` style attributes that the old placeholder used.
