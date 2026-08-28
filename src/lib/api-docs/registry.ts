@@ -5,7 +5,6 @@ import {
   v1ReposOkSample,
 } from './schemas/v1-repos';
 import {
-  queryBodySchema,
   queryResponseSchema,
   querySample,
 } from './schemas/query';
@@ -51,14 +50,14 @@ export const ENDPOINT_DOCS: EndpointDoc[] = [
     slug: 'api/query',
     path: '/api/query',
     method: 'POST',
-    summary: 'Batch-fetch up to 100 repositories with a single API key.',
+    summary: 'Batch-fetch up to 50 repositories with a single API key.',
     description:
       'Authenticated batch endpoint for API key holders. Returns results in the same order as the input nodes; partial failures are reported per-node via the discriminated union.',
     auth: 'X-API-Key',
     rateLimit: 'rateLimitPerMin (per API key, default 60) durable bucket',
     request: [
       { name: 'X-API-Key', in: 'header', type: 'string', required: true, description: 'Active API key.' },
-      { name: 'nodes',     in: 'body',   type: 'Array<{ owner, name }>', required: true, description: 'Up to 100 repo refs to fetch.' },
+      { name: 'nodes',     in: 'body',   type: 'Array<{ owner, name }>', required: true, description: 'Up to 50 repo refs to fetch.' },
     ],
     response: queryResponseSchema,
     responseSamples: { default: querySample },

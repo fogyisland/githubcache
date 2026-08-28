@@ -1,4 +1,6 @@
 import { prisma } from '@/lib/db/client';
+import type { Prisma } from '@prisma/client';
+import type { RepoCoreData } from '@/lib/github/fields';
 
 interface CreateTestRepoOpts {
   owner: string;
@@ -6,36 +8,44 @@ interface CreateTestRepoOpts {
   status: 'ok' | 'not_found' | 'error';
 }
 
-const DEFAULT_METADATA = {
-  owner: '',
+// Default metadata for a cached 'ok' repo. Mirrors RepoCoreData from
+// src/lib/github/fields.ts exactly — no `owner` (the owner lives only
+// in the URL path / canonical key, never in the cached metadata) and
+// camelCase date fields. Keeping the shape aligned with parseRepoResponse
+// means the test cannot silently drift from production.
+const DEFAULT_METADATA: RepoCoreData = {
   name: '',
-  stars: 2000,
+  description: 'A test repository',
+  private: false,
+  defaultBranch: 'main',
+  stars: 123,
   forks: 900,
   watchers: 80,
+  createdAt: '2020-01-01T00:00:00Z',
+  updatedAt: '2024-01-01T00:00:00Z',
+  pushedAt: '2024-01-15T00:00:00Z',
   language: 'TypeScript',
-  defaultBranch: 'main',
-  homepage: 'https://example.com',
-  description: 'A test repository',
-  topics: ['test', 'example'],
   license: 'MIT',
-  created_at: '2020-01-01T00:00:00Z',
-  updated_at: '2024-01-01T00:00:00Z',
-  pushed_at: '2024-01-15T00:00:00Z',
+  topics: ['test', 'example'],
+  homepage: 'https://example.com',
+  archived: false,
+  disabled: false,
 };
 
 export async function createTestRepo(opts: CreateTestRepoOpts) {
-  const metadata = { ...DEFAULT_METADATA, owner: opts.owner, name: opts.name };
+  const metadata: RepoCoreData = { ...DEFAULT_METADATA, name: opts.name };
+  const jsonMetadata = metadata as unknown as Prisma.InputJsonValue;
   const repo = await prisma.repository.upsert({
     where: { owner_name: { owner: opts.owner, name: opts.name } },
     create: {
       owner: opts.owner,
       name: opts.name,
       node: { id: 1 },
-      metadata,
+      metadata: jsonMetadata,
       fetchStatus: opts.status,
       lastFetchedAt: new Date(),
     },
-    update: { fetchStatus: opts.status, lastFetchedAt: new Date(), metadata },
+    update: { fetchStatus: opts.status, lastFetchedAt: new Date(), metadata: jsonMetadata },
   });
   return repo;
 }

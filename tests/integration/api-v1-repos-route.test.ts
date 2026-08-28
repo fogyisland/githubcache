@@ -12,7 +12,7 @@ describe('GET /api/v1/repos/[owner]/[name]', () => {
   });
 
   it('returns 200 with repository shape for cached repo', async () => {
-    const repo = await createTestRepo({ owner: 'octocat', name: 'Hello-World', status: 'ok' });
+    await createTestRepo({ owner: 'octocat', name: 'Hello-World', status: 'ok' });
     const req = new Request('http://localhost/api/v1/repos/octocat/Hello-World', {
       headers: { 'x-forwarded-for': '203.0.113.1' },
     });
@@ -20,14 +20,18 @@ describe('GET /api/v1/repos/[owner]/[name]', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.fetch_status).toBe('ok');
-    expect(body.repository.owner).toBe('octocat');
+    expect(body.fetched_at).toBeTruthy();
+    // RepoCoreData shape — NO `owner` field; owner lives only in the URL path.
+    expect(body.repository).not.toHaveProperty('owner');
     expect(body.repository.name).toBe('Hello-World');
-    expect(body.repository.stars).toBe(2000);
+    expect(body.repository.stars).toBe(123);
     expect(body.repository.forks).toBe(900);
     expect(body.repository.watchers).toBe(80);
     expect(body.repository.language).toBe('TypeScript');
     expect(body.repository.defaultBranch).toBe('main');
     expect(body.repository.license).toBe('MIT');
+    expect(body.repository.createdAt).toBe('2020-01-01T00:00:00Z');
+    expect(body.repository.archived).toBe(false);
   });
 
   it('returns 404 for repo with fetch_status=not_found', async () => {

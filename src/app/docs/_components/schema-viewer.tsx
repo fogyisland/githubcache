@@ -15,7 +15,6 @@ type AnyZod = { _zod?: unknown };
 
 interface FieldRow {
   name: string;
-  typeName: string;
   typeHtml: string;
   required: boolean;
   description: string;
@@ -45,27 +44,9 @@ function describeOf(s: z.ZodTypeAny): string {
   return s.description ?? '';
 }
 
-// DIVERGENCE FROM PLAN: For ZodLiteral, the rendered type label must contain
-// raw double-quote characters (e.g. `"a"`) so that downstream tests can match
-// them. React's text rendering HTML-escapes `"` → `&quot;`, so we expose two
-// parallel helpers: `typeName` (plain string, for general use) and `typeHtml`
-// (the same string as it should appear in the rendered HTML). All consumers
-// render `typeHtml` via `dangerouslySetInnerHTML` to preserve the quotes.
-function typeName(s: z.ZodTypeAny): string {
-  const u = unwrap(s);
-  if (u instanceof z.ZodString) return 'string';
-  if (u instanceof z.ZodNumber) return 'number';
-  if (u instanceof z.ZodBoolean) return 'boolean';
-  if (u instanceof z.ZodDate) return 'string (ISO 8601)';
-  if (u instanceof z.ZodEnum) return `enum (${(u.options as string[]).join(' | ')})`;
-  if (u instanceof z.ZodLiteral) return `literal (${JSON.stringify(u.value)})`;
-  if (u instanceof z.ZodArray) return `${typeName(u.element as unknown as z.ZodTypeAny)}[]`;
-  if (u instanceof z.ZodUnion)
-    return u.options.map((o) => typeName(o as unknown as z.ZodTypeAny)).join(' | ');
-  if (u instanceof z.ZodObject) return 'object';
-  return 'any';
-}
-
+// Render `typeHtml` via dangerouslySetInnerHTML so the literal quotes around
+// e.g. `"ok"` survive React's text-escaping pass. Input is always derived
+// from registry-authored Zod schemas, never user input.
 function typeHtml(s: z.ZodTypeAny): string {
   const u = unwrap(s);
   if (u instanceof z.ZodString) return 'string';
@@ -82,6 +63,23 @@ function typeHtml(s: z.ZodTypeAny): string {
   return 'any';
 }
 
+// Derive a human-readable branch label from a ZodUnion option. Looks for the
+// first ZodLiteral in the discriminant field (e.g. fetch_status: 'ok') and
+// returns its JSON-serialised value. Falls back to the position index when
+// the option is not a literal-tagged object.
+function branchLabel(branch: z.ZodTypeAny, index: number): string {
+  const u = unwrap(branch);
+  if (u instanceof z.ZodObject) {
+    const shape = u.shape as ZodShape;
+    // Prefer the first ZodLiteral field — typically the discriminant.
+    for (const child of Object.values(shape)) {
+      const inner = unwrap(child);
+      if (inner instanceof z.ZodLiteral) return JSON.stringify(inner.value);
+    }
+  }
+  return `option ${index + 1}`;
+}
+
 function rowsForObject(obj: z.ZodObject<ZodShape>): FieldRow[] {
   const shape = obj.shape;
   return Object.entries(shape).map(([name, child]) => {
@@ -92,7 +90,7 @@ function rowsForObject(obj: z.ZodObject<ZodShape>): FieldRow[] {
     const typePart = typeHtml(child);
     const label = badges.length ? `${typePart} ${badges.join(' ')}` : typePart;
     const desc = describeOf(child) || describeOf(unwrap(child));
-    return { name, typeName: typeName(child), typeHtml: label, required, description: desc };
+    return { name, typeHtml: label, required, description: desc };
   });
 }
 
@@ -114,7 +112,7 @@ export function SchemaViewer({ schema, depth = 0 }: SchemaViewerProps): ReactEle
         <tbody>
           {rows.map((row) => (
             <tr key={row.name} className={row.required ? 'ghc-doc-table-row-required' : ''}>
-              {/* DIVERGENCE FROM PLAN: render name + colon so test `kind:` matches. */}
+              {/* Render name + colon so test `kind:` matches. */}
               <td><code>{row.name}:</code></td>
               <td>
                 <code dangerouslySetInnerHTML={{ __html: row.typeHtml }} />
@@ -127,12 +125,14 @@ export function SchemaViewer({ schema, depth = 0 }: SchemaViewerProps): ReactEle
     );
   }
 
-  // Union → render each branch.
+  // Union → render each branch side-by-side with a role label derived
+  // from the discriminant literal (e.g. "ok", "not_found", "error").
   if (u instanceof z.ZodUnion) {
     return (
       <div className="ghc-doc-union" data-depth={depth}>
         {(u.options as z.ZodTypeAny[]).map((branch, i) => (
           <div key={i} className="ghc-doc-union-branch">
+            <span className="ghc-doc-union-branch-label">{branchLabel(branch, i)}</span>
             <SchemaViewer schema={branch} depth={depth + 1} />
           </div>
         ))}
