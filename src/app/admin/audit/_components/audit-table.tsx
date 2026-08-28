@@ -1,3 +1,6 @@
+import type { ReactElement } from 'react';
+import { getTranslations } from 'next-intl/server';
+
 interface Row {
   id: string;
   createdAt: Date;
@@ -25,32 +28,35 @@ interface Props {
  * reset on pagination. Future polish: preserve all filters in prev/next
  * href builders.
  */
-export function AuditTable({ rows, total, limit, offset }: Props) {
+export async function AuditTable({ rows, total, limit, offset }: Props): Promise<ReactElement> {
+  const t = await getTranslations('admin.audit.table');
   const start = total === 0 ? 0 : offset + 1;
   const end = Math.min(offset + limit, total);
   const hasPrev = offset > 0;
   const hasNext = end < total;
   const prevOffset = Math.max(0, offset - limit);
   const nextOffset = offset + limit;
+  const pageNum = Math.floor(offset / limit) + 1;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
       <div className="mb-3 text-sm text-gray-600">
-        Showing {start.toLocaleString()}–{end.toLocaleString()} of {total.toLocaleString()} entries
+        {t('showingRange', { start: start.toLocaleString(), end: end.toLocaleString(), total: total.toLocaleString() })}
       </div>
       {rows.length === 0 ? (
-        <p className="text-sm text-gray-500">No matching entries.</p>
+        <p className="text-sm text-gray-500">{t('empty')}</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="border-b border-gray-200 text-gray-500">
               <tr>
-                <th className="py-2">When</th>
-                <th className="py-2">Action</th>
-                <th className="py-2">Actor</th>
-                <th className="py-2">Target</th>
-                <th className="py-2">IP</th>
-                <th className="py-2">Metadata</th>
+                <th className="py-2">{t('column.when')}</th>
+                <th className="py-2">{t('column.action')}</th>
+                <th className="py-2">{t('column.actor')}</th>
+                <th className="py-2">{t('column.target')}</th>
+                <th className="py-2">{t('column.ip')}</th>
+                <th className="py-2">{t('column.metadata')}</th>
               </tr>
             </thead>
             <tbody>
@@ -73,14 +79,14 @@ export function AuditTable({ rows, total, limit, offset }: Props) {
                     ) : r.actorUserId ? (
                       <span className="font-mono text-xs">#{r.actorUserId}</span>
                     ) : (
-                      <span className="text-gray-400">system</span>
+                      <span className="text-gray-400">{t('system')}</span>
                     )}
                   </td>
                   <td className="py-2">
                     <div className="font-mono text-xs">{r.targetType}</div>
                     <div className="font-mono text-xs text-gray-500">{r.targetId}</div>
                   </td>
-                  <td className="py-2 font-mono text-xs">{r.ip ?? '—'}</td>
+                  <td className="py-2 font-mono text-xs">{r.ip ?? t('dash')}</td>
                   <td className="py-2">
                     <code className="block max-w-md overflow-x-auto whitespace-pre-wrap break-all rounded bg-gray-50 p-2 text-xs">
                       {JSON.stringify(r.metadata, null, 2)}
@@ -101,10 +107,10 @@ export function AuditTable({ rows, total, limit, offset }: Props) {
           }`}
           aria-disabled={!hasPrev}
         >
-          ← Previous
+          {t('prev')}
         </a>
         <span className="text-sm text-gray-600">
-          Page {Math.floor(offset / limit) + 1} of {Math.max(1, Math.ceil(total / limit))}
+          {t('pageOf', { page: pageNum, total: totalPages })}
         </span>
         <a
           href={`?offset=${nextOffset}&limit=${limit}`}
@@ -113,7 +119,7 @@ export function AuditTable({ rows, total, limit, offset }: Props) {
           }`}
           aria-disabled={!hasNext}
         >
-          Next →
+          {t('next')}
         </a>
       </div>
     </div>

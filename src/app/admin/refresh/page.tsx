@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
+import { getTranslations } from 'next-intl/server';
 import { validateSession } from '@/lib/auth/session';
 import { listPendingJobs, listRepositoriesForPicker } from '@/lib/db/refresh-jobs';
 import { isPaused, getPausedAt } from '@/lib/scheduler';
@@ -22,6 +23,8 @@ import { PendingJobsTable } from './_components/pending-jobs-table';
  * `RefreshControls` client component surfaces this caveat inline.
  */
 export default async function AdminRefreshPage(): Promise<ReactElement> {
+  const t = await getTranslations('admin.refresh');
+
   // Auth gate — admin only (per spec §9.1)
   const cookieStore = cookies();
   const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
@@ -50,9 +53,12 @@ export default async function AdminRefreshPage(): Promise<ReactElement> {
   return (
     <div className="ghc-admin-page">
       <AdminPageHeader
-        breadcrumb={[{ label: 'Admin', href: '/admin' }, { label: 'Refresh' }]}
-        title="Manual refresh"
-        description="Trigger a refresh for any repo, pause the scheduler, and watch the pending queue."
+        breadcrumb={[
+          { label: t('breadcrumb.admin'), href: '/admin' },
+          { label: t('breadcrumb.refresh') },
+        ]}
+        title={t('title')}
+        description={t('description')}
       />
       <RefreshControls
         isPaused={paused}

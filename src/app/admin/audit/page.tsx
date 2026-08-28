@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
+import { getTranslations } from 'next-intl/server';
 import { validateSession } from '@/lib/auth/session';
 import { queryAuditLog, getActorEmails } from '@/lib/db/audit';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
@@ -26,6 +27,8 @@ export default async function AdminAuditPage({
 }: {
   searchParams: { [k: string]: string | undefined };
 }): Promise<ReactElement> {
+  const t = await getTranslations('admin.audit');
+
   // Admin-only gate (per spec §9.1)
   const cookieStore = cookies();
   const cookieMap = Object.fromEntries(
@@ -101,9 +104,12 @@ export default async function AdminAuditPage({
   return (
     <div className="ghc-admin-page">
       <AdminPageHeader
-        breadcrumb={[{ label: 'Admin', href: '/admin' }, { label: 'Audit' }]}
-        title="Audit log"
-        description="Search across every admin action. Filters update the URL — bookmark or share a view."
+        breadcrumb={[
+          { label: t('breadcrumb.admin'), href: '/admin' },
+          { label: t('breadcrumb.audit') },
+        ]}
+        title={t('title')}
+        description={t('description')}
       />
       <AuditFilters />
       <AuditTable rows={tableRows} total={total} limit={limit} offset={offset} />

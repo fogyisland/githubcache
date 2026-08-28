@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 
 // Hard-coded list of known audit actions. Stable for M7.5; if a new action
 // is added elsewhere in the codebase, this list should be updated too.
@@ -41,6 +42,7 @@ const TARGET_TYPES = ['', 'session', 'user', 'invitation', 'api_key', 'github_to
  * updates the URL on submit.
  */
 export function AuditFilters() {
+  const t = useTranslations('admin.audit.filters');
   const router = useRouter();
   const params = useSearchParams();
   const [action, setAction] = useState(params.get('action') ?? '');
@@ -70,44 +72,44 @@ export function AuditFilters() {
     <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <label className="flex flex-col text-sm">
-          <span className="text-gray-600">Action</span>
+          <span className="text-gray-600">{t('action')}</span>
           <select
             value={action}
             onChange={(e) => setAction(e.target.value)}
             className="mt-1 rounded border border-gray-300 px-2 py-1"
           >
             {ACTIONS.map((a) => (
-              <option key={a} value={a}>{a || '(any)'}</option>
+              <option key={a} value={a}>{a || t('anyOption')}</option>
             ))}
           </select>
         </label>
 
         <label className="flex flex-col text-sm">
-          <span className="text-gray-600">Actor user ID</span>
+          <span className="text-gray-600">{t('actorUserId')}</span>
           <input
             type="text"
             value={actorUserId}
             onChange={(e) => setActorUserId(e.target.value)}
-            placeholder="e.g. 1"
+            placeholder={t('actorUserIdPlaceholder')}
             className="mt-1 rounded border border-gray-300 px-2 py-1"
           />
         </label>
 
         <label className="flex flex-col text-sm">
-          <span className="text-gray-600">Target type</span>
+          <span className="text-gray-600">{t('targetType')}</span>
           <select
             value={targetType}
             onChange={(e) => setTargetType(e.target.value)}
             className="mt-1 rounded border border-gray-300 px-2 py-1"
           >
-            {TARGET_TYPES.map((t) => (
-              <option key={t} value={t}>{t || '(any)'}</option>
+            {TARGET_TYPES.map((tt) => (
+              <option key={tt} value={tt}>{tt || t('anyOption')}</option>
             ))}
           </select>
         </label>
 
         <label className="flex flex-col text-sm">
-          <span className="text-gray-600">From</span>
+          <span className="text-gray-600">{t('from')}</span>
           <input
             type="date"
             value={from}
@@ -117,7 +119,7 @@ export function AuditFilters() {
         </label>
 
         <label className="flex flex-col text-sm">
-          <span className="text-gray-600">To</span>
+          <span className="text-gray-600">{t('to')}</span>
           <input
             type="date"
             value={to}
@@ -133,14 +135,14 @@ export function AuditFilters() {
           onClick={apply}
           className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
         >
-          Apply filters
+          {t('apply')}
         </button>
         <button
           type="button"
           onClick={reset}
           className="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
         >
-          Reset
+          {t('reset')}
         </button>
       </div>
     </div>

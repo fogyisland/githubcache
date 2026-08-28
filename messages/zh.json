@@ -404,6 +404,135 @@
           "created": "创建时间"
         }
       }
+    },
+    "reports": {
+      "title": "报表",
+      "description": "过去 24 小时的汇总用量、缓存性能与配额情况。",
+      "breadcrumb": {
+        "admin": "管理",
+        "reports": "报表"
+      },
+      "kpi": {
+        "totalRequests": "请求总数",
+        "cacheHitRate": "缓存命中率",
+        "avgLatency": "平均延迟",
+        "activeApiKeys": "活跃 API 密钥"
+      },
+      "chart": {
+        "heading": "请求趋势（24 小时，每小时）",
+        "empty": "本时段暂无数据。",
+        "cacheHits": "缓存命中",
+        "cacheMisses": "缓存未命中"
+      },
+      "topRepos": {
+        "heading": "热门仓库",
+        "empty": "本时段暂无请求。",
+        "column": {
+          "repo": "仓库",
+          "requests": "请求数",
+          "hitRate": "命中率"
+        }
+      },
+      "topKeys": {
+        "heading": "热门 API 密钥",
+        "empty": "本时段暂无请求。",
+        "column": {
+          "label": "标签",
+          "requests": "请求数",
+          "lastUsed": "最后使用"
+        },
+        "dash": "—"
+      },
+      "tokenQuota": {
+        "heading": "令牌配额使用",
+        "empty": "暂无注册的令牌。",
+        "column": {
+          "label": "标签",
+          "status": "状态",
+          "used": "已用",
+          "limit": "限额",
+          "usedPct": "已用 %",
+          "resets": "重置时间"
+        },
+        "dash": "—",
+        "status": {
+          "active": "活跃",
+          "disabled": "已禁用"
+        }
+      }
+    },
+    "audit": {
+      "title": "审计日志",
+      "description": "跨每条管理员操作的搜索。筛选条件会更新 URL — 可收藏或分享视图。",
+      "breadcrumb": {
+        "admin": "管理",
+        "audit": "审计"
+      },
+      "filters": {
+        "action": "操作",
+        "actorUserId": "操作者用户 ID",
+        "actorUserIdPlaceholder": "例如 1",
+        "targetType": "目标类型",
+        "from": "开始",
+        "to": "结束",
+        "anyOption": "（任意）",
+        "apply": "应用筛选",
+        "reset": "重置"
+      },
+      "table": {
+        "empty": "没有匹配的条目。",
+        "dash": "—",
+        "system": "系统",
+        "prev": "← 上一页",
+        "next": "下一页 →",
+        "pageOf": "第 {page} 页 / 共 {total} 页",
+        "showingRange": "显示 {start}–{end} 条，共 {total} 条",
+        "column": {
+          "when": "时间",
+          "action": "操作",
+          "actor": "操作者",
+          "target": "目标",
+          "ip": "IP",
+          "metadata": "元数据"
+        }
+      }
+    },
+    "refresh": {
+      "title": "手动刷新",
+      "description": "为任意仓库触发刷新、暂停调度器，并查看待处理队列。",
+      "breadcrumb": {
+        "admin": "管理",
+        "refresh": "刷新"
+      },
+      "trigger": {
+        "heading": "触发手动刷新",
+        "repoLabel": "仓库",
+        "selectPlaceholder": "请选择仓库…",
+        "repoOption": "#{id} — {owner}/{name}",
+        "submit": "触发刷新",
+        "selectRepoError": "请选择一个仓库。"
+      },
+      "scheduler": {
+        "heading": "调度器状态",
+        "statusLabel": "状态：",
+        "running": "运行中",
+        "paused": "已暂停",
+        "pausedAt": "暂停时间：{timestamp}",
+        "multiProcessNote": "注：暂停是进程本地的。多进程部署需要数据库级暂停（M5.5 已超出范围）。",
+        "pause": "暂停",
+        "resume": "继续"
+      },
+      "pendingJobs": {
+        "heading": "待处理刷新任务（最多 20 个）",
+        "empty": "暂无待处理任务。",
+        "column": {
+          "jobId": "任务 ID",
+          "repository": "仓库",
+          "priority": "优先级",
+          "scheduled": "计划时间",
+          "attempts": "尝试次数"
+        }
+      }
     }
   }
 }

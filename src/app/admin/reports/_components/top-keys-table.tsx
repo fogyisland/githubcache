@@ -1,3 +1,6 @@
+import type { ReactElement } from 'react';
+import { getTranslations } from 'next-intl/server';
+
 interface Row {
   keyId: string;
   label: string;
@@ -5,19 +8,20 @@ interface Row {
   lastUsed: Date | null;
 }
 
-export function TopKeysTable({ rows }: { rows: Row[] }) {
+export async function TopKeysTable({ rows }: { rows: Row[] }): Promise<ReactElement> {
+  const t = await getTranslations('admin.reports.topKeys');
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-      <h2 className="mb-4 text-lg font-semibold">Top API keys</h2>
+      <h2 className="mb-4 text-lg font-semibold">{t('heading')}</h2>
       {rows.length === 0 ? (
-        <p className="text-sm text-gray-500">No requests in this window.</p>
+        <p className="text-sm text-gray-500">{t('empty')}</p>
       ) : (
         <table className="w-full text-left text-sm">
           <thead className="border-b border-gray-200 text-gray-500">
             <tr>
-              <th className="py-2">Label</th>
-              <th className="py-2 text-right">Requests</th>
-              <th className="py-2 text-right">Last used</th>
+              <th className="py-2">{t('column.label')}</th>
+              <th className="py-2 text-right">{t('column.requests')}</th>
+              <th className="py-2 text-right">{t('column.lastUsed')}</th>
             </tr>
           </thead>
           <tbody>
@@ -30,7 +34,7 @@ export function TopKeysTable({ rows }: { rows: Row[] }) {
                 </td>
                 <td className="py-2 text-right">{k.requestCount.toLocaleString()}</td>
                 <td className="py-2 text-right text-gray-500">
-                  {k.lastUsed ? k.lastUsed.toISOString() : '—'}
+                  {k.lastUsed ? k.lastUsed.toISOString() : t('dash')}
                 </td>
               </tr>
             ))}

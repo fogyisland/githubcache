@@ -1,3 +1,6 @@
+import type { ReactElement } from 'react';
+import { getTranslations } from 'next-intl/server';
+
 interface Props {
   totalRequests: number;
   cacheHitRate: number; // 0..1
@@ -5,12 +8,13 @@ interface Props {
   activeApiKeys: number;
 }
 
-export function KpiCards({ totalRequests, cacheHitRate, avgLatencyMs, activeApiKeys }: Props) {
+export async function KpiCards({ totalRequests, cacheHitRate, avgLatencyMs, activeApiKeys }: Props): Promise<ReactElement> {
+  const t = await getTranslations('admin.reports.kpi');
   const cards = [
-    { label: 'Total requests', value: totalRequests.toLocaleString() },
-    { label: 'Cache hit rate', value: `${(cacheHitRate * 100).toFixed(1)}%` },
-    { label: 'Avg latency', value: `${Math.round(avgLatencyMs)} ms` },
-    { label: 'Active API keys', value: activeApiKeys.toLocaleString() },
+    { label: t('totalRequests'), value: totalRequests.toLocaleString() },
+    { label: t('cacheHitRate'), value: `${(cacheHitRate * 100).toFixed(1)}%` },
+    { label: t('avgLatency'), value: `${Math.round(avgLatencyMs)} ms` },
+    { label: t('activeApiKeys'), value: activeApiKeys.toLocaleString() },
   ];
 
   return (

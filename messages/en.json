@@ -404,6 +404,135 @@
           "created": "Created"
         }
       }
+    },
+    "reports": {
+      "title": "Reports",
+      "description": "Aggregated usage, cache performance, and quota over the last 24 hours.",
+      "breadcrumb": {
+        "admin": "Admin",
+        "reports": "Reports"
+      },
+      "kpi": {
+        "totalRequests": "Total requests",
+        "cacheHitRate": "Cache hit rate",
+        "avgLatency": "Avg latency",
+        "activeApiKeys": "Active API keys"
+      },
+      "chart": {
+        "heading": "Requests over time (24h, hourly)",
+        "empty": "No data in this window.",
+        "cacheHits": "Cache hits",
+        "cacheMisses": "Cache misses"
+      },
+      "topRepos": {
+        "heading": "Top repositories",
+        "empty": "No requests in this window.",
+        "column": {
+          "repo": "Repository",
+          "requests": "Requests",
+          "hitRate": "Hit rate"
+        }
+      },
+      "topKeys": {
+        "heading": "Top API keys",
+        "empty": "No requests in this window.",
+        "column": {
+          "label": "Label",
+          "requests": "Requests",
+          "lastUsed": "Last used"
+        },
+        "dash": "—"
+      },
+      "tokenQuota": {
+        "heading": "Token quota usage",
+        "empty": "No tokens registered.",
+        "column": {
+          "label": "Label",
+          "status": "Status",
+          "used": "Used",
+          "limit": "Limit",
+          "usedPct": "Used %",
+          "resets": "Resets"
+        },
+        "dash": "—",
+        "status": {
+          "active": "active",
+          "disabled": "disabled"
+        }
+      }
+    },
+    "audit": {
+      "title": "Audit log",
+      "description": "Search across every admin action. Filters update the URL — bookmark or share a view.",
+      "breadcrumb": {
+        "admin": "Admin",
+        "audit": "Audit"
+      },
+      "filters": {
+        "action": "Action",
+        "actorUserId": "Actor user ID",
+        "actorUserIdPlaceholder": "e.g. 1",
+        "targetType": "Target type",
+        "from": "From",
+        "to": "To",
+        "anyOption": "(any)",
+        "apply": "Apply filters",
+        "reset": "Reset"
+      },
+      "table": {
+        "empty": "No matching entries.",
+        "dash": "—",
+        "system": "system",
+        "prev": "← Previous",
+        "next": "Next →",
+        "pageOf": "Page {page} of {total}",
+        "showingRange": "Showing {start}–{end} of {total} entries",
+        "column": {
+          "when": "When",
+          "action": "Action",
+          "actor": "Actor",
+          "target": "Target",
+          "ip": "IP",
+          "metadata": "Metadata"
+        }
+      }
+    },
+    "refresh": {
+      "title": "Manual refresh",
+      "description": "Trigger a refresh for any repo, pause the scheduler, and watch the pending queue.",
+      "breadcrumb": {
+        "admin": "Admin",
+        "refresh": "Refresh"
+      },
+      "trigger": {
+        "heading": "Trigger manual refresh",
+        "repoLabel": "Repository",
+        "selectPlaceholder": "Select a repository…",
+        "repoOption": "#{id} — {owner}/{name}",
+        "submit": "Trigger refresh",
+        "selectRepoError": "Please select a repository."
+      },
+      "scheduler": {
+        "heading": "Scheduler state",
+        "statusLabel": "Status:",
+        "running": "RUNNING",
+        "paused": "PAUSED",
+        "pausedAt": "Paused at: {timestamp}",
+        "multiProcessNote": "Note: pause is process-local. Multi-process deployments require DB-backed pause (out of scope per M5.5).",
+        "pause": "Pause",
+        "resume": "Resume"
+      },
+      "pendingJobs": {
+        "heading": "Pending refresh jobs (top 20)",
+        "empty": "No pending jobs.",
+        "column": {
+          "jobId": "Job ID",
+          "repository": "Repository",
+          "priority": "Priority",
+          "scheduled": "Scheduled",
+          "attempts": "Attempts"
+        }
+      }
     }
   }
 }

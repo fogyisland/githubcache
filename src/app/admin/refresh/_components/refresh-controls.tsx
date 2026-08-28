@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 
 interface Repo {
   id: string;
@@ -31,6 +32,8 @@ interface Props {
  * re-renders with the updated scheduler state and pending-jobs list.
  */
 export function RefreshControls({ isPaused, pausedAt, repos }: Props) {
+  const tTrigger = useTranslations('admin.refresh.trigger');
+  const tSched = useTranslations('admin.refresh.scheduler');
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +53,7 @@ export function RefreshControls({ isPaused, pausedAt, repos }: Props) {
   async function handleTrigger(): Promise<void> {
     setError(null);
     if (!repoId) {
-      setError('Please select a repository.');
+      setError(tTrigger('selectRepoError'));
       return;
     }
     setSubmitting(true);
@@ -98,10 +101,10 @@ export function RefreshControls({ isPaused, pausedAt, repos }: Props) {
     <div className="space-y-4">
       {/* Trigger form */}
       <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-        <h2 className="mb-3 text-lg font-semibold">Trigger manual refresh</h2>
+        <h2 className="mb-3 text-lg font-semibold">{tTrigger('heading')}</h2>
         <div className="flex flex-wrap items-end gap-2">
           <label className="flex flex-col text-sm">
-            <span className="text-gray-600">Repository</span>
+            <span className="text-gray-600">{tTrigger('repoLabel')}</span>
             <select
               name="repoId"
               value={repoId}
@@ -110,11 +113,11 @@ export function RefreshControls({ isPaused, pausedAt, repos }: Props) {
               disabled={submitting}
             >
               <option value="" disabled>
-                Select a repository…
+                {tTrigger('selectPlaceholder')}
               </option>
               {repos.map((r) => (
                 <option key={r.id} value={r.id}>
-                  #{r.id} — {r.owner}/{r.name}
+                  {tTrigger('repoOption', { id: r.id, owner: r.owner, name: r.name })}
                 </option>
               ))}
             </select>
@@ -125,34 +128,33 @@ export function RefreshControls({ isPaused, pausedAt, repos }: Props) {
             disabled={submitting}
             className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            Trigger refresh
+            {tTrigger('submit')}
           </button>
         </div>
       </div>
 
       {/* Pause/resume */}
       <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-        <h2 className="mb-3 text-lg font-semibold">Scheduler state</h2>
+        <h2 className="mb-3 text-lg font-semibold">{tSched('heading')}</h2>
         <div className="flex items-center justify-between">
           <div>
             <div className="text-sm">
-              Status:{' '}
+              {tSched('statusLabel')}{' '}
               <span
                 className={
                   isPaused ? 'font-semibold text-red-600' : 'font-semibold text-green-600'
                 }
               >
-                {isPaused ? 'PAUSED' : 'RUNNING'}
+                {isPaused ? tSched('paused') : tSched('running')}
               </span>
             </div>
             {pausedAt && (
               <div className="text-xs text-gray-500">
-                Paused at: {new Date(pausedAt).toISOString()}
+                {tSched('pausedAt', { timestamp: new Date(pausedAt).toISOString() })}
               </div>
             )}
             <div className="mt-1 text-xs text-gray-500">
-              Note: pause is process-local. Multi-process deployments require DB-backed pause
-              (out of scope per M5.5).
+              {tSched('multiProcessNote')}
             </div>
           </div>
           <div>
@@ -163,7 +165,7 @@ export function RefreshControls({ isPaused, pausedAt, repos }: Props) {
                 disabled={submitting}
                 className="rounded bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
               >
-                Resume
+                {tSched('resume')}
               </button>
             ) : (
               <button
@@ -172,7 +174,7 @@ export function RefreshControls({ isPaused, pausedAt, repos }: Props) {
                 disabled={submitting}
                 className="rounded bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
               >
-                Pause
+                {tSched('pause')}
               </button>
             )}
           </div>

@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
+import { getTranslations } from 'next-intl/server';
 import { validateSession } from '@/lib/auth/session';
 import {
   totalRequests,
@@ -35,6 +36,8 @@ import { TokenQuotaTable } from './_components/token-quota-table';
  * /api/admin/reports?window=1h|24h|7d|custom.
  */
 export default async function AdminReportsPage(): Promise<ReactElement> {
+  const t = await getTranslations('admin.reports');
+
   // Auth gate — admin OR operator (per spec §9.1)
   const cookieStore = cookies();
   const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
@@ -66,9 +69,12 @@ export default async function AdminReportsPage(): Promise<ReactElement> {
   return (
     <div className="ghc-admin-page">
       <AdminPageHeader
-        breadcrumb={[{ label: 'Admin', href: '/admin' }, { label: 'Reports' }]}
-        title="Reports"
-        description="Aggregated usage, cache performance, and quota over the last 24 hours."
+        breadcrumb={[
+          { label: t('breadcrumb.admin'), href: '/admin' },
+          { label: t('breadcrumb.reports') },
+        ]}
+        title={t('title')}
+        description={t('description')}
       />
       <KpiCards
         totalRequests={total}
@@ -79,7 +85,7 @@ export default async function AdminReportsPage(): Promise<ReactElement> {
       <RequestsOverTimeChart data={overTime} />
       <TopReposTable rows={repos} />
       <TopKeysTable rows={keys.map((k) => ({ ...k, keyId: k.keyId.toString() }))} />
-      <TokenQuotaTable rows={quota.map((t) => ({ ...t, id: t.id.toString() }))} />
+      <TokenQuotaTable rows={quota.map((tt) => ({ ...tt, id: tt.id.toString() }))} />
     </div>
   );
 }

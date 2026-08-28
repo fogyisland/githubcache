@@ -1,18 +1,21 @@
+import type { ReactElement } from 'react';
+import { getTranslations } from 'next-intl/server';
 import type { TopRepo } from '@/lib/reports/queries';
 
-export function TopReposTable({ rows }: { rows: TopRepo[] }) {
+export async function TopReposTable({ rows }: { rows: TopRepo[] }): Promise<ReactElement> {
+  const t = await getTranslations('admin.reports.topRepos');
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-      <h2 className="mb-4 text-lg font-semibold">Top repositories</h2>
+      <h2 className="mb-4 text-lg font-semibold">{t('heading')}</h2>
       {rows.length === 0 ? (
-        <p className="text-sm text-gray-500">No requests in this window.</p>
+        <p className="text-sm text-gray-500">{t('empty')}</p>
       ) : (
         <table className="w-full text-left text-sm">
           <thead className="border-b border-gray-200 text-gray-500">
             <tr>
-              <th className="py-2">Repository</th>
-              <th className="py-2 text-right">Requests</th>
-              <th className="py-2 text-right">Hit rate</th>
+              <th className="py-2">{t('column.repo')}</th>
+              <th className="py-2 text-right">{t('column.requests')}</th>
+              <th className="py-2 text-right">{t('column.hitRate')}</th>
             </tr>
           </thead>
           <tbody>
