@@ -20,7 +20,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "dev:fetch": "tsx scripts/dev-fetch.ts",
-    "create:admin": "tsx --env-file=.env scripts/create-admin.ts"
+    "create:admin": "tsx --env-file=.env scripts/create-admin.ts",
+    "smoke:session": "tsx --env-file=.env scripts/smoke-session.ts"
   },
   "dependencies": {
     "@octokit/rest": "^22.0.1",
