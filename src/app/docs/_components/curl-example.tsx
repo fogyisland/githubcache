@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react';
+import { getTranslations } from 'next-intl/server';
 import { CopyButton } from './copy-button';
 
 interface CurlExampleProps {
@@ -21,7 +22,8 @@ function buildCurl({ method, url, headers, body }: CurlExampleProps): string {
   return lines.join(' \\\n');
 }
 
-export function CurlExample(props: CurlExampleProps): ReactElement {
+export async function CurlExample(props: CurlExampleProps): Promise<ReactElement> {
+  const t = await getTranslations('docs.copyButton');
   const cmd = buildCurl(props);
   return (
     <div className="ghc-doc-curl">
@@ -29,7 +31,7 @@ export function CurlExample(props: CurlExampleProps): ReactElement {
       <pre className="ghc-doc-code-block">
         <code>{cmd}</code>
       </pre>
-      <CopyButton text={cmd} label="Copy curl" />
+      <CopyButton text={cmd} label={t('copyCurl')} />
     </div>
   );
 }

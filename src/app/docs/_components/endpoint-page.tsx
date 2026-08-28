@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react';
+import { getTranslations } from 'next-intl/server';
 import type { EndpointDoc } from '@/lib/api-docs/types';
 import { CurlExample } from './curl-example';
 import { SchemaViewer } from './schema-viewer';
@@ -6,6 +7,7 @@ import { ResponseExample } from './response-example';
 import { HeadersTable } from './headers-table';
 import { ErrorsTable } from './errors-table';
 import { queryBodySchema } from '@/lib/api-docs/schemas/query';
+import { slugToNs } from './_slug';
 
 interface EndpointPageProps {
   doc: EndpointDoc;
@@ -35,91 +37,129 @@ function curlHasBody(doc: EndpointDoc): boolean {
   return doc.slug === 'api/query';
 }
 
-export function EndpointPage({ doc }: EndpointPageProps): ReactElement {
+export async function EndpointPage({ doc }: EndpointPageProps): Promise<ReactElement> {
+  const t = await getTranslations('docs.endpointPage');
+  const tReq = await getTranslations('docs.request');
+  const tEp = await getTranslations(`docs.endpoint.${slugToNs(doc.slug)}` as const);
+  // Pre-await tables so we can embed them in JSX (matches Task 2 SiteFooter pattern).
+  const requestTable = doc.request && doc.request.length > 0 ? (
+    <table className="ghc-doc-table">
+      <thead>
+        <tr>
+          <th>{tReq('columns.name')}</th>
+          <th>{tReq('columns.in')}</th>
+          <th>{tReq('columns.type')}</th>
+          <th>{tReq('columns.required')}</th>
+          <th>{tReq('columns.description')}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {doc.request.map((p) => (
+          <tr key={p.name} className={p.required ? 'ghc-doc-table-row-required' : ''}>
+            <td><code>{p.name}</code></td>
+            <td><code>{p.in}</code></td>
+            <td><code>{p.type}</code></td>
+            <td>{p.required ? tReq('yes') : tReq('no')}</td>
+            <td>
+              {(() => {
+                // Per-endpoint parameter description translations live at
+                // docs.endpoint.<ns>.request.<name>-description.
+                try {
+                  return tEp(`request.${p.name}-description`);
+                } catch {
+                  return p.description;
+                }
+              })()}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  ) : null;
+
+  const headersTable = doc.headers && doc.headers.length > 0
+    ? await HeadersTable({ headers: doc.headers, endpointNs: slugToNs(doc.slug) })
+    : null;
+
+  const errorsTable = await ErrorsTable({ errors: doc.errors, endpointNs: slugToNs(doc.slug) });
+
+  // Pre-await SchemaViewer (now async) before embedding in JSX.
+  const responseSchema = await SchemaViewer({ schema: doc.response });
+  const bodySchemaBlock = doc.slug === 'api/query'
+    ? await SchemaViewer({ schema: queryBodySchema })
+    : null;
+  // Pre-await CurlExample (now async) before embedding in JSX.
+  const curlExample = await CurlExample({
+    method: doc.method,
+    url: buildUrl(doc),
+    ...(curlHasHeaders(doc) ? { headers: curlHeaders(doc)! } : {}),
+    ...(curlHasBody(doc) ? { body: curlBody(doc) } : {}),
+  });
+
   return (
     <article className="ghc-doc-endpoint">
-      <p className="ghc-section-eyebrow">Endpoint</p>
+      <p className="ghc-section-eyebrow">{t('eyebrow')}</p>
       <h1 className="ghc-doc-h1">
         <span className={`ghc-doc-method ghc-doc-method-${doc.method}`}>{doc.method}</span>{' '}
         <code className="ghc-doc-path">{doc.path}</code>
       </h1>
-      <p className="ghc-doc-lede">{doc.summary}</p>
-      <p className="ghc-doc-description">{doc.description}</p>
+      <p className="ghc-doc-lede">{tEp('summary')}</p>
+      <p className="ghc-doc-description">{tEp('description')}</p>
 
       <section className="ghc-doc-section">
-        <h2 className="ghc-doc-h2">Authentication</h2>
+        <h2 className="ghc-doc-h2">{t('sections.authentication')}</h2>
         <p>
           {doc.auth === 'none' ? (
-            <>No authentication required. Public endpoint.</>
+            t('auth.none')
           ) : (
-            <>Requires the <code>X-API-Key</code> header with an active API key.</>
+            t.rich('auth.required', { header: (chunks) => <code>{chunks}</code> })
           )}
         </p>
       </section>
 
       <section className="ghc-doc-section">
-        <h2 className="ghc-doc-h2">Rate limit</h2>
-        <p><code>{doc.rateLimit}</code></p>
+        <h2 className="ghc-doc-h2">{t('sections.rateLimit')}</h2>
+        <p><code>{tEp('rateLimit')}</code></p>
       </section>
 
-      {doc.request && doc.request.length > 0 && (
+      {requestTable && (
         <section className="ghc-doc-section">
-          <h2 className="ghc-doc-h2">Request</h2>
-          <table className="ghc-doc-table">
-            <thead>
-              <tr><th>Name</th><th>In</th><th>Type</th><th>Required</th><th>Description</th></tr>
-            </thead>
-            <tbody>
-              {doc.request.map((p) => (
-                <tr key={p.name} className={p.required ? 'ghc-doc-table-row-required' : ''}>
-                  <td><code>{p.name}</code></td>
-                  <td><code>{p.in}</code></td>
-                  <td><code>{p.type}</code></td>
-                  <td>{p.required ? 'yes' : 'no'}</td>
-                  <td>{p.description}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {doc.slug === 'api/query' && (
+          <h2 className="ghc-doc-h2">{t('sections.request')}</h2>
+          {requestTable}
+          {doc.slug === 'api/query' && bodySchemaBlock && (
             <details>
-              <summary>Body schema</summary>
-              <SchemaViewer schema={queryBodySchema} />
+              <summary>{t('bodySchemaSummary')}</summary>
+              {bodySchemaBlock}
             </details>
           )}
         </section>
       )}
 
       <section className="ghc-doc-section">
-        <h2 className="ghc-doc-h2">Response</h2>
-        <SchemaViewer schema={doc.response} />
+        <h2 className="ghc-doc-h2">{t('sections.response')}</h2>
+        {responseSchema}
       </section>
 
       <section className="ghc-doc-section">
-        <h2 className="ghc-doc-h2">Example response</h2>
+        <h2 className="ghc-doc-h2">{t('sections.exampleResponse')}</h2>
         <ResponseExample sample={doc.responseSamples.default} />
       </section>
 
       <section className="ghc-doc-section">
-        <h2 className="ghc-doc-h2">Try it</h2>
-        <CurlExample
-          method={doc.method}
-          url={buildUrl(doc)}
-          {...(curlHasHeaders(doc) ? { headers: curlHeaders(doc)! } : {})}
-          {...(curlHasBody(doc) ? { body: curlBody(doc) } : {})}
-        />
+        <h2 className="ghc-doc-h2">{t('sections.tryIt')}</h2>
+        {curlExample}
       </section>
 
-      {doc.headers && doc.headers.length > 0 && (
+      {headersTable && (
         <section className="ghc-doc-section">
-          <h2 className="ghc-doc-h2">Response headers</h2>
-          <HeadersTable headers={doc.headers} />
+          <h2 className="ghc-doc-h2">{t('sections.responseHeaders')}</h2>
+          {headersTable}
         </section>
       )}
 
       <section className="ghc-doc-section">
-        <h2 className="ghc-doc-h2">Errors</h2>
-        <ErrorsTable errors={doc.errors} />
+        <h2 className="ghc-doc-h2">{t('sections.errors')}</h2>
+        {errorsTable}
       </section>
     </article>
   );

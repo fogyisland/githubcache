@@ -3,20 +3,22 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { ReactElement } from 'react';
+import { useTranslations } from 'next-intl';
 import { ENDPOINT_DOCS } from '@/lib/api-docs/registry';
 
 export function DocsSidebar(): ReactElement {
   const pathname = usePathname();
+  const t = useTranslations('docs.sidebar');
   return (
-    <nav className="ghc-doc-sidebar" aria-label="Documentation sections">
-      <h2 className="ghc-doc-sidebar-heading">API Reference</h2>
+    <nav className="ghc-doc-sidebar" aria-label={t('ariaLabel')}>
+      <h2 className="ghc-doc-sidebar-heading">{t('heading')}</h2>
       <ul className="ghc-doc-sidebar-list">
         <li>
           <Link
             href="/docs"
             className={pathname === '/docs' ? 'ghc-doc-sidebar-current' : ''}
           >
-            Overview
+            {t('overview')}
           </Link>
         </li>
         {ENDPOINT_DOCS.map((doc) => {

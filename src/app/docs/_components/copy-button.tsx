@@ -1,13 +1,16 @@
 'use client';
 
 import { useState, type ReactElement } from 'react';
+import { useTranslations } from 'next-intl';
 
 interface CopyButtonProps {
   text: string;
   label?: string;
 }
 
-export function CopyButton({ text, label = 'Copy' }: CopyButtonProps): ReactElement {
+export function CopyButton({ text, label }: CopyButtonProps): ReactElement {
+  const t = useTranslations('docs.copyButton');
+  const fallbackLabel = label ?? t('copy');
   const [copied, setCopied] = useState(false);
   async function handleClick() {
     try {
@@ -23,9 +26,9 @@ export function CopyButton({ text, label = 'Copy' }: CopyButtonProps): ReactElem
       type="button"
       className="ghc-doc-copy"
       onClick={handleClick}
-      aria-label={label}
+      aria-label={fallbackLabel}
     >
-      {copied ? 'Copied!' : label}
+      {copied ? t('copied') : fallbackLabel}
     </button>
   );
 }

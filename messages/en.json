@@ -710,5 +710,135 @@
       "description": "That repo doesn't exist on GitHub (or is private and not accessible).",
       "backToHome": "← Back to home"
     }
+  },
+  "docs": {
+    "landing": {
+      "eyebrow": "API Reference",
+      "title": "GitHub Metadata Cache API",
+      "lede": "Public, cache-backed access to GitHub repository metadata. Authenticated batch lookups, per-IP rate limits, and live system observability.",
+      "quickStart": {
+        "heading": "Quick start",
+        "body": "Hit the public status endpoint first — no auth required:"
+      },
+      "endpoints": {
+        "heading": "Endpoints"
+      }
+    },
+    "sidebar": {
+      "heading": "API Reference",
+      "overview": "Overview",
+      "ariaLabel": "Documentation sections"
+    },
+    "endpointPage": {
+      "eyebrow": "Endpoint",
+      "auth": {
+        "none": "No authentication required. Public endpoint.",
+        "required": "Requires the {header} header with an active API key."
+      },
+      "sections": {
+        "authentication": "Authentication",
+        "rateLimit": "Rate limit",
+        "request": "Request",
+        "response": "Response",
+        "exampleResponse": "Example response",
+        "tryIt": "Try it",
+        "responseHeaders": "Response headers",
+        "errors": "Errors",
+        "bodySchema": "Body schema"
+      },
+      "rateLimitNone": "No rate limit applied to this endpoint.",
+      "bodySchemaSummary": "Body schema"
+    },
+    "request": {
+      "columns": {
+        "name": "Name",
+        "in": "In",
+        "type": "Type",
+        "required": "Required",
+        "description": "Description"
+      },
+      "yes": "yes",
+      "no": "no"
+    },
+    "headers": {
+      "columns": {
+        "header": "Header",
+        "description": "Description",
+        "example": "Example"
+      },
+      "empty": "No documented headers."
+    },
+    "errors": {
+      "columns": {
+        "status": "Status",
+        "error": "Error",
+        "when": "When"
+      },
+      "empty": "No documented errors."
+    },
+    "schema": {
+      "columns": {
+        "name": "Name",
+        "type": "Type",
+        "description": "Description"
+      },
+      "badges": {
+        "optional": "(optional)",
+        "nullable": "(nullable)"
+      },
+      "scalar": {
+        "array": "(array)"
+      }
+    },
+    "copyButton": {
+      "copy": "Copy",
+      "copyCurl": "Copy curl",
+      "copied": "Copied!"
+    },
+    "endpoint": {
+      "api-v1-status": {
+        "summary": "System status — DB, token pool, queue, repository counts, version.",
+        "description": "Read-only observability endpoint. Always public, no rate limit. Returns 503 when the DB is down so load balancers can take the instance out of rotation.",
+        "rateLimit": "No rate limit.",
+        "errors": {
+          "503-service_unavailable": "DB unreachable (down=false)."
+        }
+      },
+      "api-v1-repos": {
+        "summary": "Fetch a single repository metadata record from the cache.",
+        "description": "Public read of the cache for a single repo. Returns the same shape as the repo detail page at /repo/[owner]/[name]. If the cache is empty, falls through to a fresh GitHub fetch.",
+        "rateLimit": "PUBLIC_LOOKUP_RATE_PER_MIN (default 30) per IP",
+        "request": {
+          "owner-description": "GitHub username or org.",
+          "name-description": "GitHub repo name."
+        },
+        "errors": {
+          "404-not_found": "fetch_status=not_found (GitHub returned 404 or owner/name is invalid).",
+          "429-rate_limit_exceeded": "Per-IP bucket exhausted.",
+          "503-service_unavailable": "fetch_status=error or no GitHub tokens configured."
+        }
+      },
+      "api-query": {
+        "summary": "Batch-fetch up to 50 repositories with a single API key.",
+        "description": "Authenticated batch endpoint for API key holders. Returns results in the same order as the input nodes; partial failures are reported per-node via the discriminated union.",
+        "rateLimit": "rateLimitPerMin (per API key, default 60) durable bucket",
+        "request": {
+          "X-API-Key-description": "Active API key.",
+          "nodes-description": "Up to 50 repo refs to fetch."
+        },
+        "headers": {
+          "Retry-After-description": "Seconds until the rate limit resets.",
+          "X-RateLimit-Limit-description": "Configured per-minute ceiling.",
+          "X-RateLimit-Remaining-description": "0 when denied, otherwise limit - count."
+        },
+        "errors": {
+          "400-malformed_json": "Body is not valid JSON.",
+          "400-invalid_nodes": "parseNodes validation failed.",
+          "401-missing_api_key": "No X-API-Key header.",
+          "403-invalid_api_key": "Key not found or status != active.",
+          "429-rate_limit_exceeded": "Per-key bucket exhausted."
+        }
+      }
+    }
   }
 }

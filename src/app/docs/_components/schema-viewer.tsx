@@ -1,4 +1,5 @@
 import type { ReactElement, ReactNode } from 'react';
+import { getTranslations } from 'next-intl/server';
 import { z } from 'zod';
 
 interface SchemaViewerProps {
@@ -80,33 +81,34 @@ function branchLabel(branch: z.ZodTypeAny, index: number): string {
   return `option ${index + 1}`;
 }
 
-function rowsForObject(obj: z.ZodObject<ZodShape>): FieldRow[] {
+function rowsForObject(obj: z.ZodObject<ZodShape>, badges: { optional: string; nullable: string }): FieldRow[] {
   const shape = obj.shape;
   return Object.entries(shape).map(([name, child]) => {
     const required = !isOptional(child);
-    const badges: string[] = [];
-    if (!required) badges.push('(optional)');
-    if (isNullable(child)) badges.push('(nullable)');
+    const badgeList: string[] = [];
+    if (!required) badgeList.push(badges.optional);
+    if (isNullable(child)) badgeList.push(badges.nullable);
     const typePart = typeHtml(child);
-    const label = badges.length ? `${typePart} ${badges.join(' ')}` : typePart;
+    const label = badgeList.length ? `${typePart} ${badgeList.join(' ')}` : typePart;
     const desc = describeOf(child) || describeOf(unwrap(child));
     return { name, typeHtml: label, required, description: desc };
   });
 }
 
-export function SchemaViewer({ schema, depth = 0 }: SchemaViewerProps): ReactElement {
+export async function SchemaViewer({ schema, depth = 0 }: SchemaViewerProps): Promise<ReactElement> {
+  const t = await getTranslations('docs.schema');
   const u = unwrap(schema);
 
   // Object → table of properties.
   if (u instanceof z.ZodObject) {
-    const rows = rowsForObject(u);
+    const rows = rowsForObject(u, { optional: t('badges.optional'), nullable: t('badges.nullable') });
     return (
       <table className="ghc-doc-table" data-depth={depth}>
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
+            <th>{t('columns.name')}</th>
+            <th>{t('columns.type')}</th>
+            <th>{t('columns.description')}</th>
           </tr>
         </thead>
         <tbody>
@@ -128,12 +130,19 @@ export function SchemaViewer({ schema, depth = 0 }: SchemaViewerProps): ReactEle
   // Union → render each branch side-by-side with a role label derived
   // from the discriminant literal (e.g. "ok", "not_found", "error").
   if (u instanceof z.ZodUnion) {
+    const branches = await Promise.all(
+      (u.options as z.ZodTypeAny[]).map(async (branch, i) => ({
+        i,
+        branch,
+        rendered: await SchemaViewer({ schema: branch, depth: depth + 1 }),
+      })),
+    );
     return (
       <div className="ghc-doc-union" data-depth={depth}>
-        {(u.options as z.ZodTypeAny[]).map((branch, i) => (
+        {branches.map(({ i, branch, rendered }) => (
           <div key={i} className="ghc-doc-union-branch">
             <span className="ghc-doc-union-branch-label">{branchLabel(branch, i)}</span>
-            <SchemaViewer schema={branch} depth={depth + 1} />
+            {rendered}
           </div>
         ))}
       </div>
@@ -142,10 +151,14 @@ export function SchemaViewer({ schema, depth = 0 }: SchemaViewerProps): ReactEle
 
   // Array → show element type.
   if (u instanceof z.ZodArray) {
+    const elementRendered = await SchemaViewer({
+      schema: u.element as z.ZodTypeAny,
+      depth: depth + 1,
+    });
     return (
       <div className="ghc-doc-array" data-depth={depth}>
-        <p className="ghc-doc-array-label">(array)</p>
-        <SchemaViewer schema={u.element as z.ZodTypeAny} depth={depth + 1} />
+        <p className="ghc-doc-array-label">{t('scalar.array')}</p>
+        {elementRendered}
       </div>
     );
   }
