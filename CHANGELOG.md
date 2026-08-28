@@ -362,6 +362,105 @@ None. `GET /api/v1/repos/{owner}/{name}` is purely additive.
 
 ---
 
+## [m13-i18n] — 2026-08-29
+
+**Full-site Chinese + English translation.** Every user-visible string on the
+public site, admin SPA, login page, and `/docs/*` now switches with the
+`ghc_lang` cookie. Cookie-persisted for anonymous visitors, DB-persisted
+on `users.lang` for logged-in users (cross-device preference). No flash —
+the root layout reads the cookie in the request pass and sets `lang="<id>"`
+on `<html>` before paint.
+
+### Added
+
+- **i18n foundation** — `next-intl@4.x` wired in. `src/i18n/config.ts` exports
+  `LOCALES = ['zh','en'] as const`, `defaultLocale = 'zh'`, `Locale` type.
+  `src/i18n/request.ts` resolves the locale from cookie → Accept-Language →
+  default via `resolveLocale`. `src/lib/lang/{cookie,registry,constants}.ts`
+  mirror the theme cookie module: `ghc_lang` cookie (1-year Max-Age,
+  Path=/, SameSite=Lax), `isLocale` type guard, `readLangFromCookieHeader`,
+  `buildLangSetCookie`.
+- **Prisma migration** — `users.lang` column added (`m13_user_lang`
+  migration, default `'zh'`, NOT NULL VarChar(8)).
+- **Server action** — `setLangAction(locale)` at `src/app/_actions/set-lang.ts`.
+  zod-validated locale, always sets `ghc_lang` cookie (anon + logged-in),
+  persists to `users.lang` when a session is present, `revalidatePath('/', 'layout')`.
+- **Lang switcher** — `<LangSwitcher>` client component in the site header
+  utility bar, mirroring the theme switcher shape (two pill buttons
+  "中" / "EN" with `aria-pressed`, `useFormState` + `useFormStatus`).
+- **Translated surfaces** — every page that renders user-visible chrome now
+  reads from `messages/{zh,en}.json`:
+  - **Root chrome** — root layout (`<html lang>` set, title/description
+    templates), `<SiteHeader>`, `<SiteFooter>`.
+  - **Public site** — homepage (`/`), `/repo/[owner]/[name]` detail page,
+    `/login`.
+  - **Admin SPA** — `admin/layout.tsx` shell + command palette + status bar;
+    users list + detail + invite form + actions; api-keys list + detail +
+    actions + limits form; github-tokens list + detail + add form + actions;
+    reports; audit; manual refresh.
+  - **Docs site** (`/docs/*`) — landing page + 3 endpoint pages (`v1-status`,
+    `v1-repos`, `query`) + 9 widgets (`endpoint-page`, `docs-sidebar`,
+    `curl-example`, `copy-button`, `response-example`, `headers-table`,
+    `errors-table`, `schema-viewer`). Registry data (summary, description,
+    rate-limit, parameter/header descriptions, error `when` strings) is
+    translated at render time via `getTranslations` lookup keyed by
+    endpoint slug; falls back to raw registry value on missing keys.
+  - **Login route** — `POST /api/admin/auth/login` reads `ghc_lang` from
+    the request cookie and persists it on `users.lang` (parallel to the
+    existing `lastLoginAt` write).
+
+### Strict namespace discipline
+
+`next-intl@4` namespaces do **not** fall back to parent keys
+(`getTranslations('a.b.c').raw('x.y')` does NOT resolve `a.x.y`). Where a
+sub-namespace references keys that logically belong to a sibling leaf
+(e.g. `admin.users.detail` referencing `role.admin` from `admin.users.role`),
+the block is mirrored under the leaf. Mirrors applied in `admin.users.detail`,
+`admin.apiKeys.detail`, `admin.githubTokens.detail`, and
+`docs.endpoint.{api-v1-status,api-v1-repos,api-query}`.
+
+### Out of scope
+
+- Right-to-left layouts (no RTL content).
+- URL-prefixed locales (e.g. `/en/...`). Cookie + DB preference only.
+- Admin endpoint documentation (`/admin/api-keys` etc. remain English-only;
+  the docs site documents the public API surface).
+
+### Migration
+
+- `npx prisma migrate deploy` to apply `m13_user_lang`.
+- No data backfill — the column defaults to `'zh'`, so every existing user
+  starts Chinese on first login after the deploy.
+- **Known issue (parked for M13.x):** the migration SQL
+  `prisma/migrations/m13_user_lang/migration.sql` line 1 uses `ALTER TABLE
+  \`User\`` but the User model is `@@map("users")` — the migration is
+  rejected by Prisma on any fresh DB. Worked around on the live test DB
+  by applying equivalent SQL and `prisma migrate resolve --applied`. The
+  migration file itself needs a one-line fix in a follow-up task.
+
+### Stats
+
+- 13 commits (M13.1 → M13.12), 98 files changed (+6778 / -845).
+- 23 new i18n tests across `tests/unit/{docs-i18n,login-i18n,home-i18n,
+  repo-detail-i18n,admin-users-i18n,admin-api-keys-i18n,admin-github-tokens-i18n,
+  admin-reports-i18n,admin-audit-i18n,admin-refresh-i18n,admin-shell-i18n,
+  lang-switcher,i18n-config,i18n-coverage}.test.ts(x)` and
+  `tests/integration/lang-persistence.test.ts`. Coverage test enforces
+  zh/en parity across all message keys (3/3 pass).
+- 9 test files updated for the async-conversion ripple: existing
+  `admin-*.test.ts` mocks added `vi.mock('next-intl/server'|'next-intl', …)`
+  with `.rich` support for `t.rich`; existing `docs-*` / `schema-viewer`
+  tests gained async + new `endpointNs` prop coverage.
+
+### Breaking changes
+
+None. All M13 features are additive. The login route's response shape is
+unchanged; `users.lang` is read-only from the login route's perspective.
+Server action response shape (`SetLangState`) is internal — never crossed
+the wire before.
+
+---
+
 ## [m8-prod-ready] — 2026-08-26
 
 **Deployment + Observability.** Production-ready observability surface, durable rate-limit,
