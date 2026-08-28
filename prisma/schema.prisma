@@ -19,7 +19,7 @@ model Repository {
   fetchError    String?     @map("fetch_error") @db.Text
   createdAt     DateTime    @default(now()) @map("created_at")
 
-  refreshJobs   RefreshJob[]
+  refreshJobs RefreshJob[]
 
   @@unique([owner, name])
   @@map("repositories")
@@ -33,18 +33,19 @@ enum FetchStatus {
 }
 
 model User {
-  id           BigInt     @id @default(autoincrement())
-  email        String     @unique @db.VarChar(255)
-  passwordHash String?    @map("password_hash") @db.VarChar(255)
-  role         Role       @default(operator)
-  status       UserStatus @default(active) @map("user_status")
-  createdAt    DateTime   @default(now()) @map("created_at")
-  lastLoginAt  DateTime?  @map("last_login_at")
-  theme        Theme      @default(terminal)
+  id           BigInt       @id @default(autoincrement())
+  email        String       @unique @db.VarChar(255)
+  passwordHash String?      @map("password_hash") @db.VarChar(255)
+  role         Role         @default(operator)
+  status       UserStatus   @default(active) @map("user_status")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  lastLoginAt  DateTime?    @map("last_login_at")
+  theme        Theme        @default(terminal)
   adminVariant AdminVariant @default(mission_control) @map("admin_variant")
+  lang         String       @default("zh") @db.VarChar(8)
 
-  apiKeys      ApiKey[]    @relation("owner")
-  approvedKeys ApiKey[]    @relation("approver")
+  apiKeys      ApiKey[]     @relation("owner")
+  approvedKeys ApiKey[]     @relation("approver")
   sessions     Session[]
   invitations  Invitation[] @relation("inviter")
 
@@ -83,21 +84,21 @@ enum AdminVariant {
 }
 
 model ApiKey {
-  id              BigInt        @id @default(autoincrement())
-  userId          BigInt        @map("user_id")
-  user            User          @relation("owner", fields: [userId], references: [id])
-  name            String        @db.VarChar(100)
-  keyPrefix       String        @map("key_prefix") @db.VarChar(16)
-  keyHash         String        @unique @map("key_hash") @db.VarChar(64)
-  status          ApiKeyStatus  @default(pending)
-  rateLimitPerMin Int           @default(60) @map("rate_limit_per_min")
-  dailyQuota      Int           @default(10000) @map("daily_quota")
-  createdAt       DateTime      @default(now()) @map("created_at")
-  approvedAt      DateTime?     @map("approved_at")
-  approvedBy      BigInt?       @map("approved_by")
-  approver        User?         @relation("approver", fields: [approvedBy], references: [id])
-  revokedAt       DateTime?     @map("revoked_at")
-  lastUsedAt      DateTime?     @map("last_used_at")
+  id              BigInt       @id @default(autoincrement())
+  userId          BigInt       @map("user_id")
+  user            User         @relation("owner", fields: [userId], references: [id])
+  name            String       @db.VarChar(100)
+  keyPrefix       String       @map("key_prefix") @db.VarChar(16)
+  keyHash         String       @unique @map("key_hash") @db.VarChar(64)
+  status          ApiKeyStatus @default(pending)
+  rateLimitPerMin Int          @default(60) @map("rate_limit_per_min")
+  dailyQuota      Int          @default(10000) @map("daily_quota")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  approvedAt      DateTime?    @map("approved_at")
+  approvedBy      BigInt?      @map("approved_by")
+  approver        User?        @relation("approver", fields: [approvedBy], references: [id])
+  revokedAt       DateTime?    @map("revoked_at")
+  lastUsedAt      DateTime?    @map("last_used_at")
 
   rateLimitBuckets RateLimitBucket[]
 
@@ -164,17 +165,17 @@ enum GithubTokenStatus {
 }
 
 model RefreshJob {
-  id            BigInt           @id @default(autoincrement())
-  repositoryId  BigInt           @map("repository_id")
-  priority      Int              @default(50)
-  scheduledFor  DateTime         @map("scheduled_for")
-  status        RefreshJobStatus @default(pending)
-  attempts      Int              @default(0)
-  lastError     String?          @map("last_error") @db.Text
-  lockedUntil   DateTime?        @map("locked_until")
-  createdAt     DateTime         @default(now()) @map("created_at")
-  updatedAt     DateTime         @updatedAt @map("updated_at")
-  repository    Repository       @relation(fields: [repositoryId], references: [id])
+  id           BigInt           @id @default(autoincrement())
+  repositoryId BigInt           @map("repository_id")
+  priority     Int              @default(50)
+  scheduledFor DateTime         @map("scheduled_for")
+  status       RefreshJobStatus @default(pending)
+  attempts     Int              @default(0)
+  lastError    String?          @map("last_error") @db.Text
+  lockedUntil  DateTime?        @map("locked_until")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+  repository   Repository       @relation(fields: [repositoryId], references: [id])
 
   @@index([status, scheduledFor])
   @@index([status, priority])
