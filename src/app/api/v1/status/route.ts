@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db/client';
 import { poolSize } from '@/lib/github/pool';
+import { v1StatusSchema } from '@/lib/api-docs/schemas/v1-status';
+import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 const STARTED_AT = new Date().toISOString();
@@ -46,7 +48,12 @@ export async function GET(): Promise<Response> {
       },
       timestamp: new Date().toISOString(),
     };
-    return NextResponse.json(body, { status: 503 });
+    const parsed = v1StatusSchema.safeParse(body);
+    if (!parsed.success) {
+      logger.error({ issues: parsed.error.issues }, 'status payload schema mismatch');
+      return NextResponse.json({ error: 'internal' }, { status: 500 });
+    }
+    return NextResponse.json(parsed.data, { status: 503 });
   }
 
   const [repoGroups, queueGroups, tokens, doneLast24h] = await Promise.all([
@@ -106,5 +113,10 @@ export async function GET(): Promise<Response> {
     timestamp: new Date().toISOString(),
   };
 
-  return NextResponse.json(body);
+  const parsed = v1StatusSchema.safeParse(body);
+  if (!parsed.success) {
+    logger.error({ issues: parsed.error.issues }, 'status payload schema mismatch');
+    return NextResponse.json({ error: 'internal' }, { status: 500 });
+  }
+  return NextResponse.json(parsed.data, { status: 200 });
 }
