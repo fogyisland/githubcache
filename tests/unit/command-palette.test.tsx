@@ -1,6 +1,28 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createElement } from 'react';
+
+vi.mock('next-intl', () => ({
+  useTranslations: (ns: string) => {
+    const labels: Record<string, Record<string, string>> = {
+      'admin.shell.palette': {
+        placeholder: 'Search admin — sections, recent actions…',
+        noMatches: 'No matches for "{query}"',
+        sections: 'Sections',
+        recentAudit: 'Recent audit',
+        hintNav: 'navigate',
+        hintOpen: 'open',
+        hintClose: 'close',
+      },
+    };
+    return (key: string, vars?: Record<string, string | number>) => {
+      const v = labels[ns]?.[key];
+      if (v && vars) return v.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? ''));
+      return v ?? key;
+    };
+  },
+}));
+
 import { CommandPalette } from '@/app/admin/_components/command-palette';
 
 const paletteData = {

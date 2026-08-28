@@ -1,6 +1,23 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createElement } from 'react';
+
+vi.mock('next-intl', () => ({
+  useTranslations: (ns: string) => {
+    const labels: Record<string, Record<string, string>> = {
+      'admin.shell.statusbar': {
+        db: 'DB',
+        ms: 'ms',
+        queue: 'Queue',
+        scheduler: 'Scheduler',
+        audit24h: 'Audit 24h',
+        operator: 'Operator',
+      },
+    };
+    return (key: string) => labels[ns]?.[key] ?? key;
+  },
+}));
+
 import { AdminStatusBar } from '@/app/admin/_components/admin-status-bar';
 
 const baseData = {

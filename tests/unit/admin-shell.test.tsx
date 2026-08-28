@@ -1,6 +1,39 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createElement } from 'react';
+
+vi.mock('next-intl/server', () => ({
+  getTranslations: async (ns: string) => {
+    const labels: Record<string, Record<string, string>> = {
+      'admin.shell': {
+        sidebarAria: 'Admin sections',
+        breadcrumbAria: 'Breadcrumb',
+        'sections.dashboard': 'Dashboard',
+        'sections.users': 'Users',
+        'sections.api-keys': 'API Keys',
+        'sections.github-tokens': 'GitHub Tokens',
+        'sections.reports': 'Reports',
+        'sections.audit': 'Audit',
+        'sections.refresh': 'Refresh',
+      },
+    };
+    return (key: string) => labels[ns]?.[key] ?? key;
+  },
+}));
+vi.mock('next-intl', () => ({
+  useTranslations: (ns: string) => {
+    const labels: Record<string, Record<string, string>> = {
+      'admin.shell.statusbar': { db: 'DB', ms: 'ms', queue: 'Queue', scheduler: 'Scheduler', audit24h: 'Audit 24h', operator: 'Operator' },
+      'admin.shell.palette': { placeholder: 'Search admin — sections, recent actions…', noMatches: 'No matches for "{query}"', sections: 'Sections', recentAudit: 'Recent audit', hintNav: 'navigate', hintOpen: 'open', hintClose: 'close' },
+    };
+    return (key: string, vars?: Record<string, string | number>) => {
+      const v = labels[ns]?.[key];
+      if (v && vars) return v.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? ''));
+      return v ?? key;
+    };
+  },
+}));
+
 import { AdminShell } from '@/app/admin/_components/admin-shell';
 import type { AdminVariantId } from '@/lib/admin/variant';
 
@@ -16,9 +49,9 @@ const initialStatus = {
 };
 
 describe('AdminShell', () => {
-  it('renders children inside the main content area', () => {
+  it('renders children inside the main content area', async () => {
     const html = renderToStaticMarkup(
-      createElement(AdminShell, {
+      await AdminShell({
         current: 'dashboard',
         variant: 'mission_control',
         user,
@@ -30,9 +63,9 @@ describe('AdminShell', () => {
     expect(html).toContain('data-testid="page"');
   });
 
-  it('renders sidebar with 7 sections', () => {
+  it('renders sidebar with 7 sections', async () => {
     const html = renderToStaticMarkup(
-      createElement(AdminShell, {
+      await AdminShell({
         current: 'dashboard',
         variant: 'mission_control',
         user: { email: 'a@b', role: 'admin' as const },
@@ -49,9 +82,9 @@ describe('AdminShell', () => {
     expect(html).toContain('Refresh');
   });
 
-  it('marks the current section with an indicator', () => {
+  it('marks the current section with an indicator', async () => {
     const html = renderToStaticMarkup(
-      createElement(AdminShell, {
+      await AdminShell({
         current: 'users',
         variant: 'mission_control',
         user: { email: 'a@b', role: 'admin' as const },
@@ -64,9 +97,9 @@ describe('AdminShell', () => {
     expect(html).toMatch(/ghc-admin-sidebar-current[^>]*href="\/admin\/users"/);
   });
 
-  it('hides admin-only sections from operators', () => {
+  it('hides admin-only sections from operators', async () => {
     const html = renderToStaticMarkup(
-      createElement(AdminShell, {
+      await AdminShell({
         current: 'dashboard',
         variant: 'mission_control',
         user, // role: operator
@@ -82,9 +115,9 @@ describe('AdminShell', () => {
     expect(html).toContain('href="/admin/reports"');
   });
 
-  it('renders status bar only for mission_control variant', () => {
+  it('renders status bar only for mission_control variant', async () => {
     const mcHtml = renderToStaticMarkup(
-      createElement(AdminShell, {
+      await AdminShell({
         current: 'dashboard',
         variant: 'mission_control',
         user,
@@ -95,7 +128,7 @@ describe('AdminShell', () => {
     expect(mcHtml).toContain('ghc-admin-statusbar');
 
     const insHtml = renderToStaticMarkup(
-      createElement(AdminShell, {
+      await AdminShell({
         current: 'dashboard',
         variant: 'inspector',
         user,
@@ -106,7 +139,7 @@ describe('AdminShell', () => {
     expect(insHtml).not.toContain('ghc-admin-statusbar');
 
     const wbHtml = renderToStaticMarkup(
-      createElement(AdminShell, {
+      await AdminShell({
         current: 'dashboard',
         variant: 'workbench',
         user,
