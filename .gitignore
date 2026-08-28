@@ -6,7 +6,6 @@ dist/
 .env.local
 coverage/
 .DS_Store
-.pnpm-store/
 .superpowers/
 *.tsbuildinfo
 .claude/
