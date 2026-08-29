@@ -12,6 +12,35 @@ vi.mock('next-intl/server', () => ({
         'docs.landing.quickStart.heading': 'Quick start',
         'docs.landing.quickStart.body': 'Hit the public status endpoint first — no auth required:',
         'docs.landing.endpoints.heading': 'Endpoints',
+        // M14.3 — rate-limits explainer
+        'docs.landing.rateLimits.heading': 'Rate limits',
+        'docs.landing.rateLimits.intro': 'Three-tier rate-limit model.',
+        'docs.landing.rateLimits.tier.status.title': 'Public status',
+        'docs.landing.rateLimits.tier.status.endpoint': 'GET /api/v1/status',
+        'docs.landing.rateLimits.tier.status.per': 'No rate limit',
+        'docs.landing.rateLimits.tier.status.body': 'Service-wide observability.',
+        'docs.landing.rateLimits.tier.public.title': 'Public lookup',
+        'docs.landing.rateLimits.tier.public.endpoint': 'GET /api/v1/repos/{owner}/{name}',
+        'docs.landing.rateLimits.tier.public.per': '{limit} req/min/IP',
+        'docs.landing.rateLimits.tier.public.body': 'PUBLIC_LOOKUP_RATE_PER_MIN default {limit}.',
+        'docs.landing.rateLimits.tier.public.headers': 'On 429: Retry-After.',
+        'docs.landing.rateLimits.tier.auth.title': 'Authenticated batch',
+        'docs.landing.rateLimits.tier.auth.endpoint': 'POST /api/query',
+        'docs.landing.rateLimits.tier.auth.per': '{limit} req/min/key',
+        'docs.landing.rateLimits.tier.auth.body': 'apiKey.rateLimitPerMin default {limit}.',
+        'docs.landing.rateLimits.tier.auth.headers': 'On 429: Retry-After.',
+        // M14.3 — live status widget
+        'docs.landing.liveStatus.heading': 'Live status',
+        'docs.landing.liveStatus.body': 'Snapshot rendered on this page.',
+        'docs.landing.liveStatus.fields.ok': 'Service',
+        'docs.landing.liveStatus.fields.db': 'Database',
+        'docs.landing.liveStatus.fields.tokensActive': 'Active tokens',
+        'docs.landing.liveStatus.fields.tokensExhausted': 'Exhausted',
+        'docs.landing.liveStatus.fields.queuePending': 'Queue pending',
+        'docs.landing.liveStatus.fields.queueFailed': 'Queue failed',
+        'docs.landing.liveStatus.fields.reposTotal': 'Repositories',
+        'docs.landing.liveStatus.values.up': 'up',
+        'docs.landing.liveStatus.values.down': 'down',
         'docs.endpointPage.eyebrow': 'Endpoint',
         'docs.endpointPage.auth.none': 'No authentication required. Public endpoint.',
         'docs.endpointPage.auth.required': 'Requires the {header} header with an active API key.',
@@ -87,6 +116,21 @@ vi.mock('next-intl/server', () => ({
 }));
 vi.mock('next-intl', () => ({
   useTranslations: vi.fn((ns: string) => (key: string) => `[${ns}.${key}]`),
+}));
+
+// M14.3 — the live status widget calls collectV1Status() which hits the DB.
+// Stub it to a healthy payload so the docs landing render doesn't need a
+// real DB connection in this unit test.
+vi.mock('@/lib/api-docs/v1-status', () => ({
+  collectV1Status: vi.fn(async () => ({
+    ok: true,
+    db: 'up',
+    tokens: { active: 3, exhausted: 0, total: 4 },
+    queue: { pending: 0, in_progress: 0, done: 12, failed: 0 },
+    repositories: { total: 46, ok: 42, not_found: 3, forbidden: 0, error: 1 },
+    version: { commit: 'abc', startedAt: '2026-01-01', nodeVersion: 'v20' },
+    timestamp: '2026-01-01',
+  })),
 }));
 
 import DocsLanding from '@/app/docs/page';

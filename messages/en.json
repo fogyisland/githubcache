@@ -737,6 +737,49 @@
       },
       "endpoints": {
         "heading": "Endpoints"
+      },
+      "rateLimits": {
+        "heading": "Rate limits",
+        "intro": "The API uses a three-tier rate-limit model. All limits are enforced server-side; exceeding any tier returns HTTP 429 with the headers listed below.",
+        "tier": {
+          "status": {
+            "title": "Public status",
+            "endpoint": "GET /api/v1/status",
+            "per": "No rate limit",
+            "body": "Service-wide observability endpoint. Always public, no per-IP or per-key bucket."
+          },
+          "public": {
+            "title": "Public lookup",
+            "endpoint": "GET /api/v1/repos/{owner}/{name} · homepage lookup form",
+            "per": "{limit} requests / minute / IP",
+            "body": "Anonymous browsing uses PUBLIC_LOOKUP_RATE_PER_MIN (default {limit}). The window resets every minute on a fixed clock boundary. When the bucket is exhausted, the response is 429 with the headers below.",
+            "headers": "On 429: Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining."
+          },
+          "auth": {
+            "title": "Authenticated batch",
+            "endpoint": "POST /api/query",
+            "per": "{limit} requests / minute / API key",
+            "body": "API-key holders are rate-limited per key by the apiKey.rateLimitPerMin field (Prisma default {limit}). Daily quota apiKey.dailyQuota (Prisma default 10000) is enforced separately. When either bucket is exhausted, the response is 429.",
+            "headers": "On 429: Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining."
+          }
+        }
+      },
+      "liveStatus": {
+        "heading": "Live status",
+        "body": "Snapshot of /api/v1/status rendered on this page at request time. Click any field to open the raw JSON.",
+        "fields": {
+          "ok": "Service",
+          "db": "Database",
+          "tokensActive": "Active tokens",
+          "tokensExhausted": "Exhausted",
+          "queuePending": "Queue pending",
+          "queueFailed": "Queue failed",
+          "reposTotal": "Repositories"
+        },
+        "values": {
+          "up": "up",
+          "down": "down"
+        }
       }
     },
     "sidebar": {

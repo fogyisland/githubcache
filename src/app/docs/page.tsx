@@ -1,12 +1,16 @@
 import type { ReactElement } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { CurlExample } from './_components/curl-example';
+import { RateLimitsSection } from './_components/rate-limits-section';
+import { LiveStatusWidget } from './_components/live-status-widget';
 import { ENDPOINT_DOCS } from '@/lib/api-docs/registry';
 
 export default async function DocsLanding(): Promise<ReactElement> {
   const t = await getTranslations('docs.landing');
-  // Pre-await async sub-component before embedding in JSX (Task 2 SiteFooter pattern).
+  // Pre-await async sub-components before embedding in JSX (Task 2 SiteFooter pattern).
   const curlExample = await CurlExample({ method: 'GET', url: 'https://githubcache.example.com/api/v1/status' });
+  const rateLimits = await RateLimitsSection();
+  const liveStatus = await LiveStatusWidget();
   return (
     <article className="ghc-doc-landing">
       <p className="ghc-section-eyebrow">{t('eyebrow')}</p>
@@ -33,6 +37,9 @@ export default async function DocsLanding(): Promise<ReactElement> {
           ))}
         </ul>
       </section>
+
+      {rateLimits}
+      {liveStatus}
     </article>
   );
 }

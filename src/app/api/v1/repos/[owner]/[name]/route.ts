@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { lookupRepo } from '@/lib/cache/lookup';
-import { incrementIpBucket, windowStartFor } from '@/lib/db/ip-rate-limit';
+import { checkIpRateLimit } from '@/lib/rate-limit/ip-bucket';
 import { clientIpFromHeaders } from '@/lib/http/client-ip';
 import { env } from '@/lib/config/env';
 import { logger } from '@/lib/logger';
@@ -12,13 +12,19 @@ interface RouteContext {
 export async function GET(req: Request, ctx: RouteContext): Promise<Response> {
   const { owner, name } = ctx.params;
   const ip = clientIpFromHeaders(req.headers);
-  const windowStart = windowStartFor(new Date());
 
-  const rl = await incrementIpBucket(ip, windowStart);
-  if (rl > env.PUBLIC_LOOKUP_RATE_PER_MIN) {
+  const rl = await checkIpRateLimit(ip, env.PUBLIC_LOOKUP_RATE_PER_MIN);
+  if (!rl.allowed) {
     return NextResponse.json(
-      { error: 'rate limit exceeded', retryAfter: 60 },
-      { status: 429, headers: { 'Retry-After': '60' } },
+      { error: 'rate limit exceeded', retryAfter: rl.retryAfterSeconds },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(rl.retryAfterSeconds),
+          'X-RateLimit-Limit': String(rl.limit),
+          'X-RateLimit-Remaining': String(Math.max(0, rl.limit - rl.count)),
+        },
+      },
     );
   }
 

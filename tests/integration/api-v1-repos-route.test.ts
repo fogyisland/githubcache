@@ -57,4 +57,20 @@ describe('GET /api/v1/repos/[owner]/[name]', () => {
     const res = await GET(req(), { params: { owner: 'octocat', name: 'Hello-World' } });
     expect(res.status).toBe(429);
   }, 30_000);
+
+  it('returns Retry-After + X-RateLimit-* headers on 429 (M14.3)', async () => {
+    await createTestRepo({ owner: 'octocat', name: 'Hello-World', status: 'ok' });
+    const req = () => new Request('http://localhost/api/v1/repos/octocat/Hello-World', {
+      headers: { 'x-forwarded-for': '203.0.113.4' },
+    });
+    for (let i = 0; i < 30; i++) {
+      await GET(req(), { params: { owner: 'octocat', name: 'Hello-World' } });
+    }
+    const res = await GET(req(), { params: { owner: 'octocat', name: 'Hello-World' } });
+    expect(res.status).toBe(429);
+    expect(res.headers.get('retry-after')).not.toBeNull();
+    expect(res.headers.get('x-ratelimit-limit')).toBe('30');
+    // 31st hit; remaining = max(0, 30 - 31) = 0
+    expect(res.headers.get('x-ratelimit-remaining')).toBe('0');
+  }, 30_000);
 });

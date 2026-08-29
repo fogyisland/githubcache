@@ -737,6 +737,49 @@
       },
       "endpoints": {
         "heading": "端点列表"
+      },
+      "rateLimits": {
+        "heading": "速率限制",
+        "intro": "API 采用三层速率限制模型。所有限制都在服务端强制执行;超过任一层都会返回 HTTP 429 以及下方列出的响应头。",
+        "tier": {
+          "status": {
+            "title": "公开状态",
+            "endpoint": "GET /api/v1/status",
+            "per": "无限速",
+            "body": "服务级可观测端点。始终公开,无 IP 或 key 维度桶。"
+          },
+          "public": {
+            "title": "公开查询",
+            "endpoint": "GET /api/v1/repos/{owner}/{name} · 首页查询表单",
+            "per": "每分钟 {limit} 次 / IP",
+            "body": "匿名浏览使用 PUBLIC_LOOKUP_RATE_PER_MIN(默认 {limit})。窗口在固定时钟边界每分钟重置。桶耗尽时返回 429 以及下方响应头。",
+            "headers": "429 时返回: Retry-After、X-RateLimit-Limit、X-RateLimit-Remaining。"
+          },
+          "auth": {
+            "title": "认证批量",
+            "endpoint": "POST /api/query",
+            "per": "每分钟 {limit} 次 / API key",
+            "body": "API key 持有人按 key 限速,使用 apiKey.rateLimitPerMin 字段(Prisma 默认 {limit})。日配额 apiKey.dailyQuota(Prisma 默认 10000)独立执行,任一桶耗尽即返回 429。",
+            "headers": "429 时返回: Retry-After、X-RateLimit-Limit、X-RateLimit-Remaining。"
+          }
+        }
+      },
+      "liveStatus": {
+        "heading": "实时状态",
+        "body": "本页请求时由 /api/v1/status 渲染的快照。点击任一字段可查看原始 JSON。",
+        "fields": {
+          "ok": "服务",
+          "db": "数据库",
+          "tokensActive": "活跃令牌",
+          "tokensExhausted": "已耗尽",
+          "queuePending": "队列待处理",
+          "queueFailed": "队列失败",
+          "reposTotal": "仓库数"
+        },
+        "values": {
+          "up": "正常",
+          "down": "异常"
+        }
       }
     },
     "sidebar": {
