@@ -518,14 +518,41 @@ parking-lot + 1 missed-from-finalization artifact commit.
   rule does not apply. `eslint src/app/admin/layout.tsx` is now clean
   (was 3 errors before).
 
+### Fixed
+
+- **3 pre-existing failing integration tests** (`8063460`) — since
+  M13.9/M13.11 these have been red:
+  - `tests/integration/api-docs-routes.test.ts` — threw
+    `getTranslations is not supported in Client Components` (landing
+    page calls `getTranslations`) and `Objects are not valid as a
+    React child (found: [object Promise])` (3 endpoint pages
+    returned `<EndpointPage doc={doc} />` as JSX — React rejects
+    Promise-as-JSX-child in the non-RSC renderToStaticMarkup path).
+  - `tests/integration/repo-detail-api-shape.test.ts` — same JSX-
+    Promise failure for `<ApiShape>` rendered inside `RepoOkView`'s
+    JSX tree.
+  - `tests/integration/public-lookup-action.test.ts` — `getTranslations`
+    mock missing from the action test path. Also assertion drift: the
+    test asserted `/boom/` on the error message, but M13.9 changed the
+    action to surface a translated generic "lookup failed" message
+    (lookup.ts:111) instead of the raw error.
+  Fix: pre-await `EndpointPage` in the 3 docs route pages; pre-await
+  `<ApiShape>` inside `RepoOkView`'s JSX; add `vi.mock('next-intl/server')`
+  + `vi.mock('next-intl')` to all 3 test files with labels map per
+  namespace + `.rich()` support that flattens React-element chunks to
+  strings (recursive walk over `.props.children`). Update assertion to
+  `/failed|error/i`. 3/3 files pass individually, 16/16 tests green.
+
 ### Stats
 
-- 7 commits (`cf2fd62` → `f4f404d`), 5 files modified + 3 created
+- 8 commits (`cf2fd62` → `8063460`), 5 files modified + 3 created
   (the two new docs + the wired-in smoke-session script + the new
-  status-loader helper).
+  status-loader helper) + 4 modified in the integration-test fix.
 - Test suite: 13/13 admin shell tests now pass (was 5/13 with the async
-  component bug pre-fix). Full unit suite green (51 files, 359 tests).
-  ESLint clean on `src/app/admin/layout.tsx` (was 3 errors pre-fix).
+  component bug pre-fix). 16/16 in the 3 fixed integration tests
+  (was 13/16, 3 fail, pre-fix). Full unit suite green (51 files, 359
+  tests). ESLint clean on `src/app/admin/layout.tsx` (was 3 errors
+  pre-fix).
 
 ---
 
