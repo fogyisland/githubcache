@@ -9,7 +9,8 @@ export type AdminSectionSlug =
   | 'github-tokens'
   | 'reports'
   | 'audit'
-  | 'refresh';
+  | 'refresh'
+  | 'webhooks';
 
 /** Static metadata — `title` lives in messages, not here, so it can translate. */
 export interface AdminSection {
@@ -27,6 +28,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { slug: 'reports', icon: '⊟', href: '/admin/reports', roles: ['admin', 'operator'] },
   { slug: 'audit', icon: '◭', href: '/admin/audit', roles: ['admin'] },
   { slug: 'refresh', icon: '↻', href: '/admin/refresh', roles: ['admin'] },
+  { slug: 'webhooks', icon: '⊜', href: '/admin/webhooks', roles: ['admin'] },
 ];
 
 interface Props {

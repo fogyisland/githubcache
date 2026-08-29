@@ -418,6 +418,102 @@
         }
       }
     },
+    "webhooks": {
+      "title": "Webhook",
+      "description": "面向运维的系统审计事件订阅。使用 HMAC-SHA256 签名，指数退避重试。",
+      "breadcrumbAdmin": "管理",
+      "breadcrumbWebhooks": "Webhook",
+      "addHeading": "添加 Webhook 订阅",
+      "status": {
+        "active": "启用",
+        "disabled": "已停用"
+      },
+      "delivery": {
+        "delivered": "已送达",
+        "failed": "失败",
+        "pending": "待发",
+        "dead": "已弃"
+      },
+      "add": {
+        "url": "目标 URL",
+        "urlPlaceholder": "https://example.com/webhook",
+        "filter": "事件动作（逗号分隔，* 表示全部）",
+        "filterPlaceholder": "repo.refresh.succeeded, repo.refresh.failed",
+        "submit": "创建订阅",
+        "submitting": "创建中…",
+        "secret": {
+          "heading": "签名密钥（仅显示一次）",
+          "warning": "请立即复制该密钥，之后不会再显示。请将其保存为接收方的 GH_WEBHOOK_SECRET。",
+          "dismiss": "完成"
+        }
+      },
+      "list": {
+        "heading": "订阅列表",
+        "ariaLabel": "Webhook 订阅",
+        "never": "未送达",
+        "column": {
+          "url": "URL",
+          "filter": "事件",
+          "status": "状态",
+          "lastDelivery": "最近投递"
+        },
+        "empty": {
+          "title": "尚无 Webhook 订阅",
+          "description": "在上方添加一个即可开始接收签名后的审计事件。"
+        }
+      },
+      "actions": {
+        "disable": "停用",
+        "reArm": "重新启用",
+        "rotate": "轮换密钥",
+        "confirmRotate": "确定轮换签名密钥？旧密钥将立即失效。",
+        "disableFailed": "停用失败（HTTP {status}）",
+        "reArmFailed": "重新启用失败（HTTP {status}）",
+        "rotateFailed": "轮换失败（HTTP {status}）",
+        "disabledOk": "订阅已停用。",
+        "reArmedOk": "订阅已重新启用。",
+        "dismiss": "关闭"
+      },
+      "retry": {
+        "retry": "重试",
+        "busy": "重试中…",
+        "ok": "已重新入队。",
+        "failed": "重试失败（HTTP {status}）"
+      },
+      "detail": {
+        "description": "订阅详情与近期投递记录。",
+        "breadcrumbDetail": "详情",
+        "deliveryStatus": {
+          "pending": "待发",
+          "delivered": "已送达",
+          "failed": "失败",
+          "dead": "已弃"
+        },
+        "field": {
+          "id": "ID",
+          "url": "URL",
+          "filter": "事件",
+          "status": "状态",
+          "secret": "签名密钥指纹",
+          "createdAt": "创建时间"
+        },
+        "deliveries": {
+          "heading": "近期投递",
+          "ariaLabel": "Webhook 投递记录",
+          "empty": {
+            "title": "暂无投递",
+            "description": "匹配该订阅筛选条件的新审计事件会显示在此。"
+          },
+          "column": {
+            "when": "时间",
+            "event": "事件",
+            "status": "状态",
+            "attempts": "尝试次数",
+            "lastError": "最近错误"
+          }
+        }
+      }
+    },
     "reports": {
       "title": "报表",
       "description": "过去 24 小时的汇总用量、缓存性能与配额情况。",

@@ -16,6 +16,8 @@ const schema = z.object({
   SCHEDULER_TICK_MS: z.coerce.number().int().positive().default(60_000),
   NIGHTLY_SWEEP_INTERVAL_MS: z.coerce.number().int().positive().default(24 * 60 * 60_000),
   SCHEDULER_ENABLED: z.coerce.boolean().default(true),
+  WEBHOOK_WORKER_TICK_MS: z.coerce.number().int().positive().default(15_000),
+  WEBHOOK_WORKER_BATCH_SIZE: z.coerce.number().int().positive().default(25),
   // Per-IP rate limit for the public lookup form (no X-API-Key required).
   // Protects the GitHub token pool from anonymous abuse.
   PUBLIC_LOOKUP_RATE_PER_MIN: z.coerce.number().int().positive().default(30),

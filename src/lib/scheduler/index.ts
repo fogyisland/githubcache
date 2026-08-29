@@ -2,6 +2,7 @@ import { logger } from '@/lib/logger';
 import { env } from '@/lib/config/env';
 import { runTick } from './tick';
 import { nightlySweep } from './sweep';
+import { runWorkerTick } from '@/lib/webhooks/worker';
 
 // Re-export pause/resume state helpers. Defined in `./state` to avoid a
 // circular import with `./tick` (which imports `isPaused`).
@@ -54,14 +55,27 @@ export function startScheduler(): SchedulerHandle {
     });
   }, env.NIGHTLY_SWEEP_INTERVAL_MS);
 
+  // M14.6 — webhook delivery worker. Runs alongside the refresh tick on
+  // its own cadence (default 15s — faster than refresh because deliveries
+  // can be queued at any moment via the audit-write hook). Processes up to
+  // BATCH_SIZE due deliveries per tick serially.
+  const webhookWorkerInterval = setInterval(() => {
+    runWorkerTick(env.WEBHOOK_WORKER_BATCH_SIZE).catch((e: unknown) => {
+      logger.error({ err: e }, 'webhook runWorkerTick failed');
+    });
+  }, env.WEBHOOK_WORKER_TICK_MS);
+
   // Don't keep the process alive solely for these timers (in case Next.js exits)
   tickInterval.unref?.();
   sweepInterval.unref?.();
+  webhookWorkerInterval.unref?.();
 
   logger.info(
     {
       tickMs: env.SCHEDULER_TICK_MS,
       sweepMs: env.NIGHTLY_SWEEP_INTERVAL_MS,
+      webhookWorkerMs: env.WEBHOOK_WORKER_TICK_MS,
+      webhookWorkerBatch: env.WEBHOOK_WORKER_BATCH_SIZE,
     },
     'scheduler started',
   );
@@ -70,6 +84,7 @@ export function startScheduler(): SchedulerHandle {
     stop: () => {
       clearInterval(tickInterval);
       clearInterval(sweepInterval);
+      clearInterval(webhookWorkerInterval);
       activeHandle = null;
       logger.info('scheduler stopped');
     },

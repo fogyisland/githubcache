@@ -246,3 +246,77 @@ model IpRateLimitBucket {
   @@index([windowStart])
   @@map("ip_rate_limit_buckets")
 }
+
+// M14.6 — operator-facing system event webhooks. The webhook layer is a
+// consumer of the audit log: every AuditLog row can be fanned out to N
+// WebhookSubscriptions whose eventFilter matches the audit action. Each
+// fan-out becomes a WebhookDelivery that the delivery worker retries with
+// exponential backoff until success, max-attempts (dead), or manual
+// re-arm.
+//
+// `secret` stores the raw 32-byte hex signing key. It's shown exactly
+// once at creation/rotation time and never recoverable from the DB
+// after that. THREAT MODEL: a DB dump exposes signing keys — anyone
+// with the dump can forge events to that subscriber. This is the same
+// tradeoff GitHub/Stripe make (they also store raw). Mitigation: limit
+// DB access via standard ACLs. We do NOT hash the secret because we
+// need the raw bytes to sign each delivery.
+//
+// `eventFilter` is a JSON array of action strings or the single
+// element `["*"]` for firehose mode. `active` is set false
+// automatically when a delivery hits `dead` so the admin UI shows the
+// failure clearly without silently swallowing new events.
+model WebhookSubscription {
+  id                 BigInt    @id @default(autoincrement())
+  url                String    @db.VarChar(500)
+  secret             String    @db.Char(64)
+  eventFilter        Json      @map("event_filter")
+  active             Boolean   @default(true)
+  createdAt          DateTime  @default(now()) @map("created_at")
+  lastDeliveryAt     DateTime? @map("last_delivery_at")
+  lastDeliveryStatus String?   @map("last_delivery_status") @db.VarChar(20)
+  createdBy          BigInt?   @map("created_by")
+
+  deliveries WebhookDelivery[]
+
+  @@index([active])
+  @@map("webhook_subscriptions")
+}
+
+// M14.6 — one row per (subscription × audit event) emission. The payload
+// is a frozen JSON snapshot of the AuditLog row + the subscription URL
+// so the delivery worker can replay retries without re-reading the
+// AuditLog (which may be pruned by retention policy). `attemptCount`
+// increments on every HTTP attempt; `status` advances pending → delivered
+// or pending → failed (transient) → dead (after max attempts). The
+// delivery worker picks up `pending` rows where `nextRetryAt <= now()`
+// and processes them FIFO (oldest first).
+model WebhookDelivery {
+  id              BigInt    @id @default(autoincrement())
+  subscriptionId  BigInt    @map("subscription_id")
+  subscription    WebhookSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  eventId         BigInt    @map("event_id")
+  eventAction     String    @map("event_action") @db.VarChar(100)
+  eventTargetType String    @map("event_target_type") @db.VarChar(50)
+  eventTargetId   String    @map("event_target_id") @db.VarChar(100)
+  eventCreatedAt  DateTime  @map("event_created_at")
+  payload         Json
+  attemptCount    Int       @default(0) @map("attempt_count")
+  status          WebhookDeliveryStatus @default(pending)
+  lastAttemptAt   DateTime? @map("last_attempt_at")
+  lastError       String?   @map("last_error") @db.Text
+  nextRetryAt     DateTime? @map("next_retry_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  @@index([status, nextRetryAt])
+  @@index([subscriptionId, createdAt])
+  @@map("webhook_deliveries")
+}
+
+enum WebhookDeliveryStatus {
+  pending
+  delivered
+  failed
+  dead
+}

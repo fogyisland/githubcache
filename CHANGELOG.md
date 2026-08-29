@@ -657,6 +657,62 @@ cut.
 - 385/385 unit tests pass on vitest 4. ESLint clean except 7 pre-existing
   warnings (unrelated to the M14 round).
 
+## [m14.x follow-up: M14.6 webhook delivery] — 2026-08-29
+
+**Operator-facing webhook subscriptions.** System audit events fan out to
+subscriber URLs signed with HMAC-SHA256 (`X-Hub-Signature-256` header,
+GitHub-compatible). Exponential backoff retries (1m / 5m / 30m / 2h, max
+5 attempts); auto-disable subscription on permanent 4xx or max retries.
+
+### Added
+
+- `WebhookSubscription` + `WebhookDelivery` models + `WebhookDeliveryStatus`
+  enum (`pending` / `delivered` / `failed` / `dead`). Migration
+  `20260829090000_m14_webhook_subscriptions` creates both tables with
+  indices on `(status, nextRetryAt)` and `(subscription_id, created_at)`.
+- Raw secret stored as `CHAR(64)` (lowercase hex of 32 random bytes).
+  HMAC signing needs the raw bytes — hashing the secret breaks signing.
+  Migration `20260829090500_m14_webhook_rename_secret` renamed
+  `secret_hash` → `secret` after the design review caught the issue.
+- `src/lib/webhooks/signer.ts` — `generateWebhookSecret()`,
+  `signWebhookPayload()` (`sha256=<hex>`), `constantTimeEqual()`.
+- `src/lib/webhooks/retry.ts` — `MAX_ATTEMPTS=5`,
+  `BACKOFF_MS = [60s, 5m, 30m, 2h]`, `nextRetryMs(attemptCount)`,
+  `shouldDeadLetter(attemptCount)`.
+- `src/lib/webhooks/db.ts` — subscription CRUD, filter matching, delivery
+  enqueue, due-delivery claim (`claimDueDeliveries`), terminal state
+  transitions, findMatchingSubscriptions for fan-out, recordDeliveryResult
+  to stamp `lastDeliveryAt` + `lastDeliveryStatus` on the parent.
+- `src/lib/webhooks/worker.ts` — `attemptDelivery` (POST with 10s
+  AbortController timeout), `processOneDelivery` (4xx except 408/429
+  dead-letters immediately and auto-disables the sub), `runWorkerTick`
+  (claim batch + process serially + summary).
+- Fire-and-forget fan-out in `src/lib/audit/writer.ts` — every audit row
+  triggers `fanOutAuditEvent` via dynamic import + Promise.allSettled. Hot
+  path stays fast; failures don't poison sibling subscriptions.
+- Webhook worker wired into `src/lib/scheduler/index.ts` (third interval,
+  default 15s tick, 25 deliveries per tick).
+- New env vars: `WEBHOOK_WORKER_TICK_MS` (default 15000) and
+  `WEBHOOK_WORKER_BATCH_SIZE` (default 25).
+- Admin UI: `/admin/webhooks` (list + create + per-row disable/re-arm/
+  rotate-secret) and `/admin/webhooks/[id]` (detail with subscription
+  metadata + recent deliveries + per-row retry for dead/failed rows).
+  Full `admin.webhooks` namespace added to `messages/en.json` + `messages/zh.json`.
+- 5 admin API routes: `POST /api/admin/webhooks` (create), `.../[id]/disable`,
+  `.../[id]/re-arm`, `.../[id]/rotate-secret`, `.../deliveries/[id]/retry`.
+  All admin-only (404 hide / 403 non-admin / 403 disabled).
+
+### Tests
+
+- 38 new unit tests across 4 files: `signer.test.ts` (8 — secret shape,
+  signature equality, constant-time compare), `retry.test.ts` (12 — backoff
+  math, dead-letter threshold), `matches-filter.test.ts` (6 — wildcard,
+  fail-closed on non-array / non-string / empty), `webhook-worker.test.ts`
+  (13 — 2xx/4xx/5xx/timeout, transient vs permanent errors, dead-letter on
+  max attempts, deleted subscription handling, inactive subscription
+  skipping). Total: 423/423 unit tests pass on vitest 4. Pre-existing
+  integration flakes (api-query-stale, api-v1-repos-route) unchanged.
+
 ---
 
 ## [m8-prod-ready] — 2026-08-26

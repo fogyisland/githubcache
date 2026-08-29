@@ -2126,3 +2126,160 @@ a {
 .ghc-doc-table-scalar td {
   padding: var(--space-2, 0.5rem) var(--space-3, 0.75rem);
 }
+
+/* webhooks admin — add form */
+.ghc-admin-add-webhook-form {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr);
+  gap: var(--space-3, 0.75rem);
+  align-items: end;
+  margin: var(--space-3, 0.75rem) 0;
+  max-width: 720px;
+}
+.ghc-admin-add-webhook-form .ghc-admin-field {
+  display: grid;
+  gap: var(--space-1, 0.25rem);
+}
+.ghc-admin-add-webhook-form .ghc-admin-field > span {
+  font-size: 0.8125rem;
+  color: var(--color-ink-muted);
+}
+.ghc-admin-add-webhook-form .ghc-admin-input {
+  width: 100%;
+  font-family: var(--admin-mono, monospace);
+  font-size: 0.875rem;
+  padding: 0.4375rem 0.625rem;
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-button, 6px);
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+.ghc-admin-add-webhook-form .ghc-admin-input:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -1px;
+}
+.ghc-admin-add-webhook-form .ghc-btn-primary {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+/* secret reveal (after create / rotate) */
+.ghc-admin-add-webhook-secret,
+.ghc-admin-rotated-secret {
+  display: grid;
+  gap: var(--space-2, 0.5rem);
+  padding: var(--space-3, 0.75rem);
+  margin: var(--space-3, 0.75rem) 0;
+  background: color-mix(in srgb, var(--color-accent) 8%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-accent) 35%, var(--color-rule));
+  border-radius: var(--radius-button, 6px);
+  max-width: 720px;
+}
+.ghc-admin-secret-heading {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+.ghc-admin-secret-warning {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--color-ink-muted);
+}
+.ghc-admin-secret-value {
+  display: block;
+  padding: 0.5rem 0.75rem;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-rule);
+  border-radius: 4px;
+  font-family: var(--admin-mono, monospace);
+  font-size: 0.8125rem;
+  word-break: break-all;
+  user-select: all;
+}
+.ghc-admin-rotated-secret {
+  background: transparent;
+  border-style: dashed;
+  max-width: 360px;
+  padding: var(--space-2, 0.5rem);
+}
+.ghc-admin-rotated-secret .ghc-admin-secret-value {
+  font-size: 0.75rem;
+}
+
+/* delivery cell — chip + when */
+.ghc-admin-delivery-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+}
+.ghc-admin-delivery-when {
+  font-family: var(--admin-mono, monospace);
+  font-size: 0.75rem;
+  color: var(--color-ink-muted);
+}
+
+/* detail page layout */
+.ghc-admin-detail-grid {
+  margin: var(--space-3, 0.75rem) 0;
+}
+.ghc-admin-detail-list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-2, 0.5rem) var(--space-4, 1rem);
+  margin: 0;
+  padding: var(--space-3, 0.75rem);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-button, 6px);
+  background: var(--color-surface);
+  max-width: 720px;
+}
+.ghc-admin-detail-list > div {
+  display: contents;
+}
+.ghc-admin-detail-list dt {
+  font-size: 0.8125rem;
+  color: var(--color-ink-muted);
+}
+.ghc-admin-detail-list dd {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+/* actions cell — buttons stacked + inline message */
+.ghc-admin-actions-cell {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1, 0.25rem);
+}
+.ghc-admin-actions-buttons {
+  display: inline-flex;
+  gap: var(--space-1, 0.25rem);
+  flex-wrap: wrap;
+}
+.ghc-admin-action-message {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--color-ink-muted);
+}
+
+/* retry cell */
+.ghc-admin-retry-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1, 0.25rem);
+}
+
+/* muted helper text */
+.ghc-admin-muted {
+  color: var(--color-ink-muted);
+}
+
+/* error message */
+.ghc-admin-error {
+  margin: 0;
+  grid-column: 1 / -1;
+  color: var(--color-danger, #b91c1c);
+  font-size: 0.8125rem;
+}

@@ -418,6 +418,102 @@
         }
       }
     },
+    "webhooks": {
+      "title": "Webhooks",
+      "description": "Operator-facing subscriptions to system audit events. Signed with HMAC-SHA256; delivered with exponential backoff.",
+      "breadcrumbAdmin": "Admin",
+      "breadcrumbWebhooks": "Webhooks",
+      "addHeading": "Add a webhook subscription",
+      "status": {
+        "active": "active",
+        "disabled": "disabled"
+      },
+      "delivery": {
+        "delivered": "delivered",
+        "failed": "failed",
+        "pending": "pending",
+        "dead": "dead"
+      },
+      "add": {
+        "url": "Target URL",
+        "urlPlaceholder": "https://example.com/webhook",
+        "filter": "Event actions (comma-separated, or * for all)",
+        "filterPlaceholder": "repo.refresh.succeeded, repo.refresh.failed",
+        "submit": "Create subscription",
+        "submitting": "Creating…",
+        "secret": {
+          "heading": "Signing secret (shown once)",
+          "warning": "Copy this secret now — it will not be shown again. Save it as GH_WEBHOOK_SECRET on the receiver.",
+          "dismiss": "Done"
+        }
+      },
+      "list": {
+        "heading": "Subscriptions",
+        "ariaLabel": "Webhook subscriptions",
+        "never": "never delivered",
+        "column": {
+          "url": "URL",
+          "filter": "Events",
+          "status": "Status",
+          "lastDelivery": "Last delivery"
+        },
+        "empty": {
+          "title": "No webhook subscriptions yet",
+          "description": "Add one above to start receiving signed audit events."
+        }
+      },
+      "actions": {
+        "disable": "Disable",
+        "reArm": "Re-arm",
+        "rotate": "Rotate secret",
+        "confirmRotate": "Rotate the signing secret? The old secret will stop working immediately.",
+        "disableFailed": "Disable failed (HTTP {status})",
+        "reArmFailed": "Re-arm failed (HTTP {status})",
+        "rotateFailed": "Rotate failed (HTTP {status})",
+        "disabledOk": "Subscription disabled.",
+        "reArmedOk": "Subscription re-armed.",
+        "dismiss": "Dismiss"
+      },
+      "retry": {
+        "retry": "Retry",
+        "busy": "Retrying…",
+        "ok": "Re-queued.",
+        "failed": "Retry failed (HTTP {status})"
+      },
+      "detail": {
+        "description": "Subscription detail and recent deliveries.",
+        "breadcrumbDetail": "Detail",
+        "deliveryStatus": {
+          "pending": "pending",
+          "delivered": "delivered",
+          "failed": "failed",
+          "dead": "dead"
+        },
+        "field": {
+          "id": "ID",
+          "url": "URL",
+          "filter": "Events",
+          "status": "Status",
+          "secret": "Signing secret fingerprint",
+          "createdAt": "Created"
+        },
+        "deliveries": {
+          "heading": "Recent deliveries",
+          "ariaLabel": "Webhook deliveries",
+          "empty": {
+            "title": "No deliveries yet",
+            "description": "New audit events that match this subscription's filter will appear here."
+          },
+          "column": {
+            "when": "When",
+            "event": "Event",
+            "status": "Status",
+            "attempts": "Attempts",
+            "lastError": "Last error"
+          }
+        }
+      }
+    },
     "reports": {
       "title": "Reports",
       "description": "Aggregated usage, cache performance, and quota over the last 24 hours.",
