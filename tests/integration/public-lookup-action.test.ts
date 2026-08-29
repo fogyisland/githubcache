@@ -23,6 +23,33 @@ vi.mock('@/lib/cache/lookup', () => ({
   lookupRepo: (...args: unknown[]) => lookupRepoMock(...args),
 }));
 
+// Mock next-intl/server — the action calls getTranslations inside the
+// Vitest runtime, which lacks the Next.js server context that
+// next-intl requires. Mirrors the M13 admin-shell test mock pattern.
+vi.mock('next-intl/server', () => ({
+  getTranslations: async (ns: string) => {
+    const labels: Record<string, Record<string, string>> = {
+      'home.lookup.errors': {
+        ownerRequired: 'owner is required',
+        ownerTooLong: 'owner too long',
+        ownerFormat: 'invalid owner format',
+        ownerInvalid: 'invalid owner',
+        nameRequired: 'name is required',
+        nameTooLong: 'name too long',
+        nameFormat: 'invalid name format',
+        nameInvalid: 'invalid name',
+        rateLimited: 'Too many requests — try again in {seconds}s',
+        generic: 'Lookup failed',
+      },
+    };
+    return (key: string, vars?: Record<string, string | number>) => {
+      const v = labels[ns]?.[key];
+      if (v && vars) return v.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? ''));
+      return v ?? key;
+    };
+  },
+}));
+
 // Now safe to import the action.
 import { lookupAction } from '@/app/_actions/lookup';
 
@@ -142,7 +169,10 @@ describe('lookupAction (public form)', () => {
       lookupRepoMock.mockRejectedValueOnce(new Error('boom'));
       const state = await lookupAction(idleState, formDataFor('octocat', 'a'));
       expect(state.status).toBe('error');
-      expect(state.message).toMatch(/boom/);
+      // M13.9 changed the error path to surface a translated generic message
+      // (lookup.ts:111) instead of the raw error — intentional, so we don't
+      // leak internal details to public form users.
+      expect(state.message).toMatch(/failed|error/i);
     });
 
     it('falls back to "unknown" IP when no x-forwarded-for is set', async () => {

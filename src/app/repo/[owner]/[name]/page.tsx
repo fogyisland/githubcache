@@ -223,7 +223,7 @@ async function RepoOkView({
 
       {/* Raw API shape — collapsible JSON dump of what /api/v1/repos/... returns. */}
       <section className="mx-auto max-w-4xl px-4 pb-12">
-        <ApiShape owner={owner} name={name} metadata={meta} />
+        {await ApiShape({ owner, name, metadata: meta })}
       </section>
 
       <footer className="border-t border-[color:var(--color-rule)]">

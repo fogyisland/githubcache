@@ -33,6 +33,47 @@ vi.mock('@/lib/cache/lookup', () => ({
   }),
 }));
 
+// Mock next-intl/server — RepoDetailPage calls getTranslations inside
+// the Vitest runtime, which lacks the Next.js server context next-intl
+// requires. Mirrors the M13 admin-shell test mock pattern.
+vi.mock('next-intl/server', () => ({
+  getTranslations: async (ns: string) => {
+    const labels: Record<string, Record<string, string>> = {
+      'repo.hero': { backToAll: '← Back to all repositories' },
+      'repo.apiShape': { eyebrow: 'API', hint: 'See {path} in {link}.' },
+    };
+    const t = (key: string, vars?: Record<string, string | number>) => {
+      const v = labels[ns]?.[key];
+      if (v && vars) return v.replace(/\{(\w+)\}/g, (_, k) => String(vars[k] ?? ''));
+      return v ?? key;
+    };
+    // t.rich(key, chunks) — chunks values may be React elements
+    // (e.g. `() => <code>{apiPath}</code>`). We invoke the chunk
+    // function (if callable) then flatten the resulting React element to
+    // a plain string for renderToStaticMarkup. Children may be string,
+    // number, nested element, or array — recurse to leaf strings.
+    const flatten = (node: unknown): string => {
+      if (node == null || typeof node === 'boolean') return '';
+      if (typeof node === 'string' || typeof node === 'number') return String(node);
+      if (Array.isArray(node)) return node.map(flatten).join('');
+      if (typeof node === 'object' && node !== null && 'props' in node) {
+        const el = node as { props: { children?: unknown } };
+        return flatten(el.props.children);
+      }
+      return '';
+    };
+    t.rich = (key: string, chunks: Record<string, React.ReactNode>) => {
+      const v = labels[ns]?.[key] ?? key;
+      return v.replace(/\{(\w+)\}/g, (_, k) => {
+        const raw = chunks[k];
+        const node = typeof raw === 'function' ? (raw as () => unknown)() : raw;
+        return flatten(node);
+      });
+    };
+    return t;
+  },
+}));
+
 import RepoDetailPage from '@/app/repo/[owner]/[name]/page';
 
 describe('repo detail page — API shape section', () => {
