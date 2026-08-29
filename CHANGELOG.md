@@ -461,6 +461,64 @@ the wire before.
 
 ---
 
+## [m13.x follow-ups] — 2026-08-29
+
+**Post-M13 cleanup round.** Six follow-up commits under the same
+`m13-i18n` tag — final-review blocker + 4 M13.x.1–x.5 fixups from review
+parking-lot + 1 missed-from-finalization artifact commit.
+
+### Fixed
+
+- **Migration SQL table name** (`cf2fd62`) — `m13_user_lang/migration.sql`
+  line 1 was `ALTER TABLE \`User\`` but the User model is `@@map("users")`.
+  Renamed to `users`. `prisma migrate deploy` now succeeds on a clean DB
+  (was previously worked-around on the live test DB only).
+- **Admin LangSwitcher active indicator** (`5e67fcf`) — the admin layout's
+  lang cookie read used `cookieStore.get('cookie')` (raw header string,
+  not a real cookie name), so the active button always showed the
+  default `zh` active regardless of the user's choice. Switched to
+  `cookieStore.get(LANG_COOKIE)?.value` with `dbValue: user.lang` fallback
+  from the user record. (Same trap caught in M11.8 for admin variant.)
+- **Lang-switcher a11y** (`6b1ae25`) — `LangButton` now takes an explicit
+  `ariaLabel` prop; `LangSwitcher` builds it from the `switchTo` template
+  + `fullLabel.{zh,en}` keys so screen readers hear "Switch to Chinese" /
+  "Switch to English" instead of the bare "中" / "EN" pill label. An
+  `sr-only` status mirror with `data-lang-state` + `data-current-lang`
+  surfaces server-action state for tests + assistive tech.
+- **Admin shell tests async fix** (`43e8acf`) — `tests/unit/admin-shell.test.tsx`
+  used `createElement(AdminShell, ...)` synchronously, but `AdminShell` is
+  an async server component returning `Promise<ReactElement>`; React threw
+  "Objects are not valid as a React child (found: [object Promise])" on
+  all 5 cases. Refactored to `await AdminShell({...})` directly with `vi.mock('next-intl/server')` + `vi.mock('next-intl')` mock setup. 13/13 admin shell/status-bar/palette tests now pass.
+
+### Added
+
+- `npm run smoke:session` (`900b2fd`) — wires `scripts/smoke-session.ts`
+  into `package.json`. One-off helper that creates a session for the
+  first active admin user and prints `SESSION_ID` + `USER_EMAIL` +
+  `EXPIRES_AT` for curl-based smoke testing of admin endpoints. Same
+  `tsx --env-file=.env` pattern as `create:admin`.
+- M13 spec + plan (`e8efce6`) — `docs/superpowers/plans/2026-08-28-m13-i18n.md`
+  (342 lines) + `docs/superpowers/specs/2026-08-28-m13-i18n.md` (183
+  lines). These artifacts were created during M13 brainstorming but
+  missed from M13.13 finalization; now committed for future contributors
+  to reference.
+
+### Changed
+
+- `.gitignore` (`5ebcc19`) — removed stale `.pnpm-store/` entry. Project
+  uses npm (verified: `package-lock.json` present, no `pnpm-lock.yaml`,
+  no `.pnpm-store/` directory). Cosmetic cleanup from M8 era.
+
+### Stats
+
+- 6 commits (`cf2fd62` → `e8efce6`), 4 files modified + 3 created
+  (the two new docs + the wired-in smoke-session script).
+- Test suite: 13/13 admin shell tests now pass (was 5/13 with the async
+  component bug pre-fix). Full unit suite green.
+
+---
+
 ## [m8-prod-ready] — 2026-08-26
 
 **Deployment + Observability.** Production-ready observability surface, durable rate-limit,
