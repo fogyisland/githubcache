@@ -32,6 +32,7 @@ const ACTIONS = [
   'scheduler_resumed',
   'repo_forbidden',
   'refresh.failed_review',
+  'auto_disable_token',
 ];
 
 const TARGET_TYPES = ['', 'session', 'user', 'invitation', 'api_key', 'github_token'];

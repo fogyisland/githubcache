@@ -5,6 +5,7 @@ import {
   insertToken,
   updateTokenStatus,
   deleteTokenById,
+  disableTokenById,
 } from '@/lib/db/github-tokens';
 import { prisma } from '@/lib/db/client';
 import { createHash } from 'crypto';
@@ -159,5 +160,26 @@ describe('insertToken', () => {
     expect(row.tokenFirst4).toHaveLength(4);
     expect(row.tokenLast4).toHaveLength(4);
     expect(row.tokenHash).toBe(hash);
+  });
+});
+
+describe('disableTokenById (M14.4)', () => {
+  it('flips status to disabled synchronously', async () => {
+    const id = await mkRow('auto-disable-1');
+    const before = await getTokenById(id);
+    expect(before!.status).toBe('active');
+
+    const updated = await disableTokenById(id, 'auto-rotation');
+    expect(updated.status).toBe('disabled');
+    // Persisted in DB
+    const after = await getTokenById(id);
+    expect(after!.status).toBe('disabled');
+  });
+
+  it('idempotent — calling twice still disables', async () => {
+    const id = await mkRow('auto-disable-2');
+    await disableTokenById(id, 'auto-rotation');
+    const updated = await disableTokenById(id, 'auto-rotation');
+    expect(updated.status).toBe('disabled');
   });
 });

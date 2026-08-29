@@ -8,6 +8,12 @@ const mocks = vi.hoisted(() => ({
   insertedRows: [] as Array<{ label: string; tokenFirst4: string; tokenLast4: string; tokenHash: string }>,
   updatedRows: [] as Array<{ id: bigint; requestsUsed: number; resetAt: Date | null; lastUsedAt: Date | null }>,
   insertIdSeq: 1 as number,
+  disableCalls: [] as Array<{ id: bigint; reason: 'operator' | 'auto-rotation' }>,
+  autoDisableThreshold: 3 as number,
+}));
+
+vi.mock('@/lib/config/env', () => ({
+  get env() { return { TOKEN_AUTO_DISABLE_THRESHOLD: mocks.autoDisableThreshold }; },
 }));
 
 vi.mock('@/lib/github/tokens-loader', () => ({
@@ -38,6 +44,12 @@ vi.mock('@/lib/db/github-tokens', () => ({
     mocks.updatedRows.push({ id, ...data });
     const row = mocks.dbRows.find((r) => r.id === id);
     if (row) Object.assign(row, data);
+    return Promise.resolve(row!);
+  }),
+  disableTokenById: vi.fn((id: bigint, reason: 'operator' | 'auto-rotation') => {
+    mocks.disableCalls.push({ id, reason });
+    const row = mocks.dbRows.find((r) => r.id === id);
+    if (row) (row as { status: string }).status = 'disabled';
     return Promise.resolve(row!);
   }),
 }));
@@ -83,6 +95,8 @@ beforeEach(async () => {
   mocks.insertedRows = [];
   mocks.updatedRows = [];
   mocks.insertIdSeq = 1;
+  mocks.disableCalls = [];
+  mocks.autoDisableThreshold = 3;
   vi.useFakeTimers();
   // Re-import after resetModules so each test gets a fresh pool module
   const mod = await import('@/lib/github/pool');
@@ -247,5 +261,105 @@ describe('shutdownPool', () => {
     await recordUsage(t.id, 4999, Math.floor(Date.now() / 1000) + 3600);
     await shutdownPool();
     expect(mocks.updatedRows.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('M14.4 auto-disable', () => {
+  it('does not auto-disable below threshold', async () => {
+    mocks.envTokens = [mkEnvToken('ghp_aaa')];
+    mocks.autoDisableThreshold = 3;
+    await initPool();
+    const t = pickToken()!;
+    const futureReset = Math.floor(Date.now() / 1000) + 3600;
+    await recordUsage(t.id, 0, futureReset);
+    await recordUsage(t.id, 0, futureReset);
+    expect(mocks.disableCalls).toHaveLength(0);
+    expect(poolSize()).toBe(1);
+  });
+
+  it('auto-disables after consecutive 429s hit threshold', async () => {
+    mocks.envTokens = [mkEnvToken('ghp_aaa')];
+    mocks.autoDisableThreshold = 3;
+    await initPool();
+    const t = pickToken()!;
+    const futureReset = Math.floor(Date.now() / 1000) + 3600;
+    await recordUsage(t.id, 0, futureReset);
+    await recordUsage(t.id, 0, futureReset);
+    await recordUsage(t.id, 0, futureReset);
+    expect(mocks.disableCalls).toEqual([{ id: t.id, reason: 'auto-rotation' }]);
+    expect(poolSize()).toBe(0);
+  });
+
+  it('respects threshold=0 (manual-only)', async () => {
+    mocks.envTokens = [mkEnvToken('ghp_aaa')];
+    mocks.autoDisableThreshold = 0;
+    await initPool();
+    const t = pickToken()!;
+    const futureReset = Math.floor(Date.now() / 1000) + 3600;
+    for (let i = 0; i < 10; i++) {
+      await recordUsage(t.id, 0, futureReset);
+    }
+    expect(mocks.disableCalls).toHaveLength(0);
+    expect(poolSize()).toBe(1);
+  });
+
+  it('respects a custom threshold', async () => {
+    mocks.envTokens = [mkEnvToken('ghp_aaa')];
+    mocks.autoDisableThreshold = 5;
+    await initPool();
+    const t = pickToken()!;
+    const futureReset = Math.floor(Date.now() / 1000) + 3600;
+    for (let i = 0; i < 4; i++) {
+      await recordUsage(t.id, 0, futureReset);
+    }
+    expect(mocks.disableCalls).toHaveLength(0);
+    await recordUsage(t.id, 0, futureReset); // 5th
+    expect(mocks.disableCalls).toHaveLength(1);
+  });
+
+  it('resets per-token counter on success', async () => {
+    mocks.envTokens = [mkEnvToken('ghp_aaa')];
+    mocks.autoDisableThreshold = 3;
+    await initPool();
+    const t = pickToken()!;
+    const futureReset = Math.floor(Date.now() / 1000) + 3600;
+    await recordUsage(t.id, 0, futureReset);
+    await recordUsage(t.id, 0, futureReset);
+    // success — counter resets
+    await recordUsage(t.id, 4999, futureReset);
+    // 2 more 429s is back below threshold
+    await recordUsage(t.id, 0, futureReset);
+    await recordUsage(t.id, 0, futureReset);
+    expect(mocks.disableCalls).toHaveLength(0);
+    expect(poolSize()).toBe(1);
+    // 3rd 429 since the success trips the threshold
+    await recordUsage(t.id, 0, futureReset);
+    expect(mocks.disableCalls).toHaveLength(1);
+  });
+
+  it('does not treat remaining=0 with past resetAt as 429', async () => {
+    mocks.envTokens = [mkEnvToken('ghp_aaa')];
+    mocks.autoDisableThreshold = 3;
+    await initPool();
+    const t = pickToken()!;
+    const pastReset = Math.floor(Date.now() / 1000) - 60;
+    await recordUsage(t.id, 0, pastReset);
+    await recordUsage(t.id, 0, pastReset);
+    await recordUsage(t.id, 0, pastReset);
+    expect(mocks.disableCalls).toHaveLength(0); // not over limit, just reset
+    expect(poolSize()).toBe(1);
+  });
+
+  it('only auto-disables the offending token, not the whole pool', async () => {
+    mocks.envTokens = [mkEnvToken('ghp_aaa'), mkEnvToken('ghp_bbb')];
+    mocks.autoDisableThreshold = 3;
+    await initPool();
+    const t1 = pickToken()!;
+    const futureReset = Math.floor(Date.now() / 1000) + 3600;
+    await recordUsage(t1.id, 0, futureReset);
+    await recordUsage(t1.id, 0, futureReset);
+    await recordUsage(t1.id, 0, futureReset); // disables t1
+    expect(mocks.disableCalls).toEqual([{ id: t1.id, reason: 'auto-rotation' }]);
+    expect(poolSize()).toBe(1); // t2 still active
   });
 });

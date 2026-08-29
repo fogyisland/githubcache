@@ -43,6 +43,47 @@ export function updateTokenStatus(id: bigint, status: GithubTokenStatus): Promis
   });
 }
 
+/**
+ * Mark a token disabled and write a corresponding audit log entry. Used by:
+ *   - the admin route (`POST /api/admin/github-tokens/[id]/disable`)
+ *   - the pool auto-rotation logic (M14.4) when a token accumulates too many
+ *     consecutive 429s and the operator hasn't intervened.
+ *
+ * Audit `action` distinguishes the two paths via the `reason` field in
+ * metadata — `operator` for explicit admin action, `auto-rotation` for the
+ * pool's consecutive-429 trip.
+ *
+ * Idempotent: calling this on an already-disabled token still writes a
+ * fresh audit row (so the timestamp of the latest disable is preserved).
+ */
+export async function disableTokenById(
+  id: bigint,
+  reason: 'operator' | 'auto-rotation',
+  actorUserId?: bigint,
+): Promise<GithubToken> {
+  const row = await prisma.githubToken.update({
+    where: { id },
+    data: { status: 'disabled' },
+  });
+  // Fire-and-forget — pool auto-rotation must not block on audit write.
+  void import('@/lib/audit/writer').then(async ({ writeAudit }) => {
+    try {
+      await writeAudit({
+        action: 'auto_disable_token',
+        targetType: 'github_token',
+        targetId: String(row.id),
+        ...(actorUserId !== undefined ? { actorUserId } : {}),
+        metadata: { label: row.label, reason },
+      });
+    } catch (e) {
+      // Swallow — disable already persisted; audit write failure must not
+      // bubble up to the pool caller (would block subsequent picks).
+      console.error('disableTokenById audit write failed', e);
+    }
+  });
+  return row;
+}
+
 export async function deleteTokenById(id: bigint): Promise<void> {
   await prisma.githubToken.delete({ where: { id } });
 }

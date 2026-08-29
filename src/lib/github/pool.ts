@@ -1,8 +1,10 @@
 import { createHash } from 'crypto';
 import { Octokit } from '@octokit/rest';
 import { logger } from '@/lib/logger';
+import { env } from '@/lib/config/env';
 import { loadTokensFromEnv } from './tokens-loader';
 import {
+  disableTokenById,
   listAllTokens,
   insertToken,
   updateTokenQuota,
@@ -25,6 +27,11 @@ let persistCounter = 0;
 let lastPersistAt: number = Date.now();
 let persistTimer: ReturnType<typeof setInterval> | null = null;
 let consecutive429s = 0;
+// M14.4 — per-token consecutive-429 counter for auto-disable. Reset on a
+// successful call for that token. When a counter reaches
+// env.TOKEN_AUTO_DISABLE_THRESHOLD the token is auto-disabled and dropped
+// from the pool. In-memory only — process restart resets counters.
+const consecutive429ByToken: Map<bigint, number> = new Map();
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 let shuttingDown = false;
 
@@ -137,9 +144,50 @@ export async function recordUsage(
   entry.lastUsedAt = new Date();
   entry.dirty = true;
   persistCounter += 1;
-  consecutive429s = 0; // success — reset backoff counter
+  // Distinguish 429 from success by `remaining === 0`. A resetAt in the
+  // future is the actual 429 signal — a past resetAt with remaining=0 is
+  // just "fully used and ready to reset", not an over-limit hit.
+  const resetAtMs = resetAtUnix * 1000;
+  const isOverLimit = remaining === 0 && resetAtMs > Date.now();
+  if (isOverLimit) {
+    consecutive429s += 1; // global backoff counter (used by getBackoff)
+    const threshold = env.TOKEN_AUTO_DISABLE_THRESHOLD;
+    if (threshold > 0) {
+      const next = (consecutive429ByToken.get(tokenId) ?? 0) + 1;
+      consecutive429ByToken.set(tokenId, next);
+      if (next >= threshold) {
+        await autoDisableToken(tokenId, entry.label, next);
+      }
+    }
+  } else {
+    consecutive429s = 0; // global backoff counter — reset on any success
+    consecutive429ByToken.delete(tokenId); // per-token counter — reset on this token's success
+  }
   if (persistCounter >= FLUSH_INTERVAL_CALLS) {
     await persistQuota();
+  }
+}
+
+/**
+ * M14.4 — auto-disable a token after TOKEN_AUTO_DISABLE_THRESHOLD
+ * consecutive 429s. Drops it from the in-memory pool, marks the DB row
+ * disabled, and writes an audit log entry.
+ */
+async function autoDisableToken(
+  tokenId: bigint,
+  label: string,
+  consecutiveCount: number,
+): Promise<void> {
+  pool.delete(tokenId);
+  consecutive429ByToken.delete(tokenId);
+  try {
+    await disableTokenById(tokenId, 'auto-rotation');
+    logger.warn(
+      { tokenId: tokenId.toString(), label, consecutiveCount, threshold: env.TOKEN_AUTO_DISABLE_THRESHOLD },
+      'auto-disabled github token after consecutive 429s',
+    );
+  } catch (e) {
+    logger.error({ err: e, tokenId: tokenId.toString() }, 'auto-disable failed; token dropped from pool anyway');
   }
 }
 
