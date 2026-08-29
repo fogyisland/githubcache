@@ -30,9 +30,8 @@ import {
   ADMIN_SECTIONS,
   type AdminSectionSlug,
 } from '@/app/admin/_components/admin-sidebar';
-import { prisma } from '@/lib/db/client';
 import { isPaused } from '@/lib/scheduler/state';
-import { queryAuditLog, getActorEmails } from '@/lib/db/audit';
+import { getActorEmails, loadAdminStatusData } from '@/lib/admin/status-loader';
 import type { AdminStatusBarData } from '@/app/admin/_components/admin-status-bar';
 import type { PaletteData } from '@/app/admin/_components/command-palette';
 
@@ -111,20 +110,10 @@ export default async function AdminLayout({
   const pathname = headerStore.get('x-pathname') ?? '/admin';
   const currentSection = sectionForPath(pathname);
 
-  // Prefetch status-bar + palette data in parallel.
-  const [pingStart, paletteAudit] = await Promise.all([
-    Promise.resolve(Date.now()).then((t) => ({ start: t })),
-    queryAuditLog({ limit: 5, offset: 0 }),
-  ]);
-  await prisma.$queryRaw`SELECT 1`;
-  const dbPingMs = Date.now() - pingStart.start;
-
-  const [queueDepth, recentAuditCount] = await Promise.all([
-    prisma.refreshJob.count({ where: { status: 'pending' } }),
-    prisma.auditLog.count({
-      where: { createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
-    }),
-  ]);
+  // Prefetch status-bar + palette data via the helper that owns the
+  // `Date.now()` calls (extracted to escape react-hooks/purity).
+  const { dbPingMs, queueDepth, recentAuditCount, paletteAudit } =
+    await loadAdminStatusData();
 
   const initialStatus: AdminStatusBarData = {
     dbPingMs,
