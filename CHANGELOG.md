@@ -715,6 +715,100 @@ GitHub-compatible). Exponential backoff retries (1m / 5m / 30m / 2h, max
 
 ---
 
+## [m15-apidocs] — 2026-08-29
+
+**Unified error envelope + request-id stamping + machine-readable API
+spec.** Every 4xx/5xx JSON response now carries a machine-readable `code`
+plus a `requestId` that round-trips through the response header, and
+external integrators can pull `/api-docs.json` for a flat JSON dump of
+the public surface. The `/docs` page gained a "How caching works"
+explainer section and an "Error codes" reference table.
+
+### Added
+
+- **`src/lib/api/errors.ts`** — unified error envelope
+  `{error, code, requestId, details?}` additive over the legacy `error`
+  field. `ErrorCode` union of 8 codes (`bad_request`, `unauthorized`,
+  `forbidden`, `not_found`, `conflict`, `rate_limited`, `internal_error`,
+  `unavailable`) with `ERROR_CODE_STATUS` map (single source of truth
+  for status codes). `apiError(code, message, opts, req?)` helper. Wire
+  contract is fully backward compatible — old clients reading `error`
+  keep working.
+- **`src/lib/api/request-id.ts`** — `applyRequestId(req, res)` stamps
+  `x-request-id` on every response (echo inbound if valid, else fresh
+  UUID via Web Crypto). Edge-runtime safe. `readRequestId(req)` for
+  log-only access. `sanitizeRequestId` enforces ≤128 chars + no control
+  chars (prevents header injection / log poisoning).
+- **Middleware request-id stamping** — `src/middleware.ts` now runs on
+  every non-static route and stamps `x-request-id` on all responses
+  (success, redirect, CSRF failure, default pass-through). Matcher
+  changed to global pattern (Next.js negative lookahead; no capturing
+  groups).
+- **`GET /api-docs.json`** — flat JSON dump of every public endpoint
+  (path, method, summary, auth, rate limit, cache semantics, request
+  params, response samples, headers, errors with `code`). Top-level
+  `caching` block exposes scheduler_tick_ms / nightly_sweep_ms /
+  default_freshness_window_seconds / stale_path_on_github_down.
+  `Cache-Control: public, max-age=300, stale-while-revalidate=600`. Built
+  as `force-static` with `revalidate=300`.
+- **`CacheDoc` shape** on every endpoint:
+  `{ mode: 'cache-only' | 'cache-first' | 'passthrough',
+     freshness_window_seconds?: number,
+     stale_path?: 'serve' | 'fail' }`. Cache-first endpoints expose the
+  freshness window; passthrough (e.g. `/api/v1/status`) omits it.
+- **`/docs` page upgrades** — three new sections pre-awaited into the
+  landing page:
+  - "Download API spec" card (link + copy-cURL button) → `/api-docs.json`
+  - "How caching works" explainer (5-step ordered list: client hit →
+    cache check → on-miss queue + sync wait → scheduler drain → stale
+    fallback when GitHub unreachable)
+  - "Error codes" reference table — all 8 codes with status, retry hint
+    (`no` / `after {seconds}s` / `later`), and per-code description
+- **`apiError` swept across all 20 API routes** — `NextResponse.json({error}, {status})`
+  replaced with `apiError(code, message)`. Hide-existence 404 patterns
+  preserved (intentionally not converted to error envelope). Auth/login
+  429s preserve their `Retry-After` header via `opts.headers`.
+- **i18n parity** — `docs.landing.{downloadSpec, howCachingWorks, errorCodes}`
+  namespaces added to `messages/en.json` + `messages/zh.json` (5 / 5 / 24
+  keys respectively).
+- **CSS** — `.ghc-doc-download-card`, `.ghc-doc-download-actions`,
+  `.ghc-doc-cache-steps`, `.ghc-doc-cache-step-num` for the new sections.
+
+### Tests
+
+- **33 new unit tests** across 3 files:
+  - `tests/unit/api-errors.test.ts` (18) — `apiError` envelope shape,
+    status mapping, header echo + override, structured details, omitted
+    `details` key, `apiErrorBody` helper, `sanitizeRequestId` (length /
+    control chars / nullish), `generateRequestId` (UUID v4 shape +
+    uniqueness), `statusToErrorCode` (forward + reverse).
+  - `tests/unit/api-request-id.test.ts` (7) — `applyRequestId` (fresh /
+    echo / invalid / chainability), `readRequestId` (echo / fallback),
+    stability under repeated calls.
+  - `tests/unit/api-docs-json.test.ts` (8) — envelope shape, cache-control
+    header, server-wide `caching` block, endpoint enumeration, contract
+    fields without zod schema leak, `cache-first` vs `passthrough` shape
+    distinction, `code` on every error entry.
+- 21 mock-key entries added to `docs-i18n.test.tsx` for the new
+  translation namespaces.
+- `tests/integration/middleware.test.ts` mock updated to provide
+  `headers: noopHeaders` on the synthetic redirect / json response shapes
+  (the middleware's request-id stamping requires it).
+- Total: **731/732 tests pass on vitest 4 + 5**. Pre-existing
+  integration flake `api-query-stale.test.ts > NotFoundError does NOT
+  trigger stale path` unchanged (unrelated to M15).
+
+### Constraints respected
+
+- **No OpenAPI 3.1 conformance** — JSON dump is lightweight per user
+  direction. No yaml, no spec validator, no zod→JSON Schema converter.
+- **Backward compatible** — `error` field preserved on every error
+  response; only `code` + `requestId` are added.
+- **Edge-runtime safe** — UUID via `crypto.randomUUID()`; no Node APIs
+  in middleware or errors helper.
+
+---
+
 ## [m8-prod-ready] — 2026-08-26
 
 **Deployment + Observability.** Production-ready observability surface, durable rate-limit,

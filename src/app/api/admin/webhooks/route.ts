@@ -3,6 +3,7 @@ import { validateSession } from '@/lib/auth/session';
 import { logger } from '@/lib/logger';
 import { createSubscription } from '@/lib/webhooks/db';
 import { generateWebhookSecret } from '@/lib/webhooks/signer';
+import { apiError } from '@/lib/api/errors';
 
 /**
  * POST /api/admin/webhooks
@@ -16,34 +17,34 @@ export async function POST(req: Request): Promise<Response> {
   const user = await validateSession(req);
   if (!user) return new NextResponse(null, { status: 404 });
   if (user.role !== 'admin') {
-    return NextResponse.json({ error: 'admin role required' }, { status: 403 });
+    return apiError('forbidden', 'admin role required', {}, req);
   }
   if (user.status !== 'active') {
-    return NextResponse.json({ error: 'account_disabled' }, { status: 403 });
+    return apiError('forbidden', 'account_disabled', {}, req);
   }
 
   let body: { url?: unknown; eventFilter?: unknown } = {};
   try {
     body = (await req.json()) as { url?: unknown; eventFilter?: unknown };
   } catch {
-    return NextResponse.json({ error: 'invalid JSON body' }, { status: 400 });
+    return apiError('bad_request', 'invalid JSON body', {}, req);
   }
 
   if (typeof body.url !== 'string' || !/^https?:\/\//.test(body.url)) {
-    return NextResponse.json({ error: 'url must be http(s)://...' }, { status: 400 });
+    return apiError('bad_request', 'url must be http(s)://...', {}, req);
   }
   if (body.url.length > 500) {
-    return NextResponse.json({ error: 'url too long (max 500)' }, { status: 400 });
+    return apiError('bad_request', 'url too long (max 500)', {}, req);
   }
   if (!Array.isArray(body.eventFilter)) {
-    return NextResponse.json({ error: 'eventFilter must be an array' }, { status: 400 });
+    return apiError('bad_request', 'eventFilter must be an array', {}, req);
   }
   if (!body.eventFilter.every((e) => typeof e === 'string')) {
-    return NextResponse.json({ error: 'eventFilter entries must be strings' }, { status: 400 });
+    return apiError('bad_request', 'eventFilter entries must be strings', {}, req);
   }
   // Empty array → fail closed (no events). Caller likely meant `["*"]`.
   if (body.eventFilter.length === 0) {
-    return NextResponse.json({ error: 'eventFilter cannot be empty (use ["*"] for all)' }, { status: 400 });
+    return apiError('bad_request', 'eventFilter cannot be empty (use ["*"] for all)', {}, req);
   }
 
   const eventFilter = body.eventFilter as string[];
@@ -59,7 +60,7 @@ export async function POST(req: Request): Promise<Response> {
     });
   } catch (e) {
     logger.error({ err: e }, 'create webhook subscription failed');
-    return NextResponse.json({ error: 'create failed' }, { status: 500 });
+    return apiError('internal_error', 'create failed', {}, req);
   }
 
   return NextResponse.json({

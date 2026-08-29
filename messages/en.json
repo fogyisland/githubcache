@@ -876,6 +876,49 @@
           "up": "up",
           "down": "down"
         }
+      },
+      "downloadSpec": {
+        "heading": "Download API spec",
+        "body": "A machine-readable summary of every public endpoint — paths, methods, auth, rate limits, cache semantics, response samples, and error codes. No OpenAPI dependency; consumers parse it as plain JSON.",
+        "copyCurl": "Copy cURL",
+        "copied": "Copied",
+        "fetch": "Fetch /api-docs.json"
+      },
+      "howCachingWorks": {
+        "heading": "How caching works",
+        "intro": "Every public endpoint reads through the same cache+scheduler pipeline. Once a repo is in the database, subsequent calls return from local storage without hitting GitHub.",
+        "steps": {
+          "step1": "Client hits an API endpoint (e.g. POST /api/query).",
+          "step2": "Server checks the local repository cache first. On hit, it returns immediately with the cached record.",
+          "step3": "On miss, the server queues a refresh job against the GitHub token pool, waits synchronously for the first response, writes the row to the database, and returns.",
+          "step4": "A background scheduler (default every 60s) drains the refresh queue; a nightly sweep re-enqueues every ok repo so the cache stays fresh.",
+          "step5": "If GitHub is unreachable, the server serves the most recent cached row with a `stale: true` flag instead of failing — better slow than down."
+        }
+      },
+      "errorCodes": {
+        "heading": "Error codes",
+        "intro": "Every 4xx/5xx response carries a machine-readable `code` alongside the human-readable `error` string. Clients should branch on `code` for retry decisions; the `error` field is for logs only.",
+        "columns": {
+          "code": "Code",
+          "status": "HTTP",
+          "retry": "Retry?",
+          "description": "Description"
+        },
+        "retry": {
+          "no": "no",
+          "after": "after {seconds}s",
+          "later": "later"
+        },
+        "codes": {
+          "bad_request": "Request body or parameters failed validation.",
+          "unauthorized": "Authentication header missing or malformed.",
+          "forbidden": "Credentials are valid but the caller lacks permission (e.g. inactive API key).",
+          "not_found": "The requested resource does not exist (e.g. GitHub returned 404 for that repo).",
+          "conflict": "The request conflicts with the current state of the resource.",
+          "rate_limited": "Rate limit exceeded. Honor the Retry-After header.",
+          "internal_error": "Server-side failure. Safe to retry with exponential backoff.",
+          "unavailable": "Service is down or a dependency is unreachable. Try again later."
+        }
       }
     },
     "sidebar": {

@@ -2112,6 +2112,50 @@ a {
   padding-left: var(--space-3, 0.75rem);
   margin: var(--space-2, 0.5rem) 0;
 }
+
+/* M15 — download spec card */
+.ghc-doc-download-card {
+  background: color-mix(in srgb, var(--color-accent) 6%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-accent) 30%, var(--color-rule));
+  border-radius: var(--radius-card, 6px);
+  padding: var(--space-4, 1rem) var(--space-5, 1.25rem);
+}
+.ghc-doc-download-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+  margin-top: var(--space-2, 0.5rem);
+}
+
+/* M15 — how caching works (numbered steps) */
+.ghc-doc-cache-steps {
+  list-style: none;
+  counter-reset: ghc-step;
+  padding: 0;
+  margin: var(--space-3, 0.75rem) 0 0;
+  display: grid;
+  gap: var(--space-2, 0.5rem);
+}
+.ghc-doc-cache-steps > li {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  align-items: start;
+  gap: var(--space-3, 0.75rem);
+  padding: var(--space-2, 0.5rem) 0;
+  border-bottom: 1px solid var(--color-rule);
+}
+.ghc-doc-cache-steps > li:last-child {
+  border-bottom: none;
+}
+.ghc-doc-cache-step-num {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-accent);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding-top: 0.125rem;
+}
 .ghc-doc-array-label {
   font-family: var(--font-mono);
   font-size: 0.8125rem;

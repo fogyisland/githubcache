@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { revokeKey } from '@/lib/api-keys/workflow';
 import { validateSession } from '@/lib/auth/session';
 import { logger } from '@/lib/logger';
+import { apiError } from '@/lib/api/errors';
 
 interface Params {
   params: { id: string };
@@ -27,14 +28,14 @@ export async function POST(req: Request, { params }: Params): Promise<Response> 
     return new NextResponse(null, { status: 404 });
   }
   if (user.status !== 'active') {
-    return NextResponse.json({ error: 'account_disabled' }, { status: 403 });
+    return apiError('forbidden', 'account_disabled', {}, req);
   }
 
   let id: bigint;
   try {
     id = BigInt(params.id);
   } catch {
-    return NextResponse.json({ error: 'invalid id' }, { status: 400 });
+    return apiError('bad_request', 'invalid id', {}, req);
   }
 
   try {
@@ -52,6 +53,6 @@ export async function POST(req: Request, { params }: Params): Promise<Response> 
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'unknown';
     logger.error({ err: e, id }, 'revoke failed');
-    return NextResponse.json({ error: msg }, { status: 404 });
+    return apiError('not_found', msg, {}, req);
   }
 }

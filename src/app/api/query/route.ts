@@ -6,6 +6,7 @@ import { prisma } from '@/lib/db/client';
 import { findApiKeyByHash } from '@/lib/db/api-keys';
 import { recordRequest } from '@/lib/db/request-log';
 import { checkRateLimit } from '@/lib/rate-limit/bucket';
+import { apiError } from '@/lib/api/errors';
 import { logger } from '@/lib/logger';
 
 export async function POST(req: Request): Promise<Response> {
@@ -14,27 +15,29 @@ export async function POST(req: Request): Promise<Response> {
   // 1. Extract and validate X-API-Key
   const plain = req.headers.get('x-api-key');
   if (!plain) {
-    return NextResponse.json({ error: 'missing api key' }, { status: 401 });
+    return apiError('unauthorized', 'missing api key', {}, req);
   }
   const hash = createHash('sha256').update(plain).digest('hex');
   const apiKey = await findApiKeyByHash(hash);
   if (!apiKey || apiKey.status !== 'active') {
-    return NextResponse.json({ error: 'invalid api key' }, { status: 403 });
+    return apiError('forbidden', 'invalid api key', {}, req);
   }
 
   // 2. Rate limit per key (durable bucket, M8.1; was in-memory tokenBucket pre-M8)
   const rl = await checkRateLimit(apiKey.id, apiKey.rateLimitPerMin);
   if (!rl.allowed) {
-    return NextResponse.json(
-      { error: 'rate limit exceeded', retryAfter: rl.retryAfterSeconds },
+    return apiError(
+      'rate_limited',
+      'rate limit exceeded',
       {
-        status: 429,
+        details: { retryAfter: rl.retryAfterSeconds },
         headers: {
           'Retry-After': String(rl.retryAfterSeconds),
           'X-RateLimit-Limit': String(rl.limit),
           'X-RateLimit-Remaining': String(Math.max(0, rl.limit - rl.count)),
         },
       },
+      req,
     );
   }
 
@@ -48,11 +51,11 @@ export async function POST(req: Request): Promise<Response> {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: 'malformed json' }, { status: 400 });
+    return apiError('bad_request', 'malformed json', {}, req);
   }
   const parsed = parseNodes(body);
   if (!parsed.ok) {
-    return NextResponse.json({ error: parsed.error }, { status: 400 });
+    return apiError('bad_request', parsed.error, {}, req);
   }
 
   // 5. Existing route logic — delegated to lookupRepo (M9.3 extraction)

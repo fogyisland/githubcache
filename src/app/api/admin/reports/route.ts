@@ -11,6 +11,7 @@ import {
   topKeys,
   tokenQuotaUsage,
 } from '@/lib/reports/queries';
+import { apiError } from '@/lib/api/errors';
 
 /**
  * GET /api/admin/reports?window=24h
@@ -28,7 +29,7 @@ export async function GET(req: Request): Promise<Response> {
   const cookies = cookiesFromRequest(req);
   const user = await validateSession({ headers: req.headers, cookies });
   if (!user) {
-    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+    return apiError('forbidden', 'forbidden', {}, req);
   }
 
   const url = new URL(req.url);

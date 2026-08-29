@@ -876,6 +876,49 @@
           "up": "正常",
           "down": "异常"
         }
+      },
+      "downloadSpec": {
+        "heading": "下载 API 规范",
+        "body": "每个公共端点的机器可读摘要——路径、方法、认证、速率限制、缓存语义、响应示例与错误码。不依赖 OpenAPI，消费方可直接按 JSON 解析。",
+        "copyCurl": "复制 cURL",
+        "copied": "已复制",
+        "fetch": "获取 /api-docs.json"
+      },
+      "howCachingWorks": {
+        "heading": "缓存如何工作",
+        "intro": "每个公共端点都走同一条「缓存 + 调度」管线。仓库一旦入库，后续调用直接从本地返回，不再打 GitHub。",
+        "steps": {
+          "step1": "客户端请求 API 端点（如 POST /api/query）。",
+          "step2": "服务端先查本地仓库缓存。命中即返回缓存记录。",
+          "step3": "未命中则入队一个针对 GitHub 令牌池的 refresh job，同步等待首次响应，写入数据库后返回。",
+          "step4": "后台调度器（默认每 60s）清空 refresh 队列；每晚全量重入队所有 ok 仓库，使缓存保持新鲜。",
+          "step5": "若 GitHub 不可达，服务端返回最近一行缓存并打 `stale: true`，而不是直接失败——慢一点也比挂掉好。"
+        }
+      },
+      "errorCodes": {
+        "heading": "错误码",
+        "intro": "每个 4xx/5xx 响应除了人类可读的 `error` 字符串外，还带一个机器可读的 `code`。客户端应基于 `code` 决定是否重试；`error` 字段仅供日志。",
+        "columns": {
+          "code": "Code",
+          "status": "HTTP",
+          "retry": "重试？",
+          "description": "说明"
+        },
+        "retry": {
+          "no": "否",
+          "after": "{seconds}s 后",
+          "later": "稍后"
+        },
+        "codes": {
+          "bad_request": "请求体或参数校验失败。",
+          "unauthorized": "认证头缺失或格式错误。",
+          "forbidden": "凭证有效但调用者无权限（如 API key 已停用）。",
+          "not_found": "请求资源不存在（如 GitHub 对该仓库返回 404）。",
+          "conflict": "请求与资源当前状态冲突。",
+          "rate_limited": "速率限制已达上限。请遵守 Retry-After 头。",
+          "internal_error": "服务端故障。可按指数退避重试。",
+          "unavailable": "服务宕机或依赖不可达。请稍后重试。"
+        }
       }
     },
     "sidebar": {

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { collectV1Status } from '@/lib/api-docs/v1-status';
 import { v1StatusSchema } from '@/lib/api-docs/schemas/v1-status';
 import { logger } from '@/lib/logger';
+import { apiError } from '@/lib/api/errors';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,14 +29,14 @@ export async function GET(): Promise<Response> {
     const parsed = v1StatusSchema.safeParse(degraded);
     if (!parsed.success) {
       logger.error({ issues: parsed.error.issues }, 'status payload schema mismatch');
-      return NextResponse.json({ error: 'internal' }, { status: 500 });
+      return apiError('internal_error', 'internal');
     }
     return NextResponse.json(parsed.data, { status: 503 });
   }
   const parsed = v1StatusSchema.safeParse(status);
   if (!parsed.success) {
     logger.error({ issues: parsed.error.issues }, 'status payload schema mismatch');
-    return NextResponse.json({ error: 'internal' }, { status: 500 });
+    return apiError('internal_error', 'internal');
   }
   return NextResponse.json(parsed.data, { status: 200 });
 }

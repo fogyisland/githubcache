@@ -50,7 +50,7 @@ describe('docs secondary components', () => {
   it('ErrorsTable renders error rows', async () => {
     const html = renderToStaticMarkup(
       await ErrorsTable({
-        errors: [{ status: 404, error: 'not_found', when: 'Repo not in cache.' }],
+        errors: [{ status: 404, code: 'not_found', error: 'not_found', when: 'Repo not in cache.' }],
         endpointNs: 'api-v1-repos',
       }),
     );

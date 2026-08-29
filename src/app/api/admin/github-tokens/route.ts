@@ -6,6 +6,7 @@ import { validateSession } from '@/lib/auth/session';
 import { verifyCsrf } from '@/lib/auth/csrf';
 import { listAllTokens, insertToken } from '@/lib/db/github-tokens';
 import { writeAudit } from '@/lib/audit/writer';
+import { apiError } from '@/lib/api/errors';
 
 const PostBody = z.object({
   label: z.string().min(1).max(100),
@@ -28,7 +29,7 @@ export async function GET(req: Request): Promise<Response> {
   const cookies = cookiesFromRequest(req);
   const user = await validateSession({ headers: req.headers, cookies });
   if (!user) {
-    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+    return apiError('forbidden', 'forbidden', {}, req);
   }
   const { rows: tokens } = await listAllTokens({ skip: 0, take: 1000 });
   // Serialize BigInt ids to strings (NextResponse.json doesn't handle BigInt)
@@ -58,16 +59,16 @@ export async function POST(req: Request): Promise<Response> {
   const cookies = cookiesFromRequest(req);
   const user = await validateSession({ headers: req.headers, cookies });
   if (!user || user.role !== 'admin') {
-    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+    return apiError('forbidden', 'forbidden', {}, req);
   }
 
   const body = (await req.json().catch(() => null)) as unknown;
   const parsed = PostBody.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: 'invalid body' }, { status: 400 });
+    return apiError('bad_request', 'invalid body', {}, req);
   }
   if (!verifyCsrf(req, parsed.data.csrf)) {
-    return NextResponse.json({ error: 'invalid csrf' }, { status: 403 });
+    return apiError('forbidden', 'invalid csrf', {}, req);
   }
 
   const first4 = parsed.data.token.slice(0, 4);
@@ -79,7 +80,7 @@ export async function POST(req: Request): Promise<Response> {
   const existing = await listAllTokens({ skip: 0, take: 1000 });
   const dup = existing.rows.find((t) => t.tokenHash === hash);
   if (dup) {
-    return NextResponse.json({ error: 'token already registered' }, { status: 409 });
+    return apiError('conflict', 'token already registered', {}, req);
   }
 
   const row = await insertToken({
@@ -102,7 +103,7 @@ export async function POST(req: Request): Promise<Response> {
     throw e;
   });
   if (row === null) {
-    return NextResponse.json({ error: 'token already registered' }, { status: 409 });
+    return apiError('conflict', 'token already registered', {}, req);
   }
 
   const fwd = req.headers.get('x-forwarded-for');

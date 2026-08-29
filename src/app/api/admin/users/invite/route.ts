@@ -6,6 +6,7 @@ import { verifyCsrf } from '@/lib/auth/csrf';
 import { createInvitation } from '@/lib/db/invitations';
 import { prisma } from '@/lib/db/client';
 import { writeAudit } from '@/lib/audit/writer';
+import { apiError } from '@/lib/api/errors';
 
 const Body = z.object({
   email: z.string().email(),
@@ -35,17 +36,17 @@ export async function POST(req: Request): Promise<Response> {
     cookies: cookiesFromRequest(req),
   });
   if (!user || user.role !== 'admin') {
-    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+    return apiError('forbidden', 'forbidden', {}, req);
   }
 
   // CSRF (defense-in-depth: middleware also checks)
   const body = (await req.json().catch(() => null)) as unknown;
   const parsed = Body.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: 'invalid body' }, { status: 400 });
+    return apiError('bad_request', 'invalid body', {}, req);
   }
   if (!verifyCsrf(req, parsed.data.csrf)) {
-    return NextResponse.json({ error: 'invalid csrf' }, { status: 403 });
+    return apiError('forbidden', 'invalid csrf', {}, req);
   }
 
   // Check for existing active user with this email
@@ -53,7 +54,7 @@ export async function POST(req: Request): Promise<Response> {
     where: { email: parsed.data.email },
   });
   if (existing) {
-    return NextResponse.json({ error: 'user already exists' }, { status: 409 });
+    return apiError('conflict', 'user already exists', {}, req);
   }
 
   // Check for existing unconsumed, unexpired invitation
@@ -65,7 +66,7 @@ export async function POST(req: Request): Promise<Response> {
     },
   });
   if (openInvite) {
-    return NextResponse.json({ error: 'invitation already pending' }, { status: 409 });
+    return apiError('conflict', 'invitation already pending', {}, req);
   }
 
   // Create invitation

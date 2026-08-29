@@ -86,6 +86,36 @@ vi.mock('next-intl/server', () => ({
         'docs.endpoint.api-query.summary': 'Batch-fetch up to 50 repositories with a single API key.',
         'docs.endpoint.api-query.description': 'Authenticated batch endpoint for API key holders.',
         'docs.endpoint.api-query.rateLimit': 'rateLimitPerMin (per API key, default 60) durable bucket',
+        // M15 — /docs page sections (download spec, how caching works, error codes)
+        'docs.landing.downloadSpec.heading': 'Download API spec',
+        'docs.landing.downloadSpec.body': 'A machine-readable summary of every public endpoint.',
+        'docs.landing.downloadSpec.copyCurl': 'Copy cURL',
+        'docs.landing.downloadSpec.copied': 'Copied',
+        'docs.landing.downloadSpec.fetch': 'Fetch /api-docs.json',
+        'docs.landing.howCachingWorks.heading': 'How caching works',
+        'docs.landing.howCachingWorks.intro': 'Every public endpoint reads through the same cache+scheduler pipeline.',
+        'docs.landing.howCachingWorks.steps.step1': 'Client hits an API endpoint.',
+        'docs.landing.howCachingWorks.steps.step2': 'Server checks the local cache.',
+        'docs.landing.howCachingWorks.steps.step3': 'On miss, queue a refresh and wait for the first response.',
+        'docs.landing.howCachingWorks.steps.step4': 'A background scheduler drains the refresh queue.',
+        'docs.landing.howCachingWorks.steps.step5': 'If GitHub is unreachable, serve the most recent cached row.',
+        'docs.landing.errorCodes.heading': 'Error codes',
+        'docs.landing.errorCodes.intro': 'Every 4xx/5xx response carries a machine-readable code.',
+        'docs.landing.errorCodes.columns.code': 'Code',
+        'docs.landing.errorCodes.columns.status': 'HTTP',
+        'docs.landing.errorCodes.columns.retry': 'Retry?',
+        'docs.landing.errorCodes.columns.description': 'Description',
+        'docs.landing.errorCodes.retry.no': 'no',
+        'docs.landing.errorCodes.retry.after': 'after {seconds}s',
+        'docs.landing.errorCodes.retry.later': 'later',
+        'docs.landing.errorCodes.codes.bad_request': 'Request body or parameters failed validation.',
+        'docs.landing.errorCodes.codes.unauthorized': 'Authentication header missing or malformed.',
+        'docs.landing.errorCodes.codes.forbidden': 'Credentials valid but caller lacks permission.',
+        'docs.landing.errorCodes.codes.not_found': 'The requested resource does not exist.',
+        'docs.landing.errorCodes.codes.conflict': 'The request conflicts with current state.',
+        'docs.landing.errorCodes.codes.rate_limited': 'Rate limit exceeded.',
+        'docs.landing.errorCodes.codes.internal_error': 'Server-side failure.',
+        'docs.landing.errorCodes.codes.unavailable': 'Service is down or dependency unreachable.',
       };
       let s = dict[`${ns}.${key}`];
       if (s === undefined) {
@@ -200,7 +230,7 @@ describe('docs i18n', () => {
   it('errors table renders translated columns and translated when', async () => {
     const html = renderToStaticMarkup(await ErrorsTable({
       errors: [
-        { status: 429, error: 'rate limit exceeded', when: 'fallback when' },
+        { status: 429, code: 'rate_limited', error: 'rate limit exceeded', when: 'fallback when' },
       ],
       endpointNs: 'api-query',
     }));

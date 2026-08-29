@@ -5,6 +5,7 @@ import type { NextRequest } from 'next/server';
 // Mock NextResponse so we can capture redirects/json responses
 vi.mock('next/server', async () => {
   const actual = await vi.importActual<typeof import('next/server')>('next/server');
+  const noopHeaders = { set: (_name: string, _value: string) => undefined };
   return {
     ...actual,
     NextResponse: {
@@ -13,11 +14,13 @@ vi.mock('next/server', async () => {
         type: 'redirect',
         url: typeof url === 'string' ? url : url.toString(),
         status: 307,
+        headers: noopHeaders,
       })),
       json: vi.fn((body: unknown, init?: { status?: number }) => ({
         type: 'json',
         body,
         status: init?.status ?? 200,
+        headers: noopHeaders,
       })),
       next: vi.fn(() => ({
         type: 'next',

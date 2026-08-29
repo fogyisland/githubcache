@@ -3,6 +3,7 @@ import { cookiesFromRequest } from '@/lib/auth/cookies-from-request';
 import { validateSession } from '@/lib/auth/session';
 import { buildAuditWhere, getActorEmails } from '@/lib/db/audit';
 import { prisma } from '@/lib/db/client';
+import { apiError } from '@/lib/api/errors';
 import type { Prisma } from '@prisma/client';
 
 const LIMIT_MIN = 1;
@@ -46,7 +47,7 @@ export async function GET(req: Request): Promise<Response> {
   const cookies = cookiesFromRequest(req);
   const user = await validateSession({ headers: req.headers, cookies });
   if (!user || user.role !== 'admin') {
-    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+    return apiError('forbidden', 'forbidden', {}, req);
   }
 
   const url = new URL(req.url);
@@ -58,7 +59,7 @@ export async function GET(req: Request): Promise<Response> {
     try {
       actorUserId = BigInt(actorParam);
     } catch {
-      return NextResponse.json({ error: 'invalid actorUserId' }, { status: 400 });
+      return apiError('bad_request', 'invalid actorUserId', {}, req);
     }
   }
 
@@ -67,7 +68,7 @@ export async function GET(req: Request): Promise<Response> {
   if (fromParam) {
     const d = new Date(fromParam);
     if (isNaN(d.getTime())) {
-      return NextResponse.json({ error: 'invalid from' }, { status: 400 });
+      return apiError('bad_request', 'invalid from', {}, req);
     }
     from = d;
   }
@@ -77,7 +78,7 @@ export async function GET(req: Request): Promise<Response> {
   if (toParam) {
     const d = new Date(toParam);
     if (isNaN(d.getTime())) {
-      return NextResponse.json({ error: 'invalid to' }, { status: 400 });
+      return apiError('bad_request', 'invalid to', {}, req);
     }
     to = d;
   }
@@ -88,7 +89,7 @@ export async function GET(req: Request): Promise<Response> {
     formatParam !== 'csv' &&
     formatParam !== 'json'
   ) {
-    return NextResponse.json({ error: 'invalid format' }, { status: 400 });
+    return apiError('bad_request', 'invalid format', {}, req);
   }
   const format: ExportFormat = formatParam === 'csv' ? 'csv' : 'json';
 
@@ -107,11 +108,11 @@ export async function GET(req: Request): Promise<Response> {
   // Default JSON path — unchanged behavior.
   let limit = Number(params.get('limit') ?? LIMIT_DEFAULT);
   if (!Number.isFinite(limit) || limit < LIMIT_MIN || limit > LIMIT_MAX) {
-    return NextResponse.json({ error: 'invalid limit' }, { status: 400 });
+    return apiError('bad_request', 'invalid limit', {}, req);
   }
   let offset = Number(params.get('offset') ?? 0);
   if (!Number.isFinite(offset) || offset < 0 || !Number.isInteger(offset)) {
-    return NextResponse.json({ error: 'invalid offset' }, { status: 400 });
+    return apiError('bad_request', 'invalid offset', {}, req);
   }
 
   const [rows, total] = await Promise.all([

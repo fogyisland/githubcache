@@ -9,6 +9,7 @@ import { writeAudit } from '@/lib/audit/writer';
 import { logger } from '@/lib/logger';
 import { readLangFromCookieHeader } from '@/lib/lang/cookie';
 import { isLocale } from '@/lib/lang/registry';
+import { apiError } from '@/lib/api/errors';
 
 const loginSchema = z.object({
   email: z.string().email().max(255),
@@ -50,7 +51,7 @@ export async function POST(req: Request): Promise<Response> {
   // 1. CSRF check (defense in depth)
   const headerToken = req.headers.get('x-csrf-token');
   if (!verifyCsrf(req, headerToken)) {
-    return NextResponse.json({ error: 'csrf' }, { status: 403 });
+    return apiError('forbidden', 'csrf', {}, req);
   }
 
   // 2. Extract IP
@@ -67,12 +68,11 @@ export async function POST(req: Request): Promise<Response> {
       metadata: { attempts: throttle.attempts, retryAfterSec: throttle.retryAfterSec },
       ip,
     });
-    return NextResponse.json(
-      { error: 'too_many_attempts' },
-      {
-        status: 429,
-        headers: { 'Retry-After': String(throttle.retryAfterSec) },
-      },
+    return apiError(
+      'rate_limited',
+      'too_many_attempts',
+      { headers: { 'Retry-After': String(throttle.retryAfterSec) } },
+      req,
     );
   }
 
@@ -83,7 +83,7 @@ export async function POST(req: Request): Promise<Response> {
     body = loginSchema.parse(raw);
   } catch (e: unknown) {
     logger.warn({ err: e, ip }, 'login: invalid body');
-    return NextResponse.json({ error: 'invalid_body' }, { status: 400 });
+    return apiError('bad_request', 'invalid_body', {}, req);
   }
 
   // 5-6. Look up user + verify password
@@ -94,7 +94,7 @@ export async function POST(req: Request): Promise<Response> {
 
   // Generic "invalid credentials" message — don't reveal whether email exists
   const invalidCredentials = (): Response =>
-    NextResponse.json({ error: 'invalid_credentials' }, { status: 401 });
+    apiError('unauthorized', 'invalid_credentials', {}, req);
 
   if (!user || !user.passwordHash) {
     void writeAudit({
@@ -128,7 +128,7 @@ export async function POST(req: Request): Promise<Response> {
       metadata: { reason: 'disabled', status: user.status },
       ip,
     });
-    return NextResponse.json({ error: 'account_disabled' }, { status: 403 });
+    return apiError('forbidden', 'account_disabled', {}, req);
   }
 
   // 8. Success

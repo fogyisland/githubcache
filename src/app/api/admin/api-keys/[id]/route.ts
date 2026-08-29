@@ -5,6 +5,7 @@ import { validateSession } from '@/lib/auth/session';
 import { verifyCsrf } from '@/lib/auth/csrf';
 import { getApiKeyById, updateApiKeyLimits } from '@/lib/db/api-keys';
 import { writeAudit } from '@/lib/audit/writer';
+import { apiError } from '@/lib/api/errors';
 
 const PatchBody = z.object({
   rateLimitPerMin: z.number().int().min(1).max(10000),
@@ -36,27 +37,27 @@ export async function PATCH(
   const cookies = cookiesFromRequest(req);
   const user = await validateSession({ headers: req.headers, cookies });
   if (!user) {
-    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+    return apiError('forbidden', 'forbidden', {}, req);
   }
 
   let id: bigint;
   try {
     id = BigInt(params.id);
   } catch {
-    return NextResponse.json({ error: 'invalid id' }, { status: 400 });
+    return apiError('bad_request', 'invalid id', {}, req);
   }
   const target = await getApiKeyById(id);
   if (!target) {
-    return NextResponse.json({ error: 'not found' }, { status: 404 });
+    return apiError('not_found', 'not found', {}, req);
   }
 
   const body = (await req.json().catch(() => null)) as unknown;
   const parsed = PatchBody.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: 'invalid body' }, { status: 400 });
+    return apiError('bad_request', 'invalid body', {}, req);
   }
   if (!verifyCsrf(req, parsed.data.csrf)) {
-    return NextResponse.json({ error: 'invalid csrf' }, { status: 403 });
+    return apiError('forbidden', 'invalid csrf', {}, req);
   }
 
   const before = {

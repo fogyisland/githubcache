@@ -5,6 +5,7 @@ import { validateSession } from '@/lib/auth/session';
 import { verifyCsrf } from '@/lib/auth/csrf';
 import { updateTokenStatus, deleteTokenById, getTokenById } from '@/lib/db/github-tokens';
 import { writeAudit } from '@/lib/audit/writer';
+import { apiError } from '@/lib/api/errors';
 
 const PatchBody = z.object({
   status: z.enum(['active', 'disabled']),
@@ -31,27 +32,27 @@ export async function PATCH(
   const cookies = cookiesFromRequest(req);
   const user = await validateSession({ headers: req.headers, cookies });
   if (!user || user.role !== 'admin') {
-    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+    return apiError('forbidden', 'forbidden', {}, req);
   }
 
   let id: bigint;
   try {
     id = BigInt(params.id);
   } catch {
-    return NextResponse.json({ error: 'invalid id' }, { status: 400 });
+    return apiError('bad_request', 'invalid id', {}, req);
   }
   const target = await getTokenById(id);
   if (!target) {
-    return NextResponse.json({ error: 'not found' }, { status: 404 });
+    return apiError('not_found', 'not found', {}, req);
   }
 
   const body = (await req.json().catch(() => null)) as unknown;
   const parsed = PatchBody.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: 'invalid body' }, { status: 400 });
+    return apiError('bad_request', 'invalid body', {}, req);
   }
   if (!verifyCsrf(req, parsed.data.csrf)) {
-    return NextResponse.json({ error: 'invalid csrf' }, { status: 403 });
+    return apiError('forbidden', 'invalid csrf', {}, req);
   }
 
   const before = target.status;
@@ -92,18 +93,18 @@ export async function DELETE(
   const cookies = cookiesFromRequest(req);
   const user = await validateSession({ headers: req.headers, cookies });
   if (!user || user.role !== 'admin') {
-    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+    return apiError('forbidden', 'forbidden', {}, req);
   }
 
   let id: bigint;
   try {
     id = BigInt(params.id);
   } catch {
-    return NextResponse.json({ error: 'invalid id' }, { status: 400 });
+    return apiError('bad_request', 'invalid id', {}, req);
   }
   const target = await getTokenById(id);
   if (!target) {
-    return NextResponse.json({ error: 'not found' }, { status: 404 });
+    return apiError('not_found', 'not found', {}, req);
   }
 
   // DELETE: CSRF can be in header OR body (per M7.1 pattern)
@@ -120,7 +121,7 @@ export async function DELETE(
       : undefined;
   const csrf = csrfFromHeader ?? (typeof csrfFromBody === 'string' ? csrfFromBody : null);
   if (!csrf || !verifyCsrf(req, csrf)) {
-    return NextResponse.json({ error: 'invalid csrf' }, { status: 403 });
+    return apiError('forbidden', 'invalid csrf', {}, req);
   }
 
   await deleteTokenById(id);

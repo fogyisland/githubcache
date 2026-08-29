@@ -6,6 +6,7 @@ import { verifyCsrf } from '@/lib/auth/csrf';
 import { getUserById, updateUserStatus } from '@/lib/db/users';
 import { invalidateAllSessionsForUser } from '@/lib/db/sessions';
 import { writeAudit } from '@/lib/audit/writer';
+import { apiError } from '@/lib/api/errors';
 
 const PatchBody = z.object({
   status: z.enum(['active', 'disabled']),
@@ -34,7 +35,7 @@ async function requireAdmin(req: Request): Promise<AuthOk | AuthFail> {
   if (!user || user.role !== 'admin') {
     return {
       ok: false,
-      res: NextResponse.json({ error: 'forbidden' }, { status: 403 }),
+      res: apiError('forbidden', 'forbidden', {}, req),
     };
   }
   return { ok: true, user };
@@ -68,20 +69,20 @@ export async function PATCH(
   try {
     id = BigInt(params.id);
   } catch {
-    return NextResponse.json({ error: 'invalid id' }, { status: 400 });
+    return apiError('bad_request', 'invalid id', {}, req);
   }
   const target = await getUserById(id);
   if (!target) {
-    return NextResponse.json({ error: 'not found' }, { status: 404 });
+    return apiError('not_found', 'not found', {}, req);
   }
 
   const body = (await req.json().catch(() => null)) as unknown;
   const parsed = PatchBody.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: 'invalid body' }, { status: 400 });
+    return apiError('bad_request', 'invalid body', {}, req);
   }
   if (!verifyCsrf(req, parsed.data.csrf)) {
-    return NextResponse.json({ error: 'invalid csrf' }, { status: 403 });
+    return apiError('forbidden', 'invalid csrf', {}, req);
   }
 
   await updateUserStatus(id, parsed.data.status);
@@ -130,11 +131,11 @@ export async function DELETE(
   try {
     id = BigInt(params.id);
   } catch {
-    return NextResponse.json({ error: 'invalid id' }, { status: 400 });
+    return apiError('bad_request', 'invalid id', {}, req);
   }
   const target = await getUserById(id);
   if (!target) {
-    return NextResponse.json({ error: 'not found' }, { status: 404 });
+    return apiError('not_found', 'not found', {}, req);
   }
 
   // DELETE may carry CSRF in body OR header — accept either.
@@ -151,7 +152,7 @@ export async function DELETE(
       : undefined;
   const csrf = csrfFromHeader ?? (typeof csrfFromBody === 'string' ? csrfFromBody : null);
   if (!csrf || !verifyCsrf(req, csrf)) {
-    return NextResponse.json({ error: 'invalid csrf' }, { status: 403 });
+    return apiError('forbidden', 'invalid csrf', {}, req);
   }
 
   // Logout everywhere: invalidate all sessions for this user.

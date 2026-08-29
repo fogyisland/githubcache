@@ -7,6 +7,7 @@ import { writeAudit } from '@/lib/audit/writer';
 import { enqueueManualRefresh } from '@/lib/db/refresh-jobs';
 import { pause, resume } from '@/lib/scheduler';
 import { prisma } from '@/lib/db/client';
+import { apiError } from '@/lib/api/errors';
 
 const Body = z.object({
   action: z.enum(['trigger', 'pause', 'resume']),
@@ -42,16 +43,16 @@ export async function POST(req: Request): Promise<Response> {
   const cookies = cookiesFromRequest(req);
   const user = await validateSession({ headers: req.headers, cookies });
   if (!user || user.role !== 'admin') {
-    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+    return apiError('forbidden', 'forbidden', {}, req);
   }
 
   const body = (await req.json().catch(() => null)) as unknown;
   const parsed = Body.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: 'invalid body' }, { status: 400 });
+    return apiError('bad_request', 'invalid body', {}, req);
   }
   if (!verifyCsrf(req, parsed.data.csrf)) {
-    return NextResponse.json({ error: 'invalid csrf' }, { status: 403 });
+    return apiError('forbidden', 'invalid csrf', {}, req);
   }
 
   const fwd = req.headers.get('x-forwarded-for');
@@ -84,13 +85,13 @@ export async function POST(req: Request): Promise<Response> {
 
   // action === 'trigger'
   if (!parsed.data.repoId) {
-    return NextResponse.json({ error: 'repoId required' }, { status: 400 });
+    return apiError('bad_request', 'repoId required', {}, req);
   }
   let repoId: bigint;
   try {
     repoId = BigInt(parsed.data.repoId);
   } catch {
-    return NextResponse.json({ error: 'invalid repoId' }, { status: 400 });
+    return apiError('bad_request', 'invalid repoId', {}, req);
   }
 
   // Verify repo exists — minimal projection (id only) to keep cost down.
@@ -99,7 +100,7 @@ export async function POST(req: Request): Promise<Response> {
     select: { id: true },
   });
   if (!repo) {
-    return NextResponse.json({ error: 'repository not found' }, { status: 404 });
+    return apiError('not_found', 'repository not found', {}, req);
   }
 
   const job = await enqueueManualRefresh(repoId);

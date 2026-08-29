@@ -4,6 +4,7 @@ import { validateSession } from '@/lib/auth/session';
 import { readAdminVariantFromRequest } from '@/lib/admin/cookie';
 import { prisma } from '@/lib/db/client';
 import { isPaused } from '@/lib/scheduler/state';
+import { apiError } from '@/lib/api/errors';
 
 /**
  * GET /api/admin/status
@@ -27,7 +28,7 @@ export async function GET(req: Request): Promise<Response> {
   const cookies = cookiesFromRequest(req);
   const user = await validateSession({ headers: req.headers, cookies });
   if (!user) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+    return apiError('unauthorized', 'unauthorized', {}, req);
   }
 
   const variant = readAdminVariantFromRequest(req);

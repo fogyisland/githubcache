@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { validateSession } from '@/lib/auth/session';
 import { disableSubscription } from '@/lib/webhooks/db';
+import { apiError } from '@/lib/api/errors';
 
 interface Params {
   params: { id: string };
@@ -11,14 +12,14 @@ export async function POST(req: Request, { params }: Params): Promise<Response> 
   const user = await validateSession(req);
   if (!user) return new NextResponse(null, { status: 404 });
   if (user.role !== 'admin') {
-    return NextResponse.json({ error: 'admin role required' }, { status: 403 });
+    return apiError('forbidden', 'admin role required', {}, req);
   }
 
   let id: bigint;
   try {
     id = BigInt(params.id);
   } catch {
-    return NextResponse.json({ error: 'invalid id' }, { status: 400 });
+    return apiError('bad_request', 'invalid id', {}, req);
   }
 
   const row = await disableSubscription(id);
