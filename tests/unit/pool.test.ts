@@ -15,7 +15,7 @@ vi.mock('@/lib/github/tokens-loader', () => ({
 }));
 vi.mock('@/lib/db/github-tokens', () => ({
   findTokenByHash: vi.fn((hash: string) => Promise.resolve(mocks.dbRows.find((r) => r.tokenHash === hash) ?? null)),
-  listAllTokens: () => Promise.resolve(mocks.dbRows),
+  listAllTokens: () => Promise.resolve({ rows: mocks.dbRows, total: mocks.dbRows.length }),
   insertToken: vi.fn((data: { label: string; tokenFirst4: string; tokenLast4: string; tokenHash: string }) => {
     mocks.insertedRows.push(data);
     const row = {

@@ -132,7 +132,7 @@ vi.mock('@/lib/auth/session', () => ({
 }));
 
 vi.mock('@/lib/db/api-keys', () => ({
-  listApiKeys: async () => [],
+  listApiKeys: async () => ({ rows: [], total: 0 }),
   getApiKeyById: async () => ({
     id: 1n,
     name: 'Test Key',

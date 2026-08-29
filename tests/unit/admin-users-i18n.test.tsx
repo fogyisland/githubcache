@@ -144,7 +144,7 @@ vi.mock('@/lib/auth/session', () => ({
 }));
 
 vi.mock('@/lib/db/users', () => ({
-  listUsers: async () => [],
+  listUsers: async () => ({ rows: [], total: 0 }),
   getUserById: async () => ({
     id: 1n,
     email: 'op@test.com',

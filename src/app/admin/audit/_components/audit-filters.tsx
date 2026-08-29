@@ -69,17 +69,19 @@ export function AuditFilters() {
   }
 
   /** Build the export URL from current filter state — same query string
-   *  as the page itself, plus a `format` param the API route consumes. */
+   *  as the page itself, plus a `format` param the API route consumes.
+   *  Returns a relative URL so it works in both SSR (where window is
+   *  undefined) and the browser (which resolves the relative ref against
+   *  the current origin). */
   function exportHref(format: 'csv' | 'json'): string {
-    const u = new URL('/api/admin/audit', window.location.origin);
-    const p = u.searchParams;
+    const p = new URLSearchParams();
     p.set('format', format);
     if (action) p.set('action', action);
     if (actorUserId) p.set('actorUserId', actorUserId);
     if (targetType) p.set('targetType', targetType);
     if (from) p.set('from', from);
     if (to) p.set('to', to);
-    return u.pathname + '?' + p.toString();
+    return `/api/admin/audit?${p.toString()}`;
   }
 
   return (

@@ -66,13 +66,11 @@ vi.mock('next-intl/server', () => ({
         bodySchemaSummary: 'Request body schema',
       },
       'docs.request': {
-        columns: {
-          name: 'Name',
-          in: 'In',
-          type: 'Type',
-          required: 'Required',
-          description: 'Description',
-        },
+        'columns.name': 'Name',
+        'columns.in': 'In',
+        'columns.type': 'Type',
+        'columns.required': 'Required',
+        'columns.description': 'Description',
         yes: 'yes',
         no: 'no',
       },
