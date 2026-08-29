@@ -556,6 +556,109 @@ parking-lot + 1 missed-from-finalization artifact commit.
 
 ---
 
+## [m14-polish-round] — 2026-08-29
+
+**User-driven polish round.** Six focused follow-up commits addressing
+gap items surfaced after M13.i18n — admin UX depth, public docs clarity,
+operational hardening, and a dependency sweep. No tag applied yet at
+the time of writing; this entry is added after `m14-polish-round` is
+cut.
+
+### Added
+
+- **M14.1 — Audit log CSV/JSON export** (`3e45cac`). `format=csv|json`
+  query param on `GET /api/admin/audit`. Extracted `buildAuditWhere()`
+  to `src/lib/db/audit.ts` so the page filter and the export route share
+  one builder (filter UI mirrors export semantics). `EXPORT_MAX_ROWS =
+  100_000`. Response headers: `content-type`, `content-disposition`,
+  `x-total-rows`, `x-exported-rows`, `x-truncated`. CSV trailer line
+  `# truncated; N rows match, exported M` when result hits the cap. 10
+  integration tests in `tests/integration/admin-audit-export.test.ts`.
+- **M14.2 — Admin list pagination** (`7e3015c`). `listUsers({role?,
+  status?, skip, take})`, `listApiKeys({status?, skip, take})`,
+  `listAllTokens({skip, take})` all return `{rows, total}` via
+  `Promise.all([findMany, count])`. New `<AdminPagination>` component
+  preserves all non-pagination query params via `extraSearch` so role/
+  status filters survive click-through. `PAGE_SIZE_DEFAULT=25`,
+  `PAGE_SIZE_MAX=200`, NaN-safe parsing. github-tokens page does a
+  secondary `listAllTokens({skip:0, take:PAGE_SIZE_MAX})` for quota
+  totals to avoid page-flap. 8 integration tests + 8 unit tests.
+- **M14.3 — Public API rate-limit visualization** (`ad01cd5`). Two
+  pieces on `/docs` landing: (a) static three-tier explainer cards
+  sourced from `env.PUBLIC_LOOKUP_RATE_PER_MIN` (default 30) +
+  `apiKey.rateLimitPerMin` (Prisma default 60); documents 429 headers
+  `Retry-After + X-RateLimit-Limit + X-RateLimit-Remaining`. (b) live
+  status widget — SSR snapshot of `/api/v1/status` via shared
+  `collectV1Status()` helper rendered as 7 compact field badges, each
+  linking to raw JSON. Refactors: `/api/v1/status` becomes a thin
+  wrapper around `collectV1Status()`; `/api/v1/repos/[owner]/[name]`
+  switches from raw `incrementIpBucket` to `checkIpRateLimit()` so
+  the 429 response carries X-RateLimit-* headers (truthful docs).
+  9 new tests + 1 augmented route test.
+- **M14.4 — Pool auto-rotation on consecutive 429s** (`b1b6750`). New
+  `env.TOKEN_AUTO_DISABLE_THRESHOLD` (default 3, set 0 to disable).
+  `recordUsage` distinguishes 429 (remaining=0 + resetAt in future)
+  from success; per-token counter resets on this token's success.
+  Threshold hit → `disableTokenById(id, 'auto-rotation')` +
+  `pool.delete(id)` + warn-log. Audit log entry
+  (`action: 'auto_disable_token'`, reason `auto-rotation`) emitted
+  fire-and-forget. `'auto_disable_token'` added to the admin audit
+  filter dropdown.
+
+### Changed
+
+- **M14.5 — Dependency upgrade sweep** (`6dab1f5`). Minor/patch bumps:
+  `zod` 4.4.3→4.5.2, `next-intl` 4.14.0→4.14.1, `eslint-config-next`
+  16.3.1→16.3.3. Focused major: `vitest` 1.6.1→4.1.11 +
+  `@vitest/coverage-v8` 1.6.1→4.1.11. Vitest 4 / Vite 6 migration
+  fixes: `__dirname`→`import.meta.dirname`; added `oxc: { jsx: 'automatic' }`
+  (oxc is now default transformer; tsconfig's `jsx: 'preserve'` for
+  Next.js breaks vite import-analysis); the `--reporter=basic` flag was
+  removed (use `default` or `verbose`).
+
+### Fixed
+
+- **M14.x.9 — Collateral cleanup** (`7ba4a0d`). Three classes of
+  M14.1+M14.2 collateral that surfaced as test failures in the full
+  suite:
+  - **SSR bug in `audit-filters.tsx`** — `exportHref()` used
+    `window.location.origin`. The component is `'use client'` but
+    renders server-side first; `window` was undefined and the page
+    would 500 in SSR (no production visitor would see the export
+    buttons). Fix: return path-only URL. The browser resolves the
+    relative ref against the current origin.
+  - **`api-docs-routes.test.ts` flat-key fix** — committed the flat
+    `'columns.name'` form from M14.1. The nested `columns: { name, in,
+    type, required, description }` form doesn't match next-intl 4
+    strict-namespace lookup `t('columns.name')`.
+  - **M14.2 page-helper mock drift** — `tests/unit/pool.test.ts` +
+    `admin-api-keys-i18n.test.tsx` + `admin-users-i18n.test.tsx` still
+    mocked `listUsers/listApiKeys/listAllTokens` to return bare arrays
+    instead of `{rows, total}`. Updated all four.
+- **M14.5 — 4 pre-existing lint issues surfaced as errors** under
+  stricter `eslint-config-next` 16.3.3 (fixed in same commit):
+  - 10× `react/no-unescaped-entities` in `how-it-works.tsx` — wrap JSX
+    text with `{}` template strings.
+  - `react-hooks/set-state-in-effect` in `command-palette.tsx` —
+    combine setStates in `onChange` handler (no effect needed).
+  - `react-hooks/purity` `Date.now()` in `admin/page.tsx` — extract to
+    `loadDashboardBuckets()` helper in `src/lib/admin/dashboard-buckets.ts`
+    (same pattern as M13.x.7's status-loader).
+  - Unused `createElement` import in `admin-shell-i18n.test.ts`.
+
+### Stats
+
+- 6 commits (`3e45cac` → `6dab1f5`), ~30 files modified, 2 new files
+  (`src/lib/admin/dashboard-buckets.ts`, `src/lib/api-docs/v1-status.ts`).
+- 36 new tests in M14.1 + M14.2 + M14.3; +9 new M14.4 auto-disable
+  tests; vitest 1→4 migration validated across the existing 385 unit
+  tests + integration spot-checks (login-route, public-lookup-action,
+  admin-audit-export, admin-pagination).
+- 385/385 unit tests pass on vitest 4. ESLint clean except 7 pre-existing
+  warnings (unrelated to the M14 round).
+
+---
+
 ## [m8-prod-ready] — 2026-08-26
 
 **Deployment + Observability.** Production-ready observability surface, durable rate-limit,
