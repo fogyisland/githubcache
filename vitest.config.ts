@@ -4,10 +4,16 @@ import path from 'node:path';
 export default defineConfig({
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      '@': path.resolve(import.meta.dirname, './src'),
     },
   },
-  esbuild: {
+  // Vitest 4 / Vite 6 default to oxc as the transformer. oxc honors the
+  // tsconfig `jsx` field literally — our Next.js-required `jsx: 'preserve'`
+  // makes oxc leave JSX untouched, which then breaks vite's import-analysis
+  // with "Failed to parse source for import analysis". Force the
+  // automatic-runtime transform explicitly so JSX → JS conversion happens
+  // before vite parses the file.
+  oxc: {
     jsx: 'automatic',
   },
   test: {

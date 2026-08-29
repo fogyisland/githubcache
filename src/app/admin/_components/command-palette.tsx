@@ -91,10 +91,12 @@ export function CommandPalette({ data, query: initialQuery = '' }: Props): React
     };
   }, []);
 
-  // Reset highlight when results change.
-  useEffect(() => {
+  // Reset highlight synchronously when query changes — no effect needed;
+  // doing it in an effect triggers react-hooks/set-state-in-effect.
+  function onQueryChange(e: React.ChangeEvent<HTMLInputElement>): void {
+    setQuery(e.target.value);
     setHighlight(0);
-  }, [query]);
+  }
 
   function onInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>): void {
     if (e.key === 'ArrowDown') {
@@ -124,7 +126,7 @@ export function CommandPalette({ data, query: initialQuery = '' }: Props): React
             type="search"
             placeholder={t('placeholder')}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={onQueryChange}
             onKeyDown={onInputKeyDown}
             className="ghc-admin-palette-input"
           />

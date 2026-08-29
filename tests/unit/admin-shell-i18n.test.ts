@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { createElement } from 'react';
 
 vi.mock('next-intl/server', () => ({
   getTranslations: async (ns: string) => {

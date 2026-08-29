@@ -27,10 +27,10 @@ export async function HowItWorks(): Promise<ReactElement> {
     { number: '03', key: 'json', diagram: (
       <svg viewBox="0 0 200 80" width="100%" height="80" aria-hidden="true">
         <rect x="4" y="8" width="192" height="64" rx="4" fill="none" stroke="currentColor" strokeWidth="1.2" />
-        <text x="12" y="24" fontFamily="ui-monospace, monospace" fontSize="10" fill="currentColor">"id": 2325298,</text>
-        <text x="12" y="38" fontFamily="ui-monospace, monospace" fontSize="10" fill="currentColor">"stargazers_count": 172900,</text>
-        <text x="12" y="52" fontFamily="ui-monospace, monospace" fontSize="10" fill="currentColor">"language": "C",</text>
-        <text x="12" y="66" fontFamily="ui-monospace, monospace" fontSize="10" fill="currentColor">"node": { '{ ... }' }</text>
+        <text x="12" y="24" fontFamily="ui-monospace, monospace" fontSize="10" fill="currentColor">{'"id": 2325298,'}</text>
+        <text x="12" y="38" fontFamily="ui-monospace, monospace" fontSize="10" fill="currentColor">{'"stargazers_count": 172900,'}</text>
+        <text x="12" y="52" fontFamily="ui-monospace, monospace" fontSize="10" fill="currentColor">{'"language": "C",'}</text>
+        <text x="12" y="66" fontFamily="ui-monospace, monospace" fontSize="10" fill="currentColor">{'"node": { ... }'}</text>
       </svg>
     )},
   ] as const;

@@ -6,6 +6,7 @@ import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { AdminKpiCard } from '@/app/admin/_components/admin-kpi-card';
 import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
 import { queryAuditLog, getActorEmails } from '@/lib/db/audit';
+import { loadDashboardBuckets } from '@/lib/admin/dashboard-buckets';
 
 /**
  * Admin dashboard (M11.9 rewrite + M13.3 translation).
@@ -33,23 +34,12 @@ export default async function AdminDashboardPage(): Promise<ReactElement> {
 
   // Requests by hour — last 6h, 1h buckets, sourced from audit log
   // (action = 'api.query' or 'cache.read'). Best-effort: counts are
-  // a sampled view, not exact traffic accounting.
-  const now = Date.now();
-  const buckets = Array.from({ length: 6 }, (_, i) => {
-    const start = new Date(now - (6 - i) * 60 * 60 * 1000);
-    const end = new Date(now - (5 - i) * 60 * 60 * 1000);
-    return { start, end, label: t('chart.hoursAgo', { hours: String(6 - i) }), count: 0 };
-  });
-  const audit6h = await prisma.auditLog.findMany({
-    where: { createdAt: { gte: new Date(now - 6 * 60 * 60 * 1000) } },
-    select: { createdAt: true },
-  });
-  for (const row of audit6h) {
-    const idx = buckets.findIndex(
-      (b) => row.createdAt >= b.start && row.createdAt < b.end,
-    );
-    if (idx !== -1) buckets[idx]!.count += 1;
-  }
+  // a sampled view, not exact traffic accounting. Bucket math is in a
+  // plain helper (loadDashboardBuckets) because Date.now() inside a
+  // server component body trips react-hooks/purity.
+  const buckets = await loadDashboardBuckets((hours) =>
+    t('chart.hoursAgo', { hours: String(hours) }),
+  );
 
   const actorIds = [
     ...new Set(
