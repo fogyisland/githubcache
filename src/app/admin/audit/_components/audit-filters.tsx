@@ -68,6 +68,20 @@ export function AuditFilters() {
     router.push('/admin/audit');
   }
 
+  /** Build the export URL from current filter state — same query string
+   *  as the page itself, plus a `format` param the API route consumes. */
+  function exportHref(format: 'csv' | 'json'): string {
+    const u = new URL('/api/admin/audit', window.location.origin);
+    const p = u.searchParams;
+    p.set('format', format);
+    if (action) p.set('action', action);
+    if (actorUserId) p.set('actorUserId', actorUserId);
+    if (targetType) p.set('targetType', targetType);
+    if (from) p.set('from', from);
+    if (to) p.set('to', to);
+    return u.pathname + '?' + p.toString();
+  }
+
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -129,7 +143,7 @@ export function AuditFilters() {
         </label>
       </div>
 
-      <div className="mt-4 flex gap-2">
+      <div className="mt-4 flex flex-wrap gap-2">
         <button
           type="button"
           onClick={apply}
@@ -144,6 +158,20 @@ export function AuditFilters() {
         >
           {t('reset')}
         </button>
+        <a
+          href={exportHref('csv')}
+          download
+          className="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+          {t('exportCsv')}
+        </a>
+        <a
+          href={exportHref('json')}
+          download
+          className="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+          {t('exportJson')}
+        </a>
       </div>
     </div>
   );

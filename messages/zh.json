@@ -485,7 +485,9 @@
         "to": "结束",
         "anyOption": "（任意）",
         "apply": "应用筛选",
-        "reset": "重置"
+        "reset": "重置",
+        "exportCsv": "导出 CSV",
+        "exportJson": "导出 JSON"
       },
       "table": {
         "empty": "没有匹配的条目。",

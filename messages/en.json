@@ -485,7 +485,9 @@
         "to": "To",
         "anyOption": "(any)",
         "apply": "Apply filters",
-        "reset": "Reset"
+        "reset": "Reset",
+        "exportCsv": "Export CSV",
+        "exportJson": "Export JSON"
       },
       "table": {
         "empty": "No matching entries.",

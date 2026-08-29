@@ -16,7 +16,7 @@ export interface AuditPage {
   total: number;
 }
 
-export async function queryAuditLog(q: AuditQuery): Promise<AuditPage> {
+export function buildAuditWhere(q: Pick<AuditQuery, 'action' | 'actorUserId' | 'targetType' | 'from' | 'to'>): Prisma.AuditLogWhereInput {
   const where: Prisma.AuditLogWhereInput = {};
   if (q.action) where.action = q.action;
   if (q.actorUserId !== undefined) where.actorUserId = q.actorUserId;
@@ -27,6 +27,11 @@ export async function queryAuditLog(q: AuditQuery): Promise<AuditPage> {
       ...(q.to ? { lt: q.to } : {}),
     };
   }
+  return where;
+}
+
+export async function queryAuditLog(q: AuditQuery): Promise<AuditPage> {
+  const where = buildAuditWhere(q);
 
   const [rows, total] = await Promise.all([
     prisma.auditLog.findMany({
