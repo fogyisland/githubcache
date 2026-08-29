@@ -155,21 +155,24 @@ vi.mock('@/lib/auth/session', () => ({
 }));
 
 vi.mock('@/lib/db/github-tokens', () => ({
-  listAllTokens: async () => [
-    {
-      id: 1n,
-      label: 'ci-token-1',
-      tokenHash: 'hash1',
-      tokenFirst4: 'ghp1',
-      tokenLast4: 'wxyz',
-      status: 'active',
-      requestsUsed: 100,
-      requestsLimit: 5000,
-      resetAt: null,
-      lastUsedAt: new Date('2026-08-15T10:30:00Z'),
-      createdAt: new Date('2026-08-01T12:00:00Z'),
-    },
-  ],
+  listAllTokens: async () => ({
+    rows: [
+      {
+        id: 1n,
+        label: 'ci-token-1',
+        tokenHash: 'hash1',
+        tokenFirst4: 'ghp1',
+        tokenLast4: 'wxyz',
+        status: 'active',
+        requestsUsed: 100,
+        requestsLimit: 5000,
+        resetAt: null,
+        lastUsedAt: new Date('2026-08-15T10:30:00Z'),
+        createdAt: new Date('2026-08-01T12:00:00Z'),
+      },
+    ],
+    total: 1,
+  }),
   getTokenById: async () => ({
     id: 1n,
     label: 'ci-token-1',
@@ -217,7 +220,7 @@ import AdminGithubTokenDetailPage from '@/app/admin/github-tokens/[id]/page';
 
 describe('AdminGithubTokensPage i18n', () => {
   it('renders translated title, description, and section headings', async () => {
-    const html = renderToStaticMarkup(await AdminGithubTokensPage());
+    const html = renderToStaticMarkup(await AdminGithubTokensPage({ searchParams: {} }));
     // Page header title
     expect(html).toContain('GitHub Tokens');
     expect(html).toContain('Manage the GitHub token pool used by the refresh scheduler.');
@@ -234,7 +237,7 @@ describe('AdminGithubTokensPage i18n', () => {
   });
 
   it('renders translated status and pool chips', async () => {
-    const html = renderToStaticMarkup(await AdminGithubTokensPage());
+    const html = renderToStaticMarkup(await AdminGithubTokensPage({ searchParams: {} }));
     // Status chip text (from status.active)
     expect(html).toContain('>active<');
     // Pool chip text (from pool.inPool)

@@ -59,6 +59,11 @@
     "fine": "© {year} · Built with Next.js + Prisma + MySQL."
   },
   "admin": {
+    "common": {
+      "pagination": {
+        "showing": "Showing {start}–{end} of {total}"
+      }
+    },
     "shell": {
       "sidebarAria": "Admin sections",
       "breadcrumbAria": "Breadcrumb",

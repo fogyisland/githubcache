@@ -35,11 +35,12 @@ beforeEach(async () => {
 
 describe('listUsers', () => {
   it('returns all users ordered by createdAt desc', async () => {
-    const users = await listUsers();
-    expect(users.length).toBeGreaterThanOrEqual(3);
+    const { rows, total } = await listUsers({ skip: 0, take: 1000 });
+    expect(total).toBeGreaterThanOrEqual(3);
+    expect(rows.length).toBeGreaterThanOrEqual(3);
     // createdAt desc — strictly non-increasing
-    for (let i = 1; i < users.length; i++) {
-      expect(users[i]!.createdAt.getTime()).toBeLessThanOrEqual(users[i - 1]!.createdAt.getTime());
+    for (let i = 1; i < rows.length; i++) {
+      expect(rows[i]!.createdAt.getTime()).toBeLessThanOrEqual(rows[i - 1]!.createdAt.getTime());
     }
   });
 });

@@ -30,7 +30,7 @@ export async function GET(req: Request): Promise<Response> {
   if (!user) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   }
-  const tokens = await listAllTokens();
+  const { rows: tokens } = await listAllTokens({ skip: 0, take: 1000 });
   // Serialize BigInt ids to strings (NextResponse.json doesn't handle BigInt)
   return NextResponse.json({
     tokens: tokens.map((t) => ({
@@ -76,8 +76,8 @@ export async function POST(req: Request): Promise<Response> {
   const hash = createHash('sha256').update(parsed.data.token).digest('hex');
 
   // Check for duplicate hash
-  const existing = await listAllTokens();
-  const dup = existing.find((t) => t.tokenHash === hash);
+  const existing = await listAllTokens({ skip: 0, take: 1000 });
+  const dup = existing.rows.find((t) => t.tokenHash === hash);
   if (dup) {
     return NextResponse.json({ error: 'token already registered' }, { status: 409 });
   }

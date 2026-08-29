@@ -7,18 +7,24 @@ import { listUsers } from '@/lib/db/users';
 import { listInvitations } from '@/lib/db/invitations';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { AdminFilterBar } from '@/app/admin/_components/admin-filter-bar';
+import { AdminPagination } from '@/app/admin/_components/admin-pagination';
 import { AdminTable, type AdminColumn } from '@/app/admin/_components/admin-table';
 import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
 import { InviteForm } from './_components/invite-form';
 import type { User } from '@prisma/client';
 
+const PAGE_SIZE_DEFAULT = 25;
+const PAGE_SIZE_MAX = 200;
+
 /**
- * Admin → Users page (M7.1, M11.10 rewrite, M13.4 i18n).
+ * Admin → Users page (M7.1, M11.10 rewrite, M13.4 i18n, M14.2 pagination).
  *
  * Three sections:
  *   1. Invite a user (client component)
- *   2. Existing users — AdminTable with role/status chips + filter bar
- *   3. Pending invitations — separate AdminTable with invite links
+ *   2. Existing users — AdminTable with role/status chips + filter bar +
+ *      pagination (M14.2)
+ *   3. Pending invitations — separate AdminTable with invite links (no
+ *      pagination — typically <10 rows)
  *
  * Admin-only: enforces `user.role === 'admin'` and redirects to /admin
  * otherwise.
@@ -26,7 +32,7 @@ import type { User } from '@prisma/client';
 export default async function AdminUsersPage({
   searchParams,
 }: {
-  searchParams: { role?: string; status?: string };
+  searchParams: { role?: string; status?: string; limit?: string; offset?: string };
 }): Promise<ReactElement> {
   const cookieStore = cookies();
   const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
@@ -42,6 +48,7 @@ export default async function AdminUsersPage({
   }
 
   const t = await getTranslations('admin.users');
+  const tPag = await getTranslations('admin.common.pagination');
 
   const filterRole = searchParams.role === 'admin' || searchParams.role === 'operator'
     ? searchParams.role
@@ -50,12 +57,19 @@ export default async function AdminUsersPage({
     ? searchParams.status
     : undefined;
 
-  const allUsers = await listUsers();
-  const filteredUsers = allUsers.filter(
-    (u) =>
-      (filterRole ? u.role === filterRole : true) &&
-      (filterStatus ? u.status === filterStatus : true),
-  );
+  const rawLimit = Number(searchParams.limit ?? PAGE_SIZE_DEFAULT);
+  const rawOffset = Number(searchParams.offset ?? 0);
+  const limit = Number.isFinite(rawLimit)
+    ? Math.min(PAGE_SIZE_MAX, Math.max(1, rawLimit))
+    : PAGE_SIZE_DEFAULT;
+  const offset = Number.isFinite(rawOffset) ? Math.max(0, rawOffset) : 0;
+
+  const { rows: filteredUsers, total: totalUsers } = await listUsers({
+    ...(filterRole ? { role: filterRole } : {}),
+    ...(filterStatus ? { status: filterStatus } : {}),
+    skip: offset,
+    take: limit,
+  });
   const invitations = await listInvitations();
   const pending = invitations.filter((i) => !i.consumedAt && i.expiresAt > new Date());
 
@@ -111,7 +125,7 @@ export default async function AdminUsersPage({
       <section>
         <h2 className="ghc-admin-section-title">
           {t('list.existingHeading')}{' '}
-          <span className="ghc-admin-section-count">({filteredUsers.length})</span>
+          <span className="ghc-admin-section-count">({totalUsers})</span>
         </h2>
         <AdminFilterBar
           filters={[
@@ -145,6 +159,22 @@ export default async function AdminUsersPage({
           emptyTitle={t('list.empty.title')}
           emptyDescription={t('list.empty.description')}
           ariaLabel={t('list.ariaLabel')}
+        />
+        <AdminPagination
+          basePath="/admin/users"
+          offset={offset}
+          limit={limit}
+          total={totalUsers}
+          rowsOnPage={filteredUsers.length}
+          label={tPag('showing', {
+            start: totalUsers === 0 ? 0 : offset + 1,
+            end: offset + filteredUsers.length,
+            total: totalUsers,
+          })}
+          extraSearch={{
+            ...(filterRole ? { role: filterRole } : {}),
+            ...(filterStatus ? { status: filterStatus } : {}),
+          }}
         />
       </section>
 

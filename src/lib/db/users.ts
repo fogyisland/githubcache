@@ -1,13 +1,31 @@
-import type { User } from '@prisma/client';
+import type { User, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
 
 /**
- * List all users, newest first.
- *
- * No pagination — admin user list is small (per spec §9.1).
+ * List users (admin view), newest first. Returns a page + the total
+ * matching count so callers can render pagination controls. M14.2
+ * replaced the unbounded `listUsers()` shape — callers that need the
+ * full list (e.g. session-all enumeration) should set a high `take`.
  */
-export async function listUsers(): Promise<User[]> {
-  return prisma.user.findMany({ orderBy: { createdAt: 'desc' } });
+export async function listUsers(opts: {
+  role?: 'admin' | 'operator';
+  status?: 'active' | 'disabled';
+  skip: number;
+  take: number;
+}): Promise<{ rows: User[]; total: number }> {
+  const where: Prisma.UserWhereInput = {};
+  if (opts.role) where.role = opts.role;
+  if (opts.status) where.status = opts.status;
+  const [rows, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip: opts.skip,
+      take: opts.take,
+    }),
+    prisma.user.count({ where }),
+  ]);
+  return { rows, total };
 }
 
 /**

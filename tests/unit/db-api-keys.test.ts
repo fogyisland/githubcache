@@ -112,10 +112,10 @@ beforeEach(async () => {
 
 describe('listApiKeys', () => {
   it('returns all keys with user joined when no filter is given', async () => {
-    const keys = await listApiKeys();
+    const keys = await listApiKeys({ skip: 0, take: 1000 });
     // At minimum we have our 4 test keys (other tests may have left rows;
     // we only assert ours are present and well-formed)
-    const ourKeys = keys.filter((k) => k.keyPrefix.startsWith(TEST_API_KEY_PREFIX));
+    const ourKeys = keys.rows.filter((k) => k.keyPrefix.startsWith(TEST_API_KEY_PREFIX));
     expect(ourKeys).toHaveLength(4);
     for (const k of ourKeys) {
       expect(k.user).toBeDefined();
@@ -126,27 +126,27 @@ describe('listApiKeys', () => {
   });
 
   it('filters by status (pending / active / revoked)', async () => {
-    const pending = await listApiKeys({ status: 'pending' });
-    const ourPending = pending.filter((k) => k.keyPrefix.startsWith(TEST_API_KEY_PREFIX));
+    const pending = await listApiKeys({ status: 'pending', skip: 0, take: 1000 });
+    const ourPending = pending.rows.filter((k) => k.keyPrefix.startsWith(TEST_API_KEY_PREFIX));
     expect(ourPending).toHaveLength(2);
     for (const k of ourPending) {
       expect(k.status).toBe('pending');
     }
 
-    const active = await listApiKeys({ status: 'active' });
-    const ourActive = active.filter((k) => k.keyPrefix.startsWith(TEST_API_KEY_PREFIX));
+    const active = await listApiKeys({ status: 'active', skip: 0, take: 1000 });
+    const ourActive = active.rows.filter((k) => k.keyPrefix.startsWith(TEST_API_KEY_PREFIX));
     expect(ourActive).toHaveLength(1);
     expect(ourActive[0]!.name).toBe('owner-active');
 
-    const revoked = await listApiKeys({ status: 'revoked' });
-    const ourRevoked = revoked.filter((k) => k.keyPrefix.startsWith(TEST_API_KEY_PREFIX));
+    const revoked = await listApiKeys({ status: 'revoked', skip: 0, take: 1000 });
+    const ourRevoked = revoked.rows.filter((k) => k.keyPrefix.startsWith(TEST_API_KEY_PREFIX));
     expect(ourRevoked).toHaveLength(1);
     expect(ourRevoked[0]!.name).toBe('owner-revoked');
   });
 
   it('orders by createdAt desc', async () => {
-    const keys = await listApiKeys();
-    const ourKeys = keys.filter((k) => k.keyPrefix.startsWith(TEST_API_KEY_PREFIX));
+    const keys = await listApiKeys({ skip: 0, take: 1000 });
+    const ourKeys = keys.rows.filter((k) => k.keyPrefix.startsWith(TEST_API_KEY_PREFIX));
     expect(ourKeys).toHaveLength(4);
     // Newest first — strictly non-increasing
     for (let i = 1; i < ourKeys.length; i++) {

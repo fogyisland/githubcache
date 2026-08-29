@@ -63,8 +63,8 @@ describe('listAllTokens', () => {
   it('returns existing token rows (including ones we just inserted)', async () => {
     await mkRow('list-a');
     await mkRow('list-b');
-    const all = await listAllTokens();
-    const ours = all.filter((t) => t.label.startsWith(TEST_TOKEN_LABEL_PREFIX));
+    const all = await listAllTokens({ skip: 0, take: 1000 });
+    const ours = all.rows.filter((t) => t.label.startsWith(TEST_TOKEN_LABEL_PREFIX));
     expect(ours.length).toBeGreaterThanOrEqual(2);
     for (const t of ours) {
       expect(t.id).toBeDefined();
@@ -122,14 +122,14 @@ describe('updateTokenStatus', () => {
 describe('deleteTokenById', () => {
   it('removes the row and count decreases by 1', async () => {
     const id = await mkRow('delete-1');
-    const before = await listAllTokens();
-    const beforeOurs = before.filter((t) => t.label.startsWith(TEST_TOKEN_LABEL_PREFIX));
+    const before = await listAllTokens({ skip: 0, take: 1000 });
+    const beforeOurs = before.rows.filter((t) => t.label.startsWith(TEST_TOKEN_LABEL_PREFIX));
     expect(beforeOurs.length).toBe(1);
 
     await deleteTokenById(id);
 
-    const after = await listAllTokens();
-    const afterOurs = after.filter((t) => t.label.startsWith(TEST_TOKEN_LABEL_PREFIX));
+    const after = await listAllTokens({ skip: 0, take: 1000 });
+    const afterOurs = after.rows.filter((t) => t.label.startsWith(TEST_TOKEN_LABEL_PREFIX));
     expect(afterOurs.length).toBe(0);
     // Subsequent getTokenById returns null
     expect(await getTokenById(id)).toBeNull();

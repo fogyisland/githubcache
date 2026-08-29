@@ -79,7 +79,9 @@ describe('page-level admin role check', () => {
       status: 'active',
     } as never);
     const AdminGithubTokensPage = (await import('@/app/admin/github-tokens/page')).default;
-    await expect(AdminGithubTokensPage()).rejects.toThrow('__redirect_to__/admin');
+    await expect(AdminGithubTokensPage({ searchParams: {} })).rejects.toThrow(
+      '__redirect_to__/admin',
+    );
     expect(mockRedirect).toHaveBeenCalledWith('/admin');
   });
 });

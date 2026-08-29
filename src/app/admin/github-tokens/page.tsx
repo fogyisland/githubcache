@@ -6,22 +6,31 @@ import { listAllTokens } from '@/lib/db/github-tokens';
 import { poolHasHash, poolSize } from '@/lib/github/pool';
 import { validateSession } from '@/lib/auth/session';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
+import { AdminPagination } from '@/app/admin/_components/admin-pagination';
 import { AdminTable, type AdminColumn } from '@/app/admin/_components/admin-table';
 import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
 import { AddTokenForm } from './_components/add-token-form';
 import { TokenActions } from './_components/token-actions';
 
-type TokenRow = Awaited<ReturnType<typeof listAllTokens>>[number];
+type TokenRow = Awaited<ReturnType<typeof listAllTokens>>['rows'][number];
+
+const PAGE_SIZE_DEFAULT = 25;
+const PAGE_SIZE_MAX = 200;
 
 /**
- * Admin → GitHub Tokens page (M11.10 rewrite).
+ * Admin → GitHub Tokens page (M11.10 rewrite, M14.2 pagination).
  *
- * Admin-only. Shows pool size banner + quota warning, then AddTokenForm +
- * AdminTable of tokens. Each row carries a status chip (active/disabled),
- * a pool-state chip (in-pool vs pending activation), used/limit progress,
- * and per-row TokenActions.
+ * Admin-only. Shows pool size banner + quota warning (computed across ALL
+ * tokens, not just the current page — quota totals use a separate count),
+ * then AddTokenForm + AdminTable of tokens. Each row carries a status chip
+ * (active/disabled), a pool-state chip (in-pool vs pending activation),
+ * used/limit progress, and per-row TokenActions.
  */
-export default async function AdminGithubTokensPage(): Promise<ReactElement> {
+export default async function AdminGithubTokensPage({
+  searchParams,
+}: {
+  searchParams: { limit?: string; offset?: string };
+}): Promise<ReactElement> {
   const cookieStore = cookies();
   const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
   const user = await validateSession({
@@ -36,12 +45,27 @@ export default async function AdminGithubTokensPage(): Promise<ReactElement> {
   }
 
   const t = await getTranslations('admin.githubTokens');
+  const tPag = await getTranslations('admin.common.pagination');
 
-  const tokens = await listAllTokens();
-  const activePoolSize = poolSize();
-  const totalQuotaUsed = tokens.reduce((a, tok) => a + tok.requestsUsed, 0);
-  const totalQuotaLimit = tokens.reduce((a, tok) => a + tok.requestsLimit, 0);
+  const rawLimit = Number(searchParams.limit ?? PAGE_SIZE_DEFAULT);
+  const rawOffset = Number(searchParams.offset ?? 0);
+  const limit = Number.isFinite(rawLimit)
+    ? Math.min(PAGE_SIZE_MAX, Math.max(1, rawLimit))
+    : PAGE_SIZE_DEFAULT;
+  const offset = Number.isFinite(rawOffset) ? Math.max(0, rawOffset) : 0;
+
+  const { rows: tokens, total: totalTokens } = await listAllTokens({ skip: offset, take: limit });
+
+  // Quota totals must include tokens not on the current page so the
+  // warning doesn't flap based on which page the admin lands on. We
+  // recompute by aggregating across all tokens via a lightweight COUNT
+  // + SUM equivalent: fetch all rows just for the totals.
+  const allTokens = await listAllTokens({ skip: 0, take: PAGE_SIZE_MAX });
+  const totalQuotaUsed = allTokens.rows.reduce((a, tok) => a + tok.requestsUsed, 0);
+  const totalQuotaLimit = allTokens.rows.reduce((a, tok) => a + tok.requestsLimit, 0);
   const quotaPct = totalQuotaLimit > 0 ? Math.round((totalQuotaUsed / totalQuotaLimit) * 100) : 0;
+
+  const activePoolSize = poolSize();
 
   const columns: AdminColumn<TokenRow>[] = [
     { key: 'label', header: t('list.column.label'), render: (tok) => tok.label },
@@ -116,7 +140,7 @@ export default async function AdminGithubTokensPage(): Promise<ReactElement> {
         description={t('description')}
       />
 
-      {tokens.length > 0 && quotaPct >= 80 ? (
+      {totalTokens > 0 && quotaPct >= 80 ? (
         <div className="ghc-admin-quota-warning">
           <AdminStatusChip variant="warn">{t('quota.chip')}</AdminStatusChip>
           <span>
@@ -145,7 +169,7 @@ export default async function AdminGithubTokensPage(): Promise<ReactElement> {
       <section>
         <h2 className="ghc-admin-section-title">
           {t('list.heading')}{' '}
-          <span className="ghc-admin-section-count">({tokens.length})</span>
+          <span className="ghc-admin-section-count">({totalTokens})</span>
         </h2>
         <AdminTable<TokenRow>
           columns={columns}
@@ -153,6 +177,18 @@ export default async function AdminGithubTokensPage(): Promise<ReactElement> {
           emptyTitle={t('list.empty.title')}
           emptyDescription={t('list.empty.description')}
           ariaLabel={t('list.ariaLabel')}
+        />
+        <AdminPagination
+          basePath="/admin/github-tokens"
+          offset={offset}
+          limit={limit}
+          total={totalTokens}
+          rowsOnPage={tokens.length}
+          label={tPag('showing', {
+            start: totalTokens === 0 ? 0 : offset + 1,
+            end: offset + tokens.length,
+            total: totalTokens,
+          })}
         />
       </section>
     </div>

@@ -41,19 +41,30 @@ export const listApiKeysForUser = (userId: bigint): Promise<ApiKey[]> =>
 export type ApiKeyWithOwner = ApiKey & { user: Pick<User, 'id' | 'email' | 'role'> };
 
 /**
- * List API keys (admin view). Optional status filter; ordered by createdAt desc.
- * Always includes the owner's id / email / role for rendering the table.
+ * List API keys (admin view), newest first. Optional status filter; always
+ * includes the owner's id / email / role. Returns a page + the total
+ * matching count so callers can render pagination controls (M14.2).
  */
-export async function listApiKeys(
-  filter?: { status?: ApiKeyStatus },
-): Promise<ApiKeyWithOwner[]> {
-  return prisma.apiKey.findMany({
-    ...(filter?.status ? { where: { status: filter.status } } : {}),
-    include: {
-      user: { select: { id: true, email: true, role: true } },
-    },
-    orderBy: { createdAt: 'desc' },
-  });
+export async function listApiKeys(opts: {
+  status?: ApiKeyStatus;
+  skip: number;
+  take: number;
+}): Promise<{ rows: ApiKeyWithOwner[]; total: number }> {
+  const where: Prisma.ApiKeyWhereInput = {};
+  if (opts.status) where.status = opts.status;
+  const [rows, total] = await Promise.all([
+    prisma.apiKey.findMany({
+      where,
+      include: {
+        user: { select: { id: true, email: true, role: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      skip: opts.skip,
+      take: opts.take,
+    }),
+    prisma.apiKey.count({ where }),
+  ]);
+  return { rows, total };
 }
 
 /**

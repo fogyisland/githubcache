@@ -46,7 +46,7 @@ export async function initPool(): Promise<void> {
   const envHashes = new Set(envTokens.map((t) => t.hash));
 
   // 2. Read all DB rows
-  const dbRows = await listAllTokens();
+  const dbRows = (await listAllTokens({ skip: 0, take: 1000 })).rows;
   const dbByHash = new Map(dbRows.map((r) => [r.tokenHash, r]));
 
   // 3. For each env token, ensure DB row exists; build in-memory entry

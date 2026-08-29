@@ -59,6 +59,11 @@
     "fine": "© {year} · 基于 Next.js + Prisma + MySQL 构建。"
   },
   "admin": {
+    "common": {
+      "pagination": {
+        "showing": "显示 {start}–{end} 条，共 {total} 条"
+      }
+    },
     "shell": {
       "sidebarAria": "管理菜单",
       "breadcrumbAria": "面包屑导航",

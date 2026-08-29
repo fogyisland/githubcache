@@ -4,10 +4,11 @@ import { getTranslations } from 'next-intl/server';
 import { listApiKeys } from '@/lib/db/api-keys';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { AdminFilterBar } from '@/app/admin/_components/admin-filter-bar';
+import { AdminPagination } from '@/app/admin/_components/admin-pagination';
 import { AdminTable, type AdminColumn } from '@/app/admin/_components/admin-table';
 import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
 
-type KeyRow = Awaited<ReturnType<typeof listApiKeys>>[number];
+type KeyRow = Awaited<ReturnType<typeof listApiKeys>>['rows'][number];
 
 const STATUS_VARIANT: Record<ApiKeyStatus, 'ok' | 'warn' | 'danger'> = {
   active: 'ok',
@@ -15,19 +16,23 @@ const STATUS_VARIANT: Record<ApiKeyStatus, 'ok' | 'warn' | 'danger'> = {
   revoked: 'danger',
 };
 
+const PAGE_SIZE_DEFAULT = 25;
+const PAGE_SIZE_MAX = 200;
+
 /**
- * Admin → API Keys page (M11.10 rewrite).
+ * Admin → API Keys page (M11.10 rewrite, M14.2 pagination).
  *
  * AdminPageHeader + AdminFilterBar (status) + AdminTable of keys with
- * status chips. Status filter is URL-synced so deep links / refresh
- * preserve selection.
+ * status chips + pagination. Status filter is URL-synced so deep links /
+ * refresh preserve selection (and pagination carries it forward).
  */
 export default async function AdminApiKeysPage({
   searchParams,
 }: {
-  searchParams: { status?: string };
+  searchParams: { status?: string; limit?: string; offset?: string };
 }): Promise<ReactElement> {
   const t = await getTranslations('admin.apiKeys');
+  const tPag = await getTranslations('admin.common.pagination');
 
   const filterStatus: ApiKeyStatus | undefined =
     searchParams.status === 'pending' ||
@@ -36,7 +41,18 @@ export default async function AdminApiKeysPage({
       ? searchParams.status
       : undefined;
 
-  const keys = await listApiKeys(filterStatus ? { status: filterStatus } : undefined);
+  const rawLimit = Number(searchParams.limit ?? PAGE_SIZE_DEFAULT);
+  const rawOffset = Number(searchParams.offset ?? 0);
+  const limit = Number.isFinite(rawLimit)
+    ? Math.min(PAGE_SIZE_MAX, Math.max(1, rawLimit))
+    : PAGE_SIZE_DEFAULT;
+  const offset = Number.isFinite(rawOffset) ? Math.max(0, rawOffset) : 0;
+
+  const { rows: keys, total } = await listApiKeys({
+    ...(filterStatus ? { status: filterStatus } : {}),
+    skip: offset,
+    take: limit,
+  });
 
   const columns: AdminColumn<KeyRow>[] = [
     { key: 'name', header: t('list.column.name'), render: (k) => k.name },
@@ -109,6 +125,21 @@ export default async function AdminApiKeysPage({
         emptyTitle={t('list.empty.title')}
         emptyDescription={t('list.empty.description')}
         ariaLabel={t('list.ariaLabel')}
+      />
+      <AdminPagination
+        basePath="/admin/api-keys"
+        offset={offset}
+        limit={limit}
+        total={total}
+        rowsOnPage={keys.length}
+        label={tPag('showing', {
+          start: total === 0 ? 0 : offset + 1,
+          end: offset + keys.length,
+          total,
+        })}
+        extraSearch={{
+          ...(filterStatus ? { status: filterStatus } : {}),
+        }}
       />
     </div>
   );
