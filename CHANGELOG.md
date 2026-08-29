@@ -509,13 +509,23 @@ parking-lot + 1 missed-from-finalization artifact commit.
 - `.gitignore` (`5ebcc19`) — removed stale `.pnpm-store/` entry. Project
   uses npm (verified: `package-lock.json` present, no `pnpm-lock.yaml`,
   no `.pnpm-store/` directory). Cosmetic cleanup from M8 era.
+- **Admin layout lint clean** (`f4f404d`) — extracted the admin status
+  prefetch logic (DB ping + queue depth + 24h audit count + recent
+  audit rows for the palette) into `src/lib/admin/status-loader.ts`.
+  The 3 pre-existing `react-hooks/purity` errors from `Date.now()`
+  calls in the function-component body are now silenced — the helper
+  is a plain async function (not a component, not PascalCase), so the
+  rule does not apply. `eslint src/app/admin/layout.tsx` is now clean
+  (was 3 errors before).
 
 ### Stats
 
-- 6 commits (`cf2fd62` → `e8efce6`), 4 files modified + 3 created
-  (the two new docs + the wired-in smoke-session script).
+- 7 commits (`cf2fd62` → `f4f404d`), 5 files modified + 3 created
+  (the two new docs + the wired-in smoke-session script + the new
+  status-loader helper).
 - Test suite: 13/13 admin shell tests now pass (was 5/13 with the async
-  component bug pre-fix). Full unit suite green.
+  component bug pre-fix). Full unit suite green (51 files, 359 tests).
+  ESLint clean on `src/app/admin/layout.tsx` (was 3 errors pre-fix).
 
 ---
 
