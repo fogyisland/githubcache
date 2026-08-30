@@ -7,11 +7,11 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "next dev -p 5003",
+    "dev": "next dev -p 5002",
     "dev:server": "tsx watch --env-file=.env src/server.ts",
     "start:server": "node --import tsx/esm --env-file=.env src/server.ts",
     "build": "next build",
-    "start": "next start -p 5003",
+    "start": "next start -p 5002",
     "lint": "eslint .",
     "format": "prettier --check .",
     "format:write": "prettier --write .",
