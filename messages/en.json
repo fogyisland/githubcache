@@ -77,6 +77,8 @@
         "api-keys": "API Keys",
         "github-tokens": "GitHub Tokens",
         "reports": "Reports",
+        "queries": "Queries",
+        "ingestion": "Ingestion",
         "audit": "Audit",
         "refresh": "Refresh"
       },
@@ -345,7 +347,8 @@
         "chip": "quota",
         "warning": "{pct}% of combined token quota used ({used} / {limit})."
       },
-      "poolHint": "Pool size (currently active in memory): {size}. Adding a token here creates a DB record only — to activate it, add the token to {env} env var or {envFile} and restart the service.",
+      "poolHintPrefix": "Pool size (currently active in memory): {size}.",
+      "poolHintSuffix": "Adding a token here creates a DB record only — to activate it, add the token to {env} env var or {envFile} and restart the service.",
       "list": {
         "heading": "Registered tokens",
         "ariaLabel": "GitHub tokens",
@@ -642,6 +645,110 @@
           "priority": "Priority",
           "scheduled": "Scheduled",
           "attempts": "Attempts"
+        }
+      }
+    },
+    "queries": {
+      "title": "Queries",
+      "description": "Drill-down on consumer API traffic: time window, top repos, top keys, and a paginated list of recent requests (including anonymous v1 calls).",
+      "breadcrumb": {
+        "admin": "Admin",
+        "queries": "Queries"
+      },
+      "dateRange": {
+        "from": "From",
+        "to": "To",
+        "apply": "Apply",
+        "reset": "Reset"
+      },
+      "kpi": {
+        "totalRequests": "Total requests",
+        "cacheHitRate": "Cache hit rate",
+        "avgLatency": "Avg latency",
+        "activeApiKeys": "Active API keys"
+      },
+      "topRepos": {
+        "heading": "Top queried repositories",
+        "empty": "No requests in this window.",
+        "column": {
+          "repo": "Repository",
+          "requests": "Requests",
+          "hitRate": "Hit rate"
+        }
+      },
+      "topKeys": {
+        "heading": "Top API keys",
+        "empty": "No requests in this window.",
+        "column": {
+          "label": "Label",
+          "requests": "Requests",
+          "lastUsed": "Last used"
+        },
+        "dash": "—"
+      },
+      "recent": {
+        "heading": "Recent requests",
+        "empty": "No requests in this window.",
+        "anonymous": "anonymous",
+        "hit": "hit",
+        "miss": "miss",
+        "dash": "—",
+        "column": {
+          "when": "When",
+          "endpoint": "Endpoint",
+          "key": "Key",
+          "repo": "Repo",
+          "cache": "Cache",
+          "latency": "Latency",
+          "status": "Status"
+        }
+      }
+    },
+    "ingestion": {
+      "title": "Ingestion",
+      "description": "GitHub→DB pipeline health: queue depth, throughput, cached-repo fetch status, and recent refresh jobs.",
+      "breadcrumb": {
+        "admin": "Admin",
+        "ingestion": "Ingestion"
+      },
+      "kpi": {
+        "pending": "Pending jobs",
+        "inProgress": "In progress",
+        "done": "Done (1h)",
+        "failed": "Failed (1h)"
+      },
+      "breakdown": {
+        "heading": "Cached-repo fetch status",
+        "empty": "No repositories cached.",
+        "ok": "ok",
+        "notFound": "not_found",
+        "forbidden": "forbidden",
+        "error": "error"
+      },
+      "scheduler": {
+        "label": "Scheduler:",
+        "running": "RUNNING",
+        "paused": "PAUSED",
+        "pausedAt": "paused at {when}",
+        "manageLink": "Manage scheduler →"
+      },
+      "recent": {
+        "heading": "Recent refresh jobs",
+        "empty": "No refresh jobs yet.",
+        "dash": "—",
+        "status": {
+          "pending": "pending",
+          "in_progress": "in progress",
+          "done": "done",
+          "failed": "failed"
+        },
+        "column": {
+          "when": "When",
+          "repo": "Repo",
+          "status": "Status",
+          "priority": "Priority",
+          "attempts": "Attempts",
+          "error": "Last error"
         }
       }
     }

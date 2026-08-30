@@ -18,10 +18,10 @@ async function main(): Promise<void> {
   const email = args[0] ?? 'admin@example.com';
   const password = args[1] ?? 'admin-change-me-123';
 
-  if (!email.includes('@') || password.length < 12) {
+  if (!email.includes('@') || password.length < 8) {
     console.error('usage: create-admin <email> <password>');
     console.error('  email must contain "@"');
-    console.error('  password must be at least 12 characters');
+    console.error('  password must be at least 8 characters');
     process.exit(1);
   }
 

@@ -154,8 +154,10 @@ export default async function AdminGithubTokensPage({
       ) : null}
 
       <p className="ghc-admin-hint">
-        {t.rich('poolHint', {
+        {t.rich('poolHintPrefix', {
           size: () => <strong>{activePoolSize}</strong>,
+        })}
+        {t.rich('poolHintSuffix', {
           env: () => <code>GITHUB_TOKENS</code>,
           envFile: () => <code>GITHUB_TOKENS_FILE</code>,
         })}

@@ -77,6 +77,8 @@
         "api-keys": "API 密钥",
         "github-tokens": "GitHub 令牌",
         "reports": "报表",
+        "queries": "查询",
+        "ingestion": "入库",
         "audit": "审计",
         "refresh": "刷新"
       },
@@ -345,7 +347,8 @@
         "chip": "配额",
         "warning": "已使用合并配额的 {pct}%（{used} / {limit}）。"
       },
-      "poolHint": "池大小（当前内存中活跃）：{size}。在此处添加令牌仅创建数据库记录 — 若要激活，请将令牌加入 {env} 环境变量或 {envFile} 文件并重启服务。",
+      "poolHintPrefix": "池大小（当前内存中活跃）：{size}。",
+      "poolHintSuffix": "在此处添加令牌仅创建数据库记录 — 若要激活，请将令牌加入 {env} 环境变量或 {envFile} 文件并重启服务。",
       "list": {
         "heading": "已注册令牌",
         "ariaLabel": "GitHub 令牌",
@@ -642,6 +645,110 @@
           "priority": "优先级",
           "scheduled": "计划时间",
           "attempts": "尝试次数"
+        }
+      }
+    },
+    "queries": {
+      "title": "查询",
+      "description": "消费端 API 流量的深度钻取：时间窗口、热门仓库、热门密钥，以及最近请求的分页列表（包括匿名的 v1 调用）。",
+      "breadcrumb": {
+        "admin": "管理员",
+        "queries": "查询"
+      },
+      "dateRange": {
+        "from": "起始",
+        "to": "结束",
+        "apply": "应用",
+        "reset": "重置"
+      },
+      "kpi": {
+        "totalRequests": "总请求",
+        "cacheHitRate": "缓存命中率",
+        "avgLatency": "平均延迟",
+        "activeApiKeys": "活跃 API 密钥"
+      },
+      "topRepos": {
+        "heading": "热门查询仓库",
+        "empty": "此时间窗口内无请求。",
+        "column": {
+          "repo": "仓库",
+          "requests": "请求数",
+          "hitRate": "命中率"
+        }
+      },
+      "topKeys": {
+        "heading": "热门 API 密钥",
+        "empty": "此时间窗口内无请求。",
+        "column": {
+          "label": "标签",
+          "requests": "请求数",
+          "lastUsed": "最后使用"
+        },
+        "dash": "—"
+      },
+      "recent": {
+        "heading": "最近请求",
+        "empty": "此时间窗口内无请求。",
+        "anonymous": "匿名",
+        "hit": "命中",
+        "miss": "未命中",
+        "dash": "—",
+        "column": {
+          "when": "时间",
+          "endpoint": "端点",
+          "key": "密钥",
+          "repo": "仓库",
+          "cache": "缓存",
+          "latency": "延迟",
+          "status": "状态"
+        }
+      }
+    },
+    "ingestion": {
+      "title": "入库",
+      "description": "GitHub→DB 流水线健康度：队列深度、吞吐、缓存仓库的 fetch 状态分布，以及最近刷新任务。",
+      "breadcrumb": {
+        "admin": "管理员",
+        "ingestion": "入库"
+      },
+      "kpi": {
+        "pending": "待处理任务",
+        "inProgress": "进行中",
+        "done": "完成（1 小时）",
+        "failed": "失败（1 小时）"
+      },
+      "breakdown": {
+        "heading": "缓存仓库的 fetch 状态分布",
+        "empty": "暂无缓存仓库。",
+        "ok": "成功",
+        "notFound": "未找到",
+        "forbidden": "禁止访问",
+        "error": "错误"
+      },
+      "scheduler": {
+        "label": "调度器：",
+        "running": "运行中",
+        "paused": "已暂停",
+        "pausedAt": "暂停于 {when}",
+        "manageLink": "管理调度器 →"
+      },
+      "recent": {
+        "heading": "最近刷新任务",
+        "empty": "暂无刷新任务。",
+        "dash": "—",
+        "status": {
+          "pending": "待处理",
+          "in_progress": "进行中",
+          "done": "完成",
+          "failed": "失败"
+        },
+        "column": {
+          "when": "时间",
+          "repo": "仓库",
+          "status": "状态",
+          "priority": "优先级",
+          "attempts": "尝试次数",
+          "error": "最后错误"
         }
       }
     }

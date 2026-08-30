@@ -24,8 +24,9 @@ const githubTokensDict = flattenDict({
   status: { active: 'active', disabled: 'disabled' },
   pool: { inPool: 'in pool', pendingActivation: 'pending activation' },
   quota: { chip: 'quota', warning: '{pct}% of combined token quota used ({used} / {limit}).' },
-  poolHint:
-    'Pool size (currently active in memory): {size}. Adding a token here creates a DB record only — to activate it, add the token to {env} env var or {envFile} and restart the service.',
+  poolHintPrefix: 'Pool size (currently active in memory): {size}.',
+  poolHintSuffix:
+    'Adding a token here creates a DB record only — to activate it, add the token to {env} env var or {envFile} and restart the service.',
   list: {
     heading: 'Registered tokens',
     ariaLabel: 'GitHub tokens',
