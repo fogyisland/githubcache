@@ -159,3 +159,91 @@ export async function tokenQuotaUsage(): Promise<TokenQuota[]> {
   });
   return tokens;
 }
+
+/**
+ * M16 — recent API call rows joined with their API key (when present). Used
+ * by /admin/queries as the "recent requests" table at the bottom of the page.
+ *
+ * Two phases:
+ *   1. Paginated findMany on RequestLog with the optional [from, to) window
+ *      applied to `createdAt`.
+ *   2. One follow-up `apiKey.findMany` for any rows that have an `apiKeyId`,
+ *      so we can label them — kept off the hot path because the join is
+ *      keyed on a small IN-set (max `take` rows).
+ *
+ * Anonymous v1 traffic has `apiKeyId = null` and therefore `keyName = null`;
+ * the page renders those as "anonymous" so an admin can still tell the two
+ * kinds of traffic apart without inspecting the `endpoint` column.
+ */
+export interface RecentRequestRow {
+  id: bigint;
+  createdAt: Date;
+  endpoint: string;
+  keyId: bigint | null;
+  keyName: string | null;
+  repoRequested: string | null;
+  cacheHit: boolean;
+  durationMs: number;
+  statusCode: number;
+  ip: string | null;
+}
+
+export async function recentRequests(
+  args: { skip: number; take: number },
+  filters?: { from?: Date; to?: Date },
+): Promise<{ rows: RecentRequestRow[]; total: number }> {
+  const where = {
+    ...(filters?.from || filters?.to
+      ? {
+          createdAt: {
+            ...(filters.from ? { gte: filters.from } : {}),
+            ...(filters.to ? { lt: filters.to } : {}),
+          },
+        }
+      : {}),
+  };
+  const [rows, total] = await Promise.all([
+    prisma.requestLog.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip: args.skip,
+      take: args.take,
+      select: {
+        id: true,
+        createdAt: true,
+        endpoint: true,
+        apiKeyId: true,
+        repoRequested: true,
+        cacheHit: true,
+        durationMs: true,
+        statusCode: true,
+        ip: true,
+      },
+    }),
+    prisma.requestLog.count({ where }),
+  ]);
+  const keyIds = [
+    ...new Set(rows.map((r) => r.apiKeyId).filter((id): id is bigint => id !== null)),
+  ];
+  const keyMap = new Map<string, string>();
+  if (keyIds.length > 0) {
+    const keys = await prisma.apiKey.findMany({
+      where: { id: { in: keyIds } },
+      select: { id: true, name: true },
+    });
+    for (const k of keys) keyMap.set(k.id.toString(), k.name);
+  }
+  const out: RecentRequestRow[] = rows.map((r) => ({
+    id: r.id,
+    createdAt: r.createdAt,
+    endpoint: r.endpoint,
+    keyId: r.apiKeyId,
+    keyName: r.apiKeyId !== null ? (keyMap.get(r.apiKeyId.toString()) ?? '(deleted)') : null,
+    repoRequested: r.repoRequested,
+    cacheHit: r.cacheHit,
+    durationMs: r.durationMs,
+    statusCode: r.statusCode,
+    ip: r.ip,
+  }));
+  return { rows: out, total };
+}

@@ -809,6 +809,81 @@ explainer section and an "Error codes" reference table.
 
 ---
 
+## [m16-queries-ingestion] — 2026-08-31
+
+**Two new admin views: query drill-down + ingestion pipeline health.**
+
+Adds an operator-facing surface for the two flows M7's reports page only
+glimpsed: who is hitting the consumer API (and what), and what is the
+GitHub→DB pipeline doing right now.
+
+### Added
+
+- `/admin/queries` page — drill-down on consumer API traffic.
+  - 4 KPI cards (total / hit rate / avg latency / active keys).
+  - URL-driven date range picker (`?from=YYYY-MM-DD&to=YYYY-MM-DD`).
+    `<input type="date">` × 2, inclusive end-of-day.
+  - Two top-10 tables side-by-side (top repos, top API keys).
+  - Paginated "recent requests" table at the bottom (50/page, prev/next).
+    Anonymous v1 rows render as "anonymous" in the Key column.
+  - Visible to **admin + operator** (matches /admin/reports).
+- `/admin/ingestion` page — GitHub→DB pipeline health.
+  - Scheduler state card (RUNNING/PAUSED + pausedAt + "Manage scheduler →"
+    link to /admin/refresh).
+  - 4 KPI cards: pending (current), in-progress (current), done (1h),
+    failed (1h).
+  - Fetch-status distribution bar for cached repos
+    (ok / not_found / forbidden / error).
+  - Paginated "recent refresh jobs" table joined with parent repo
+    owner/name (50/page).
+  - **Admin-only** — operators act on these signals via /admin/refresh.
+- `recentRequests({skip, take}, {from, to})` in `src/lib/reports/queries.ts` —
+  joins RequestLog with ApiKey for label resolution. Falls back to
+  `(deleted)` when the parent ApiKey has been removed.
+- `src/lib/reports/ingestion.ts` (new) — three aggregation helpers:
+  - `ingestionSummary(from, to)` — pending + in-progress queue depths
+    (current, not bound to window) plus done/failed counts.
+  - `repositoryFetchBreakdown()` — counts of repos in each terminal
+    `fetch_status` today.
+  - `recentRefreshJobs({skip, take}, filters?)` — paginated RefreshJob
+    rows joined with parent Repository (owner/name).
+- Sidebar: 2 new entries (`Queries` admin+operator; `Ingestion` admin-only),
+  slotted between `Reports` and `Audit`. Icons: `⊰` / `⊱`.
+
+### Changed
+
+- `/api/v1/repos/[owner]/[name]` — now logs every response (200/404/429/503)
+  to RequestLog via `recordRequest()`. Anonymous (apiKeyId=null),
+  endpoint=`/api/v1/repos/[owner]/[name]`, repoRequested=`owner/name`,
+  cacheHit=true on 200 only. This lets the new /admin/queries page show
+  v1 traffic alongside the authenticated /api/query traffic.
+- `/admin/reports` kept as the top-level summary (KPI + 24h chart + quota).
+  `/admin/queries` is its drill-down (date range + recent requests table).
+  Decision per user direction — no removal.
+
+### Stats
+
+- ~10 files modified, 6 new files
+  - new: `src/lib/reports/ingestion.ts`
+  - new: `src/app/admin/queries/page.tsx` + 5 components
+  - new: `src/app/admin/ingestion/page.tsx` + 4 components
+  - new: `tests/unit/reports-recent-requests.test.ts`
+  - new: `tests/unit/reports-ingestion.test.ts`
+  - new: `tests/unit/admin-queries-i18n.test.tsx`
+  - new: `tests/unit/admin-ingestion-i18n.test.tsx`
+- 6 new DB-backed unit tests + 6 new i18n page tests = 12 new tests
+- typecheck ✓, lint ✓ (0 errors), next build ✓
+
+### Not done (YAGNI, deferred)
+
+- p50/p95/p99 latency helpers — only `avgLatency()` is computed today.
+- Scheduler-tick history table — tick stats still go to logs only.
+- Per-key `topRepos` drill-down — only global `topRepos` is exposed.
+- `RequestLog.batchSize` column — multi-node batches still only record
+  the first node's `repoRequested`.
+
+---
+
 ## [m8-prod-ready] — 2026-08-26
 
 **Deployment + Observability.** Production-ready observability surface, durable rate-limit,
