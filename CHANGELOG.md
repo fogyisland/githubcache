@@ -1029,6 +1029,101 @@ rendering all 8 sections instead of 7).
 
 ---
 
+## [m18-insights-reports] — 2026-08-31
+
+**`/admin/insights` — multi-page reports over the cached `repositories` metadata.**
+Admin-only landing page plus four drill-down reports covering popularity
+ranking, language distribution, stale cache, and fetch health. Snapshot-only
+(no history table) — every helper reads current state of the `repositories`
+table directly via raw SQL with `JSON_EXTRACT` for metadata field access.
+
+### Pages
+
+| Route | Purpose |
+|---|---|
+| `/admin/insights` | Hub: 4 KPI cards (cached repos / OK share / language count / stale count) + 4 nav cards |
+| `/admin/insights/top-repos` | Paginated, sortable (stars / forks / watchers / updated / last fetched), language-filterable listing of cached repos |
+| `/admin/insights/languages` | Top 20 languages by repo count with share percentage (CSS flexbox bar list) |
+| `/admin/insights/stale` | Repos not refreshed within N days (URL-driven threshold 1–365, default 7), oldest first |
+| `/admin/insights/health` | fetch_status KPI strip (ok / 404 / 403 / error / total) + recent failures table |
+
+### Added
+
+**Helpers — `src/lib/reports/insights.ts`**
+- `topRepos({skip, take, language?, sortBy})` — paginated, sortable, language-filterable.
+  Sort + filter push down to MySQL via `JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.field'))`
+  and `CAST(JSON_EXTRACT(...) AS UNSIGNED)` for numeric ordering.
+- `languageDistribution(limit)` — top N languages by repo count among `fetch_status = 'ok'`
+  rows with non-empty `metadata.language`. Excludes `''` empty-language rows.
+- `distinctLanguages()` — sorted list of distinct language strings for the top-repos filter dropdown.
+- `staleRepos({thresholdDays, skip, take})` — repos whose `last_fetched_at` is older
+  than the threshold, oldest first. Includes pre-computed `ageDays`.
+- `fetchStatusBreakdown()` — counts grouped by `fetch_status`. Mirrors M16's
+  `repositoryFetchBreakdown` shape so the health page reuses the same KPI semantics.
+- `recentFetchFailures({skip, take})` — non-OK repos, most-recently-fetched first.
+- `isInsightsSortKey()` + `INSIGHTS_SORT_KEYS` — runtime guard for the sort URL param.
+
+**Pages**
+- `/admin/insights/page.tsx` — hub. Fetches breakdown + language list + stale count
+  in parallel via `Promise.all`. Renders 4 KPI cards (`AdminKpiCard`) + 4 nav cards.
+- `/admin/insights/top-repos/page.tsx` — server component. Reads `language / sort /
+  limit / offset` from `searchParams` (URL-driven). Plain `<form method="get">`
+  filter (no client JS). Filter preserves `sort` + `language` across pagination
+  via `AdminPagination.extraSearch`.
+- `/admin/insights/languages/page.tsx` — server component. Renders top 20 as a
+  `.ghc-admin-bar-list` (CSS flexbox bar + inline width from `sharePct`).
+- `/admin/insights/stale/page.tsx` — server component. Threshold input (1–365)
+  with URL-driven GET form. Paginated by age.
+- `/admin/insights/health/page.tsx` — server component. KPI strip with tone
+  variants (positive when count > 0 for OK, negative for failures). Recent
+  failures table joined from `Repository.findMany` with `fetchStatus: { in: [...] }`.
+
+**Sidebar**
+- New slug `insights` (icon `◬`, admin-only) added to `admin-sidebar.tsx`
+  next to `database`. Routes to `/admin/insights`.
+
+**i18n**
+- New namespace `admin.insights.*` in both `messages/en.json` and `messages/zh.json`:
+  title / description / breadcrumb / hub / topRepos / languages / stale / health.
+  91 lines per file.
+- New sidebar section key `admin.shell.sections.insights` (zh: "内容洞察", en: "Insights").
+
+**CSS — `globals.css`**
+- `.ghc-admin-kpi-grid` — auto-fit grid for KPI cards (min 180px).
+- `.ghc-admin-card-grid` + `.ghc-admin-card*` — nav card grid with hover lift.
+- `.ghc-admin-bar-list*` — language distribution bar list (label / bar / meta / share).
+- `.ghc-admin-filter-input` + `.ghc-admin-filter-help` — number input + helper text.
+- `.ghc-admin-empty` — empty-state paragraph.
+
+**Tests**
+- `tests/unit/reports-insights.test.ts` — 12 integration tests:
+  - `isInsightsSortKey` accepts documented keys, rejects unknown.
+  - `topRepos` default + `forks` ordering + language filter + status exclusion.
+  - `languageDistribution` baseline-relative assertions + skip empty lang.
+  - `distinctLanguages` contains seeded entries.
+  - `staleRepos` threshold filter + NULL `last_fetched_at` exclusion.
+  - `fetchStatusBreakdown` reports seeded counts.
+  - `recentFetchFailures` excludes OK rows, orders by most-recent.
+
+### Migration
+
+None. Read-only over the existing `repositories` table.
+
+### Stats
+
+- 1 new helper file (`src/lib/reports/insights.ts`, ~280 lines)
+- 5 new pages
+- 1 sidebar entry + 1 sidebar section key
+- 12 new integration tests
+- typecheck ✓ / lint ✓ (0 errors) / `next build` ✓ (5 new routes built:
+  `/admin/insights`, `/admin/insights/{health,languages,stale,top-repos}`)
+
+### Breaking changes
+
+None. All M18 features are additive. Sidebar grew by one entry.
+
+---
+
 ## [m8-prod-ready] — 2026-08-26
 
 **Deployment + Observability.** Production-ready observability surface, durable rate-limit,
