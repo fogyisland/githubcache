@@ -46,7 +46,9 @@ export function RefreshControls({ isPaused, pausedAt, repos }: Props) {
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'content-type': 'application/json', 'x-csrf-token': csrfToken },
-      body: JSON.stringify(body),
+      // Send csrf in body too — route schemas require it as a body field
+      // (defense-in-depth on top of the middleware header check).
+      body: JSON.stringify({ ...body, csrf: csrfToken }),
     });
   }
 
