@@ -80,7 +80,9 @@
         "queries": "查询",
         "ingestion": "入库",
         "audit": "审计",
-        "refresh": "刷新"
+        "refresh": "刷新",
+        "webhooks": "Webhook",
+        "database": "数据库"
       },
       "statusbar": {
         "db": "数据库",
@@ -347,8 +349,10 @@
         "chip": "配额",
         "warning": "已使用合并配额的 {pct}%（{used} / {limit}）。"
       },
-      "poolHintPrefix": "池大小（当前内存中活跃）：{size}。",
-      "poolHintSuffix": "在此处添加令牌仅创建数据库记录 — 若要激活，请将令牌加入 {env} 环境变量或 {envFile} 文件并重启服务。",
+      "poolHintPrefix": "池大小(当前内存中活跃):",
+      "poolHintMid": "在此处添加令牌仅创建数据库记录 — 若要激活,请将令牌加入",
+      "poolHintEnv": "环境变量,或",
+      "poolHintSuffix": "文件,然后重启服务。",
       "list": {
         "heading": "已注册令牌",
         "ariaLabel": "GitHub 令牌",
@@ -750,6 +754,96 @@
           "attempts": "尝试次数",
           "error": "最后错误"
         }
+      }
+    },
+    "database": {
+      "title": "数据库",
+      "description": "查看数据库版本与容量、生成本地备份、从备份还原、浏览表结构、查看慢查询 TOP。",
+      "breadcrumb": {
+        "admin": "管理员",
+        "database": "数据库"
+      },
+      "binaryWarning": {
+        "heading": "备份二进制缺失",
+        "mysqldump": "未在 PATH 中找到 mysqldump。",
+        "gzip": "未在 PATH 中找到 gzip。",
+        "hint": "请安装 mysqldump + gzip（随大多数 MySQL 客户端一起分发），以启用备份与还原功能。本页其它部分仍可使用。",
+        "installHint": "安装方式：Windows → winget install MariaDB.Client；macOS → brew install mysql-client；Linux → apt install mysql-client gzip。"
+      },
+      "overview": {
+        "heading": "概览",
+        "version": "版本",
+        "host": "主机",
+        "database": "数据库",
+        "port": "端口",
+        "tableCount": "表数",
+        "totalBytes": "磁盘占用",
+        "bytesUnknown": "未知"
+      },
+      "backup": {
+        "heading": "备份",
+        "createButton": "立即备份",
+        "creating": "正在备份…",
+        "createSuccess": "已保存备份 {filename}（{size}）。",
+        "createFailed": "备份失败：{error}",
+        "listEmpty": "暂无备份。",
+        "listHeader": "现有备份",
+        "downloadLabel": "下载",
+        "size": "大小",
+        "mtime": "创建时间",
+        "deleteLabel": "删除",
+        "deleteConfirm": "确定删除 {filename}？无法撤销。",
+        "retentionHint": "保留策略：仅保留最近 {keep} 份；每次备份成功后自动裁剪旧文件。"
+      },
+      "restore": {
+        "heading": "还原",
+        "fromBackup": "从现有备份还原",
+        "fromUpload": "从上传的 .sql.gz 还原",
+        "uploadLabel": "选择 .sql.gz 文件",
+        "uploadHelp": "上传 mysqldump 生成的 gzip 文件，最大 {max}。",
+        "selectBackup": "选择备份…",
+        "confirmPrompt": "输入大写 RESTORE 以启用按钮。",
+        "confirmPlaceholder": "RESTORE",
+        "submitButton": "还原数据库",
+        "submitting": "正在还原…",
+        "resultSuccess": "还原完成，已交换 {tables} 张表。安全备份：{filename}。",
+        "resultFailed": "还原失败：{error}",
+        "resultRolledBack": "还原失败并已回滚，数据库保持原状。原始错误：{error}",
+        "warning": "还原将覆盖当前数据库。系统会在切换前自动备份，但请确认 —— 该文件是唯一的撤销手段。"
+      },
+      "tables": {
+        "heading": "表",
+        "column": {
+          "model": "Prisma 模型",
+          "table": "表名",
+          "rows": "行数",
+          "size": "大小",
+          "columns": "列",
+          "indexes": "索引"
+        },
+        "expand": "显示结构",
+        "collapse": "隐藏结构",
+        "indexesEmpty": "无索引",
+        "primaryKey": "PK",
+        "notNull": "NN"
+      },
+      "slowQueries": {
+        "heading": "慢查询（TOP {limit}）",
+        "noPermission": "无法读取 performance_schema。数据库用户需要 PROCESS 权限。错误：{reason}",
+        "empty": "尚无 SQL 摘要记录（自从上次 digest reset 后还没有查询执行）。",
+        "column": {
+          "calls": "调用数",
+          "total": "总耗时",
+          "avg": "平均耗时",
+          "rowsSent": "返回行数",
+          "sample": "样例 SQL"
+        }
+      },
+      "prismaStudio": {
+        "heading": "Prisma Studio",
+        "description": "Prisma Studio 是一个独立进程，默认监听 5555 端口。在项目根目录执行：",
+        "command": "npx prisma studio",
+        "openDocs": "打开 Prisma Studio 文档 →"
       }
     }
   },

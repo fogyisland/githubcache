@@ -32,6 +32,15 @@ const schema = z.object({
   // client IP used in per-IP rate-limit + audit logs. Set to 1 only when
   // the upstream proxy strips/sets client IP correctly.
   TRUST_PROXY: z.coerce.boolean().default(false),
+  // M17 — Database backup retention. After every successful backup the
+  // oldest files in BACKUP_DIR are trimmed so the directory holds at
+  // most this many .sql.gz files. Set to 0 to keep forever (not
+  // recommended — disk fills up).
+  BACKUP_KEEP_N: z.coerce.number().int().min(0).default(10),
+  // M17 — Absolute or cwd-relative directory where mysqldump|gzip
+  // output is written. Created on first backup if absent. Path is
+  // resolved relative to process.cwd() at bootServer() time.
+  BACKUP_DIR: z.string().default('./backups'),
 });
 
 export const env = schema.parse(process.env);

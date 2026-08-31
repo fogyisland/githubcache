@@ -17,6 +17,7 @@ const RETRY_HINTS: Record<ErrorCode, RetryHint> = {
   forbidden: { retryNo: true },
   not_found: { retryNo: true },
   conflict: { retryNo: true },
+  payload_too_large: { retryNo: true },
   rate_limited: { retryAfter: 60 }, // representative; actual value comes from Retry-After header
   internal_error: { retryLater: true },
   unavailable: { retryLater: true },

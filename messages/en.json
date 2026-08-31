@@ -80,7 +80,9 @@
         "queries": "Queries",
         "ingestion": "Ingestion",
         "audit": "Audit",
-        "refresh": "Refresh"
+        "refresh": "Refresh",
+        "webhooks": "Webhooks",
+        "database": "Database"
       },
       "statusbar": {
         "db": "DB",
@@ -347,8 +349,10 @@
         "chip": "quota",
         "warning": "{pct}% of combined token quota used ({used} / {limit})."
       },
-      "poolHintPrefix": "Pool size (currently active in memory): {size}.",
-      "poolHintSuffix": "Adding a token here creates a DB record only — to activate it, add the token to {env} env var or {envFile} and restart the service.",
+      "poolHintPrefix": "Pool size (currently active in memory):",
+      "poolHintMid": "Adding a token here creates a DB record only — to activate it, add the token to the",
+      "poolHintEnv": "env var, or",
+      "poolHintSuffix": "file, and restart the service.",
       "list": {
         "heading": "Registered tokens",
         "ariaLabel": "GitHub tokens",
@@ -750,6 +754,96 @@
           "attempts": "Attempts",
           "error": "Last error"
         }
+      }
+    },
+    "database": {
+      "title": "Database",
+      "description": "Inspect DB version + size, take local backups, restore from a backup file, browse table schemas, and view top slow queries.",
+      "breadcrumb": {
+        "admin": "Admin",
+        "database": "Database"
+      },
+      "binaryWarning": {
+        "heading": "Backup binaries missing",
+        "mysqldump": "mysqldump not found on PATH.",
+        "gzip": "gzip not found on PATH.",
+        "hint": "Install mysqldump + gzip (ships with most MySQL installs) to enable backup and restore. The rest of this page still works.",
+        "installHint": "Installation: Windows → winget install MariaDB.Client; macOS → brew install mysql-client; Linux → apt install mysql-client gzip."
+      },
+      "overview": {
+        "heading": "Overview",
+        "version": "Version",
+        "host": "Host",
+        "database": "Database",
+        "port": "Port",
+        "tableCount": "Tables",
+        "totalBytes": "Disk usage",
+        "bytesUnknown": "unknown"
+      },
+      "backup": {
+        "heading": "Backups",
+        "createButton": "Back up now",
+        "creating": "Backing up…",
+        "createSuccess": "Backup saved as {filename} ({size}).",
+        "createFailed": "Backup failed: {error}",
+        "listEmpty": "No backups yet.",
+        "listHeader": "Existing backups",
+        "downloadLabel": "Download",
+        "size": "Size",
+        "mtime": "Created",
+        "deleteLabel": "Delete",
+        "deleteConfirm": "Delete {filename}? This cannot be undone.",
+        "retentionHint": "Retention: most recent {keep} kept; older backups are trimmed automatically after each successful backup."
+      },
+      "restore": {
+        "heading": "Restore",
+        "fromBackup": "Restore from existing backup",
+        "fromUpload": "Restore from uploaded .sql.gz",
+        "uploadLabel": "Choose .sql.gz file",
+        "uploadHelp": "Upload a mysqldump-produced gzip file. Max {max}.",
+        "selectBackup": "Pick a backup…",
+        "confirmPrompt": "Type RESTORE in capitals to enable the button.",
+        "confirmPlaceholder": "RESTORE",
+        "submitButton": "Restore database",
+        "submitting": "Restoring…",
+        "resultSuccess": "Restore complete. {tables} tables swapped. Pre-restore safety backup: {filename}.",
+        "resultFailed": "Restore failed: {error}",
+        "resultRolledBack": "Restore failed and rolled back. Live DB unchanged. Original error: {error}",
+        "warning": "Restoring overwrites the current database. A safety backup is taken automatically before the swap, but be sure — there is no undo beyond that file."
+      },
+      "tables": {
+        "heading": "Tables",
+        "column": {
+          "model": "Prisma model",
+          "table": "Table",
+          "rows": "Rows",
+          "size": "Size",
+          "columns": "Columns",
+          "indexes": "Indexes"
+        },
+        "expand": "Show schema",
+        "collapse": "Hide schema",
+        "indexesEmpty": "no indexes",
+        "primaryKey": "PK",
+        "notNull": "NN"
+      },
+      "slowQueries": {
+        "heading": "Slow queries (top {limit})",
+        "noPermission": "Cannot read performance_schema. The DB user needs PROCESS privilege for this view. Error: {reason}",
+        "empty": "No statement digests recorded yet (queries have not been executed against this server since the last digest reset).",
+        "column": {
+          "calls": "Calls",
+          "total": "Total time",
+          "avg": "Avg time",
+          "rowsSent": "Rows sent",
+          "sample": "Sample SQL"
+        }
+      },
+      "prismaStudio": {
+        "heading": "Prisma Studio",
+        "description": "Prisma Studio is a separate process on port 5555. Start it from the project root:",
+        "command": "npx prisma studio",
+        "openDocs": "Open Prisma Studio docs →"
       }
     }
   },

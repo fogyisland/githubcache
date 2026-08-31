@@ -4,6 +4,7 @@ import { env } from '@/lib/config/env';
 import { logger } from '@/lib/logger';
 import { initPool, shutdownPool } from '@/lib/github/pool';
 import { startScheduler, stopScheduler } from '@/lib/scheduler';
+import { startupDatabaseChecks } from '@/lib/database/startup';
 
 interface ServerHandle {
   server: ReturnType<typeof createServer>;
@@ -31,6 +32,8 @@ export async function bootServer(): Promise<ServerHandle> {
   await app.prepare();
 
   await initPool();
+
+  await startupDatabaseChecks();
 
   const scheduler = startScheduler();
 
