@@ -4,8 +4,10 @@ import { cookiesFromRequest } from '@/lib/auth/cookies-from-request';
 import { validateSession } from '@/lib/auth/session';
 import { verifyCsrf } from '@/lib/auth/csrf';
 import { updateTokenStatus, deleteTokenById, getTokenById } from '@/lib/db/github-tokens';
+import { addTokenToPool, removeTokenFromPool } from '@/lib/github/pool';
 import { writeAudit } from '@/lib/audit/writer';
 import { apiError } from '@/lib/api/errors';
+import { logger } from '@/lib/logger';
 
 const PatchBody = z.object({
   status: z.enum(['active', 'disabled']),
@@ -16,8 +18,9 @@ const PatchBody = z.object({
  * PATCH /api/admin/github-tokens/[id]
  *
  * Admin-only. Flips the token status between 'active' and 'disabled'.
- * Audits with `enable_token` or `disable_token`. Status changes take
- * effect on next pool init (service restart).
+ * Audits with `enable_token` or `disable_token`. Status changes are
+ * mirrored into the in-memory pool immediately (no restart required).
+ * Re-enabling a legacy row with no raw token is a no-op in the pool.
  *
  * Response codes:
  *   200 — { ok: true }
@@ -58,6 +61,20 @@ export async function PATCH(
   const before = target.status;
   await updateTokenStatus(id, parsed.data.status);
 
+  if (parsed.data.status === 'disabled') {
+    removeTokenFromPool(id);
+  } else {
+    // re-enable: re-fetch the row and put it back in the pool
+    const refreshed = await getTokenById(id);
+    if (refreshed) {
+      try {
+        addTokenToPool(refreshed);
+      } catch (e) {
+        logger.error({ err: e, id: id.toString() }, 'failed to re-add token to pool on enable');
+      }
+    }
+  }
+
   const fwd = req.headers.get('x-forwarded-for');
   void writeAudit({
     action: parsed.data.status === 'disabled' ? 'disable_token' : 'enable_token',
@@ -74,8 +91,8 @@ export async function PATCH(
 /**
  * DELETE /api/admin/github-tokens/[id]
  *
- * Admin-only. Hard-deletes the DB row. If the token is still in env/file,
- * it re-appears on next pool init. Audits `delete_token` with label +
+ * Admin-only. Hard-deletes the DB row and removes the token from the
+ * in-memory pool immediately. Audits `delete_token` with label +
  * first4/last4 (NOT the hash).
  *
  * CSRF may come from header or body — accept either (per M7.1 pattern).
@@ -125,6 +142,7 @@ export async function DELETE(
   }
 
   await deleteTokenById(id);
+  removeTokenFromPool(id);
 
   const fwd = req.headers.get('x-forwarded-for');
   void writeAudit({
