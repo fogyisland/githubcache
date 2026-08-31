@@ -320,3 +320,28 @@ enum WebhookDeliveryStatus {
   failed
   dead
 }
+
+// M19 — JSON-driven ingestion sources. Operators register providers that
+// point at a JSON file (or HTTP endpoint) containing a list of GitHub
+// repository URLs. /admin/ingestion can then "preview" the provider to
+// see how many unique owner/name pairs will be queued and "run" to
+// enqueue refresh_jobs for any that are not already cached.
+//
+// `sourceType` is reserved for future expansion (csv, rss, html scrape).
+// For M19 only 'json' is accepted by the API and the run path.
+//
+// `configJson` is validated against `ProviderConfigSchema` (see
+// src/lib/ingestion/providers/schema.ts) at every API boundary, so
+// raw DB rows are never trusted at read time — always re-parse.
+model IngestionProvider {
+  id         BigInt   @id @default(autoincrement())
+  slug       String   @unique @db.VarChar(64)
+  name       String   @db.VarChar(128)
+  sourceType String   @default("json") @map("source_type") @db.VarChar(32)
+  configJson Json     @map("config_json")
+  enabled    Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("ingestion_providers")
+}
