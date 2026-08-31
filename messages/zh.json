@@ -79,6 +79,7 @@
         "reports": "报表",
         "queries": "查询",
         "ingestion": "入库",
+        "providers": "数据源",
         "audit": "审计",
         "refresh": "刷新",
         "webhooks": "Webhook",
@@ -755,6 +756,96 @@
           "attempts": "尝试次数",
           "error": "最后错误"
         }
+      }
+    },
+    "providers": {
+      "title": "数据源",
+      "description": "声明 JSON 数据来源。每个数据源解析出 GitHub owner/name 列表并加入刷新队列。",
+      "breadcrumbAdmin": "管理员",
+      "breadcrumbProviders": "数据源",
+      "sourceType": {
+        "label": "来源类型",
+        "json": "JSON"
+      },
+      "status": {
+        "enabled": "已启用",
+        "disabled": "已停用"
+      },
+      "field": {
+        "name": "名称",
+        "slug": "标识",
+        "enabled": "启用",
+        "config": "配置",
+        "createdAt": "创建时间",
+        "updatedAt": "更新时间"
+      },
+      "list": {
+        "heading": "已配置的数据源",
+        "emptyTitle": "暂无数据源",
+        "emptyDescription": "新建一个，开始从 JSON 来源拉取 GitHub 仓库。",
+        "column": {
+          "name": "名称",
+          "slug": "标识",
+          "sourceType": "类型",
+          "status": "状态",
+          "actions": "操作"
+        }
+      },
+      "form": {
+        "createHeading": "新建数据源",
+        "editHeading": "编辑数据源",
+        "slugHelp": "小写字母、数字、连字符。创建后不可修改。",
+        "namePlaceholder": "ComfyUI 自定义节点",
+        "fileHeading": "文件来源",
+        "filePathLabel": "JSON 文件绝对路径",
+        "filePathPlaceholder": "D:\\path\\to\\file.json",
+        "httpHeading": "HTTP 来源",
+        "urlLabel": "JSON URL",
+        "urlPlaceholder": "https://example.com/list.json",
+        "itemsPathLabel": "Items 路径（JSONPath）",
+        "itemsPathPlaceholder": "$.custom_nodes[*]",
+        "itemsPathHelp": "JSONPath 表达式，返回条目数组。",
+        "urlFieldLabel": "URL 字段（JSONPath，相对每个条目）",
+        "urlFieldPlaceholder": "$.repository",
+        "urlFieldHelp": "对每个条目求值，定位 GitHub URL。",
+        "submitCreate": "创建",
+        "submitEdit": "保存修改",
+        "submittingCreate": "创建中…",
+        "submittingEdit": "保存中…"
+      },
+      "actions": {
+        "edit": "编辑",
+        "delete": "删除",
+        "enable": "启用",
+        "disable": "停用",
+        "preview": "预览",
+        "run": "执行",
+        "confirmDelete": "确认删除数据源 {slug}？此操作不可撤销。"
+      },
+      "runCard": {
+        "heading": "通过数据源入库",
+        "description": "选择已配置的数据源，把返回的所有陈旧或新增 owner/name 加入刷新任务队列。",
+        "chooseProvider": "数据源",
+        "noProviders": "尚未配置任何数据源，请先新建。",
+        "dryRun": "仅试运行（不入库）",
+        "limitLabel": "最大入库条数",
+        "submitPreview": "预览",
+        "submitRun": "立即执行",
+        "previewResult": {
+          "items": "条目",
+          "urls": "URL",
+          "unique": "去重",
+          "existing": "已存在（健康）",
+          "stale": "陈旧",
+          "new": "新增",
+          "invalid": "无效"
+        },
+        "poolEmptyWarning": "尚未配置 GitHub token，任务在抓取时会失败。请先到 /admin/github-tokens 添加 token 再执行。",
+        "runOk": "已入队 {jobCount} 个刷新任务。",
+        "previewOk": "预览结果：{totals}。",
+        "previewFailed": "预览失败（HTTP {status}）",
+        "runFailed": "执行失败（HTTP {status}）",
+        "createFailed": "加载数据源失败（HTTP {status}）"
       }
     },
     "database": {

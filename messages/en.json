@@ -79,6 +79,7 @@
         "reports": "Reports",
         "queries": "Queries",
         "ingestion": "Ingestion",
+        "providers": "Providers",
         "audit": "Audit",
         "refresh": "Refresh",
         "webhooks": "Webhooks",
@@ -755,6 +756,96 @@
           "attempts": "Attempts",
           "error": "Last error"
         }
+      }
+    },
+    "providers": {
+      "title": "Providers",
+      "description": "Declare JSON-driven data sources. Each provider extracts GitHub owner/name pairs and queues them as refresh jobs.",
+      "breadcrumbAdmin": "Admin",
+      "breadcrumbProviders": "Providers",
+      "sourceType": {
+        "label": "Source type",
+        "json": "JSON"
+      },
+      "status": {
+        "enabled": "enabled",
+        "disabled": "disabled"
+      },
+      "field": {
+        "name": "Name",
+        "slug": "Slug",
+        "enabled": "Enabled",
+        "config": "Config",
+        "createdAt": "Created",
+        "updatedAt": "Updated"
+      },
+      "list": {
+        "heading": "Configured providers",
+        "emptyTitle": "No providers yet",
+        "emptyDescription": "Create one to start pulling GitHub repos from a JSON source.",
+        "column": {
+          "name": "Name",
+          "slug": "Slug",
+          "sourceType": "Type",
+          "status": "Status",
+          "actions": "Actions"
+        }
+      },
+      "form": {
+        "createHeading": "Create provider",
+        "editHeading": "Edit provider",
+        "slugHelp": "Lowercase letters, digits, hyphens. Immutable after creation.",
+        "namePlaceholder": "ComfyUI custom nodes",
+        "fileHeading": "File source",
+        "filePathLabel": "Absolute path to a JSON file",
+        "filePathPlaceholder": "D:\\path\\to\\file.json",
+        "httpHeading": "HTTP source",
+        "urlLabel": "JSON URL",
+        "urlPlaceholder": "https://example.com/list.json",
+        "itemsPathLabel": "Items path (JSONPath)",
+        "itemsPathPlaceholder": "$.custom_nodes[*]",
+        "itemsPathHelp": "JSONPath expression that yields the array of items.",
+        "urlFieldLabel": "URL field (JSONPath, relative to each item)",
+        "urlFieldPlaceholder": "$.repository",
+        "urlFieldHelp": "JSONPath evaluated per item to find the GitHub URL.",
+        "submitCreate": "Create",
+        "submitEdit": "Save changes",
+        "submittingCreate": "Creating…",
+        "submittingEdit": "Saving…"
+      },
+      "actions": {
+        "edit": "Edit",
+        "delete": "Delete",
+        "enable": "Enable",
+        "disable": "Disable",
+        "preview": "Preview",
+        "run": "Run",
+        "confirmDelete": "Delete provider {slug}? This cannot be undone."
+      },
+      "runCard": {
+        "heading": "Run via provider",
+        "description": "Pick a configured provider and enqueue refresh jobs for every stale or new owner/name pair it returns.",
+        "chooseProvider": "Provider",
+        "noProviders": "No providers configured yet — create one first.",
+        "dryRun": "Dry run (no jobs enqueued)",
+        "limitLabel": "Max pairs to enqueue",
+        "submitPreview": "Preview",
+        "submitRun": "Run now",
+        "previewResult": {
+          "items": "items",
+          "urls": "urls",
+          "unique": "unique",
+          "existing": "existing_ok",
+          "stale": "stale",
+          "new": "new",
+          "invalid": "invalid"
+        },
+        "poolEmptyWarning": "No GitHub tokens configured — jobs will fail at fetch. Add tokens at /admin/github-tokens before running for real.",
+        "runOk": "Enqueued {jobCount} refresh jobs.",
+        "previewOk": "Preview: {totals}.",
+        "previewFailed": "Preview failed (HTTP {status})",
+        "runFailed": "Run failed (HTTP {status})",
+        "createFailed": "Failed to load providers (HTTP {status})"
       }
     },
     "database": {
