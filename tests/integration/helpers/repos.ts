@@ -30,6 +30,12 @@ const DEFAULT_METADATA: RepoCoreData = {
   homepage: 'https://example.com',
   archived: false,
   disabled: false,
+  // M20.8 — version + branch fields. Test fixtures default to "no releases,
+  // no branches" unless a specific test overrides these.
+  latestRelease: null,
+  recentReleases: [],
+  releaseCount: 0,
+  branches: [],
 };
 
 export async function createTestRepo(opts: CreateTestRepoOpts) {

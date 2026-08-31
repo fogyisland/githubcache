@@ -102,7 +102,11 @@ export async function refreshOne(
       throw new Error('fetchRepoCore returned neither data nor notModified');
     }
 
-    const metadata = parseRepoResponse(result.data);
+    const metadata = parseRepoResponse(
+      result.data,
+      result.releases ?? [],
+      result.branches ?? [],
+    );
     await storeRepoMetadata({
       owner: repo.owner,
       name: repo.name,

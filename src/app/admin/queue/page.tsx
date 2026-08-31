@@ -25,7 +25,7 @@ const WINDOW_24H_MS = 24 * 60 * 60 * 1000;
  * that fires a single scheduler tick on demand. The page auto-refreshes
  * every 2s via the QueueControls client island.
  */
-export default async function AdminQueuePage(): Promise<ReactElement> {
+export default async function AdminQueuePage(_props: object = {}): Promise<ReactElement> {
   // Auth gate — admin only (per spec).
   const cookieStore = cookies();
   const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));

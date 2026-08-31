@@ -44,6 +44,14 @@ const server = setupServer(
       { headers: { etag: 'W/"abc"', 'x-ratelimit-remaining': '4999', 'x-ratelimit-reset': '9999999999' } },
     ),
   ),
+  // M20.8 — release + branch handlers default to empty arrays so existing
+  // tests continue to pass. New tests for version capture override these.
+  http.get('https://api.github.com/repos/:owner/:name/releases', () =>
+    HttpResponse.json([]),
+  ),
+  http.get('https://api.github.com/repos/:owner/:name/branches', () =>
+    HttpResponse.json([]),
+  ),
 );
 
 describe('fetchRepoCore (pool-based)', () => {
@@ -170,5 +178,112 @@ describe('fetchRepoCore (pool-based)', () => {
     const r = await fetchRepoCore('facebook', 'react');
     expect(r.data).toMatchObject({ name: 'react' });
     expect(recordUsage).toHaveBeenCalledWith(BigInt(42), 4999, expect.any(Number));
+  });
+});
+
+describe('fetchRepoCore — M20.8 version + branch capture', () => {
+  beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+  afterAll(() => server.close());
+
+  beforeEach(() => {
+    pickQueue.reset();
+    server.resetHandlers();
+  });
+
+  it('returns releases + branches arrays on 200', async () => {
+    pickQueue.push({ id: BigInt(1), octokit: fakeOctokit() });
+
+    server.use(
+      http.get('https://api.github.com/repos/:owner/:name', () =>
+        HttpResponse.json(
+          { name: 'react', default_branch: 'main' },
+          { headers: { etag: 'W/"v2"' } },
+        ),
+      ),
+      http.get('https://api.github.com/repos/:owner/:name/releases', () =>
+        HttpResponse.json([
+          {
+            tag_name: 'v18.0.0',
+            name: '18.0.0',
+            published_at: '2026-01-01T00:00:00Z',
+            html_url: 'https://github.com/facebook/react/releases/tag/v18.0.0',
+            prerelease: false,
+            draft: false,
+            tarball_url: 'https://api.github.com/facebook/react/tarball/v18.0.0',
+            zipball_url: 'https://api.github.com/facebook/react/zipball/v18.0.0',
+            assets: [{ name: 'a' }, { name: 'b' }],
+          },
+        ]),
+      ),
+      http.get('https://api.github.com/repos/:owner/:name/branches', () =>
+        HttpResponse.json([
+          { name: 'main', protected: true, commit: { sha: 'aaa111' } },
+          { name: 'v17.x', protected: false, commit: { sha: 'bbb222' } },
+        ]),
+      ),
+    );
+
+    const r = await fetchRepoCore('facebook', 'react');
+    expect(r.releases).toHaveLength(1);
+    expect(r.releases![0]!.tag_name).toBe('v18.0.0');
+    expect(r.releases![0]!.assets_count).toBe(2);
+    expect(r.branches).toHaveLength(2);
+    expect(r.branches![0]!.name).toBe('main');
+    expect(r.branches![0]!.commit_sha).toBe('aaa111');
+  });
+
+  it('omits releases + branches on 304 (no extra API calls)', async () => {
+    pickQueue.push({ id: BigInt(1), octokit: fakeOctokit() });
+
+    let releasesCalls = 0;
+    let branchesCalls = 0;
+    server.use(
+      // Main repo endpoint returns 304 — Octokit throws with status=304,
+      // which our catch block translates to `{notModified: true}`.
+      http.get('https://api.github.com/repos/:owner/:name', () =>
+        new HttpResponse(null, { status: 304, headers: { etag: 'W/"v1"' } }),
+      ),
+      http.get('https://api.github.com/repos/:owner/:name/releases', () => {
+        releasesCalls += 1;
+        return HttpResponse.json([]);
+      }),
+      http.get('https://api.github.com/repos/:owner/:name/branches', () => {
+        branchesCalls += 1;
+        return HttpResponse.json([]);
+      }),
+    );
+
+    const r = await fetchRepoCore('facebook', 'react', 'W/"v1"');
+    expect(r.notModified).toBe(true);
+    expect(r.releases).toBeUndefined();
+    expect(r.branches).toBeUndefined();
+    expect(releasesCalls).toBe(0);
+    expect(branchesCalls).toBe(0);
+  });
+
+  it('returns empty arrays when listReleases / listBranches fail (non-fatal)', async () => {
+    pickQueue.push({ id: BigInt(1), octokit: fakeOctokit() });
+
+    server.use(
+      http.get('https://api.github.com/repos/:owner/:name', () =>
+        HttpResponse.json(
+          { name: 'react', default_branch: 'main' },
+          { headers: { etag: 'W/"v3"' } },
+        ),
+      ),
+      // Both endpoints fail — the main fetch should still succeed and return
+      // empty arrays for releases + branches (Promise.allSettled fallback).
+      http.get('https://api.github.com/repos/:owner/:name/releases', () =>
+        HttpResponse.json({ message: 'internal' }, { status: 500 }),
+      ),
+      http.get('https://api.github.com/repos/:owner/:name/branches', () =>
+        HttpResponse.json({ message: 'internal' }, { status: 500 }),
+      ),
+    );
+
+    const r = await fetchRepoCore('facebook', 'react');
+    expect(r.data).toMatchObject({ name: 'react' });
+    expect(r.releases).toEqual([]);
+    expect(r.branches).toEqual([]);
   });
 });
