@@ -3,11 +3,9 @@ import type { GithubToken } from '@prisma/client';
 
 // Hoist mock state so vi.mock factories can access it
 const mocks = vi.hoisted(() => ({
-  envTokens: [] as Array<{ raw: string; first4: string; last4: string; hash: string }>,
   dbRows: [] as GithubToken[],
-  insertedRows: [] as Array<{ label: string; tokenFirst4: string; tokenLast4: string; tokenHash: string }>,
   updatedRows: [] as Array<{ id: bigint; requestsUsed: number; resetAt: Date | null; lastUsedAt: Date | null }>,
-  insertIdSeq: 1 as number,
+  dbRowIdSeq: 1 as number,
   disableCalls: [] as Array<{ id: bigint; reason: 'operator' | 'auto-rotation' }>,
   autoDisableThreshold: 3 as number,
 }));
@@ -16,20 +14,17 @@ vi.mock('@/lib/config/env', () => ({
   get env() { return { TOKEN_AUTO_DISABLE_THRESHOLD: mocks.autoDisableThreshold }; },
 }));
 
-vi.mock('@/lib/github/tokens-loader', () => ({
-  loadTokensFromEnv: () => mocks.envTokens,
-}));
 vi.mock('@/lib/db/github-tokens', () => ({
   findTokenByHash: vi.fn((hash: string) => Promise.resolve(mocks.dbRows.find((r) => r.tokenHash === hash) ?? null)),
   listAllTokens: () => Promise.resolve({ rows: mocks.dbRows, total: mocks.dbRows.length }),
-  insertToken: vi.fn((data: { label: string; tokenFirst4: string; tokenLast4: string; tokenHash: string }) => {
-    mocks.insertedRows.push(data);
+  insertToken: vi.fn((data: { label: string; tokenFirst4: string; tokenLast4: string; tokenHash: string; token: string }) => {
     const row = {
-      id: BigInt(mocks.insertIdSeq++),
+      id: BigInt(mocks.dbRowIdSeq++),
       label: data.label,
       tokenFirst4: data.tokenFirst4,
       tokenLast4: data.tokenLast4,
       tokenHash: data.tokenHash,
+      token: data.token,
       status: 'active',
       requestsUsed: 0,
       requestsLimit: 5000,
@@ -66,14 +61,18 @@ let persistQuota: typeof import('@/lib/github/pool').persistQuota;
 let getBackoff: typeof import('@/lib/github/pool').getBackoff;
 let shutdownPool: typeof import('@/lib/github/pool').shutdownPool;
 let poolSize: typeof import('@/lib/github/pool').poolSize;
+let addTokenToPool: typeof import('@/lib/github/pool').addTokenToPool;
+let removeTokenFromPool: typeof import('@/lib/github/pool').removeTokenFromPool;
+let poolHasId: typeof import('@/lib/github/pool').poolHasId;
 
 function mkRow(overrides: Partial<GithubToken> = {}): GithubToken {
   return {
-    id: BigInt(mocks.insertIdSeq++),
+    id: BigInt(mocks.dbRowIdSeq++),
     label: 'test',
     tokenFirst4: 'ghp_',
     tokenLast4: 'aaaa',
     tokenHash: 'x',
+    token: 'ghp_test', // M21 — raw plaintext required for pool entry
     status: 'active',
     requestsUsed: 0,
     requestsLimit: 5000,
@@ -84,17 +83,11 @@ function mkRow(overrides: Partial<GithubToken> = {}): GithubToken {
   } as unknown as GithubToken;
 }
 
-function mkEnvToken(raw: string) {
-  return { raw, first4: raw.slice(0, 4), last4: raw.slice(-4), hash: `hash-of-${raw}` };
-}
-
 beforeEach(async () => {
   vi.resetModules();
-  mocks.envTokens = [];
   mocks.dbRows = [];
-  mocks.insertedRows = [];
   mocks.updatedRows = [];
-  mocks.insertIdSeq = 1;
+  mocks.dbRowIdSeq = 1;
   mocks.disableCalls = [];
   mocks.autoDisableThreshold = 3;
   vi.useFakeTimers();
@@ -107,6 +100,9 @@ beforeEach(async () => {
   getBackoff = mod.getBackoff;
   shutdownPool = mod.shutdownPool;
   poolSize = mod.poolSize;
+  addTokenToPool = mod.addTokenToPool;
+  removeTokenFromPool = mod.removeTokenFromPool;
+  poolHasId = mod.poolHasId;
 });
 
 afterEach(async () => {
@@ -116,34 +112,36 @@ afterEach(async () => {
 });
 
 describe('initPool', () => {
-  it('inserts env tokens not in DB', async () => {
-    mocks.envTokens = [mkEnvToken('ghp_aaa'), mkEnvToken('ghp_bbb')];
+  it('inserts no rows on init (M21 DB-direct, no env-loader)', async () => {
+    mocks.dbRows = [mkRow({ id: BigInt(1) })];
     await initPool();
-    expect(mocks.insertedRows).toHaveLength(2);
-    expect(poolSize()).toBe(2);
-  });
-
-  it('reuses existing DB rows for tokens already present', async () => {
-    mocks.envTokens = [mkEnvToken('ghp_aaa')];
-    mocks.dbRows = [mkRow({ tokenHash: 'hash-of-ghp_aaa', label: 'existing' })];
-    await initPool();
-    expect(mocks.insertedRows).toHaveLength(0);
     expect(poolSize()).toBe(1);
   });
 
-  it('skips disabled DB rows', async () => {
-    mocks.envTokens = [mkEnvToken('ghp_aaa')];
-    mocks.dbRows = [mkRow({ tokenHash: 'hash-of-ghp_aaa', status: 'disabled' })];
+  it('skips rows with token=null and warns', async () => {
+    mocks.dbRows = [
+      mkRow({ id: BigInt(1), token: null, label: 'legacy' }),
+      mkRow({ id: BigInt(2), token: 'ghp_ok' }),
+    ];
+    await initPool();
+    expect(poolSize()).toBe(1); // only the non-null token enters the pool
+  });
+
+  it('skips disabled rows', async () => {
+    mocks.dbRows = [mkRow({ id: BigInt(1), status: 'disabled' })];
     await initPool();
     expect(poolSize()).toBe(0);
   });
 
-  it('inserts new rows but skips orphans silently', async () => {
-    mocks.envTokens = [mkEnvToken('ghp_aaa')];
-    mocks.dbRows = [mkRow({ tokenHash: 'orphan-hash', label: 'orphan' })];
+  it('clears the pool on re-init (idempotent)', async () => {
+    mocks.dbRows = [mkRow({ id: BigInt(1) })];
     await initPool();
-    expect(poolSize()).toBe(1); // only env-present token
-    // Orphan NOT deleted (would need separate admin action)
+    expect(poolSize()).toBe(1);
+    mocks.dbRows = [mkRow({ id: BigInt(2), label: 'second' })];
+    await initPool();
+    expect(poolSize()).toBe(1);
+    expect(poolHasId(BigInt(1))).toBe(false); // old id gone
+    expect(poolHasId(BigInt(2))).toBe(true);
   });
 });
 
@@ -154,7 +152,7 @@ describe('pickToken', () => {
   });
 
   it('returns the active token with lowest requestsUsed', async () => {
-    mocks.envTokens = [mkEnvToken('ghp_aaa'), mkEnvToken('ghp_bbb')];
+    mocks.dbRows = [mkRow({ id: BigInt(1) }), mkRow({ id: BigInt(2) })];
     await initPool();
     const picked = pickToken();
     expect(picked).not.toBeNull();
@@ -162,7 +160,7 @@ describe('pickToken', () => {
   });
 
   it('skips exhausted tokens', async () => {
-    mocks.envTokens = [mkEnvToken('ghp_aaa'), mkEnvToken('ghp_bbb')];
+    mocks.dbRows = [mkRow({ id: BigInt(1) }), mkRow({ id: BigInt(2) })];
     await initPool();
     // Exhaust token 1 (use up its quota, resetAt in future)
     const t1 = pickToken()!;
@@ -173,7 +171,7 @@ describe('pickToken', () => {
   });
 
   it('picks exhausted token after reset window passes', async () => {
-    mocks.envTokens = [mkEnvToken('ghp_aaa')];
+    mocks.dbRows = [mkRow({ id: BigInt(1) })];
     await initPool();
     const t = pickToken()!;
     await recordUsage(t.id, 0, Math.floor(Date.now() / 1000) + 60);
@@ -185,7 +183,7 @@ describe('pickToken', () => {
 
 describe('recordUsage + persistQuota', () => {
   it('updates in-memory state', async () => {
-    mocks.envTokens = [mkEnvToken('ghp_aaa')];
+    mocks.dbRows = [mkRow({ id: BigInt(1) })];
     await initPool();
     const t = pickToken()!;
     const resetUnix = Math.floor(Date.now() / 1000) + 3600;
@@ -196,7 +194,7 @@ describe('recordUsage + persistQuota', () => {
   });
 
   it('triggers persist after 25 calls', async () => {
-    mocks.envTokens = [mkEnvToken('ghp_aaa')];
+    mocks.dbRows = [mkRow({ id: BigInt(1) })];
     await initPool();
     const t = pickToken()!;
     for (let i = 0; i < 25; i++) {
@@ -207,7 +205,7 @@ describe('recordUsage + persistQuota', () => {
   });
 
   it('triggers persist via 60s timer', async () => {
-    mocks.envTokens = [mkEnvToken('ghp_aaa')];
+    mocks.dbRows = [mkRow({ id: BigInt(1) })];
     await initPool();
     const t = pickToken()!;
     await recordUsage(t.id, 4999, Math.floor(Date.now() / 1000) + 3600);
@@ -219,7 +217,7 @@ describe('recordUsage + persistQuota', () => {
   });
 
   it('persistQuota clears dirty flag', async () => {
-    mocks.envTokens = [mkEnvToken('ghp_aaa')];
+    mocks.dbRows = [mkRow({ id: BigInt(1) })];
     await initPool();
     const t = pickToken()!;
     await recordUsage(t.id, 4999, Math.floor(Date.now() / 1000) + 3600);
@@ -243,7 +241,7 @@ describe('getBackoff', () => {
   });
 
   it('resets after a successful recordUsage', async () => {
-    mocks.envTokens = [mkEnvToken('ghp_aaa')];
+    mocks.dbRows = [mkRow({ id: BigInt(1) })];
     await initPool();
     const t = pickToken()!;
     getBackoff();
@@ -255,7 +253,7 @@ describe('getBackoff', () => {
 
 describe('shutdownPool', () => {
   it('flushes dirty entries and stops the timer', async () => {
-    mocks.envTokens = [mkEnvToken('ghp_aaa')];
+    mocks.dbRows = [mkRow({ id: BigInt(1) })];
     await initPool();
     const t = pickToken()!;
     await recordUsage(t.id, 4999, Math.floor(Date.now() / 1000) + 3600);
@@ -266,7 +264,7 @@ describe('shutdownPool', () => {
 
 describe('M14.4 auto-disable', () => {
   it('does not auto-disable below threshold', async () => {
-    mocks.envTokens = [mkEnvToken('ghp_aaa')];
+    mocks.dbRows = [mkRow({ id: BigInt(1) })];
     mocks.autoDisableThreshold = 3;
     await initPool();
     const t = pickToken()!;
@@ -278,7 +276,7 @@ describe('M14.4 auto-disable', () => {
   });
 
   it('auto-disables after consecutive 429s hit threshold', async () => {
-    mocks.envTokens = [mkEnvToken('ghp_aaa')];
+    mocks.dbRows = [mkRow({ id: BigInt(1) })];
     mocks.autoDisableThreshold = 3;
     await initPool();
     const t = pickToken()!;
@@ -291,7 +289,7 @@ describe('M14.4 auto-disable', () => {
   });
 
   it('respects threshold=0 (manual-only)', async () => {
-    mocks.envTokens = [mkEnvToken('ghp_aaa')];
+    mocks.dbRows = [mkRow({ id: BigInt(1) })];
     mocks.autoDisableThreshold = 0;
     await initPool();
     const t = pickToken()!;
@@ -304,7 +302,7 @@ describe('M14.4 auto-disable', () => {
   });
 
   it('respects a custom threshold', async () => {
-    mocks.envTokens = [mkEnvToken('ghp_aaa')];
+    mocks.dbRows = [mkRow({ id: BigInt(1) })];
     mocks.autoDisableThreshold = 5;
     await initPool();
     const t = pickToken()!;
@@ -318,7 +316,7 @@ describe('M14.4 auto-disable', () => {
   });
 
   it('resets per-token counter on success', async () => {
-    mocks.envTokens = [mkEnvToken('ghp_aaa')];
+    mocks.dbRows = [mkRow({ id: BigInt(1) })];
     mocks.autoDisableThreshold = 3;
     await initPool();
     const t = pickToken()!;
@@ -338,7 +336,7 @@ describe('M14.4 auto-disable', () => {
   });
 
   it('does not treat remaining=0 with past resetAt as 429', async () => {
-    mocks.envTokens = [mkEnvToken('ghp_aaa')];
+    mocks.dbRows = [mkRow({ id: BigInt(1) })];
     mocks.autoDisableThreshold = 3;
     await initPool();
     const t = pickToken()!;
@@ -351,7 +349,7 @@ describe('M14.4 auto-disable', () => {
   });
 
   it('only auto-disables the offending token, not the whole pool', async () => {
-    mocks.envTokens = [mkEnvToken('ghp_aaa'), mkEnvToken('ghp_bbb')];
+    mocks.dbRows = [mkRow({ id: BigInt(1) }), mkRow({ id: BigInt(2) })];
     mocks.autoDisableThreshold = 3;
     await initPool();
     const t1 = pickToken()!;
@@ -361,5 +359,47 @@ describe('M14.4 auto-disable', () => {
     await recordUsage(t1.id, 0, futureReset); // disables t1
     expect(mocks.disableCalls).toEqual([{ id: t1.id, reason: 'auto-rotation' }]);
     expect(poolSize()).toBe(1); // t2 still active
+  });
+});
+
+describe('M21 addTokenToPool / removeTokenToPool / poolHasId', () => {
+  it('poolHasId returns true after addTokenToPool for an active row', async () => {
+    mocks.dbRows = [];
+    await initPool();
+    expect(poolHasId(BigInt(99))).toBe(false);
+    addTokenToPool(mkRow({ id: BigInt(99) }));
+    expect(poolHasId(BigInt(99))).toBe(true);
+    expect(poolSize()).toBe(1);
+  });
+
+  it('addTokenToPool no-ops on token=null rows (legacy M4)', async () => {
+    mocks.dbRows = [];
+    await initPool();
+    addTokenToPool(mkRow({ id: BigInt(7), token: null }));
+    expect(poolHasId(BigInt(7))).toBe(false);
+  });
+
+  it('addTokenToPool removes from pool when status !== active', async () => {
+    mocks.dbRows = [];
+    await initPool();
+    addTokenToPool(mkRow({ id: BigInt(1) }));
+    expect(poolHasId(BigInt(1))).toBe(true);
+    addTokenToPool(mkRow({ id: BigInt(1), status: 'disabled' }));
+    expect(poolHasId(BigInt(1))).toBe(false);
+  });
+
+  it('removeTokenToPool is a no-op when id absent', async () => {
+    mocks.dbRows = [];
+    await initPool();
+    expect(() => removeTokenFromPool(BigInt(99))).not.toThrow();
+    expect(poolSize()).toBe(0);
+  });
+
+  it('removeTokenToPool removes the entry', async () => {
+    mocks.dbRows = [];
+    await initPool();
+    addTokenToPool(mkRow({ id: BigInt(1) }));
+    removeTokenFromPool(BigInt(1));
+    expect(poolHasId(BigInt(1))).toBe(false);
   });
 });
