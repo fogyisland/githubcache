@@ -194,6 +194,11 @@ vi.mock('@/app/admin/ingestion/_components/recent-jobs-table', () => ({
     ),
 }));
 
+vi.mock('@/app/admin/ingestion/_components/run-via-provider', () => ({
+  RunViaProvider: () =>
+    createElement('div', { 'data-testid': 'run-via-provider-stub' }),
+}));
+
 import AdminIngestionPage from '@/app/admin/ingestion/page';
 
 describe('AdminIngestionPage i18n', () => {
