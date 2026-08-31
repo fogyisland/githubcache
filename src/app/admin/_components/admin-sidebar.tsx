@@ -13,6 +13,7 @@ export type AdminSectionSlug =
   | 'providers'
   | 'audit'
   | 'refresh'
+  | 'queue'
   | 'webhooks'
   | 'database'
   | 'insights';
@@ -36,6 +37,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { slug: 'providers', icon: '⊡', href: '/admin/providers', roles: ['admin'] },
   { slug: 'audit', icon: '◭', href: '/admin/audit', roles: ['admin'] },
   { slug: 'refresh', icon: '↻', href: '/admin/refresh', roles: ['admin'] },
+  { slug: 'queue', icon: '⊞', href: '/admin/queue', roles: ['admin'] },
   { slug: 'webhooks', icon: '⊜', href: '/admin/webhooks', roles: ['admin'] },
   { slug: 'database', icon: '◰', href: '/admin/database', roles: ['admin'] },
   { slug: 'insights', icon: '◬', href: '/admin/insights', roles: ['admin'] },

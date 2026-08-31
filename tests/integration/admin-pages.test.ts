@@ -84,4 +84,23 @@ describe('page-level admin role check', () => {
     );
     expect(mockRedirect).toHaveBeenCalledWith('/admin');
   });
+
+  it('redirects to /login when no session is present (AdminQueuePage)', async () => {
+    mockValidateSession.mockResolvedValueOnce(null);
+    const AdminQueuePage = (await import('@/app/admin/queue/page')).default;
+    await expect(AdminQueuePage({})).rejects.toThrow('__redirect_to__/login');
+    expect(mockRedirect).toHaveBeenCalledWith('/login');
+  });
+
+  it('redirects to /admin when the user is an operator (AdminQueuePage)', async () => {
+    mockValidateSession.mockResolvedValueOnce({
+      id: 1n,
+      email: 'op@example.test',
+      role: 'operator',
+      status: 'active',
+    } as never);
+    const AdminQueuePage = (await import('@/app/admin/queue/page')).default;
+    await expect(AdminQueuePage({})).rejects.toThrow('__redirect_to__/admin');
+    expect(mockRedirect).toHaveBeenCalledWith('/admin');
+  });
 });

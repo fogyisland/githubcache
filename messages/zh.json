@@ -82,6 +82,7 @@
         "providers": "数据源",
         "audit": "审计",
         "refresh": "刷新",
+        "queue": "队列",
         "webhooks": "Webhook",
         "database": "数据库",
         "insights": "内容洞察"
@@ -651,6 +652,56 @@
           "priority": "优先级",
           "scheduled": "计划时间",
           "attempts": "尝试次数"
+        }
+      }
+    },
+    "queue": {
+      "title": "队列",
+      "description": "GitHub 刷新队列的实时视图：观察待处理任务清空、查看刚完成的任务，以及需要时手动触发一次调度。",
+      "breadcrumb": {
+        "admin": "管理",
+        "queue": "队列"
+      },
+      "controls": {
+        "heading": "触发一次调度",
+        "hint": "手动触发一次调度 tick——领取最多 SCHEDULER_BATCH_SIZE 个待处理任务并发执行。",
+        "autoRefresh": "本页每 2 秒自动刷新。",
+        "runTickButton": "立即触发",
+        "running": "执行中…",
+        "schedulerLabel": "调度器：",
+        "running": "运行中",
+        "paused": "已暂停",
+        "pausedAt": "暂停于 {when}",
+        "tickSummary": "本次 tick：领取 {claimed}，完成 {done}，仍待处理 {pending}，失败 {failed}。",
+        "failed": "失败：{error}"
+      },
+      "kpi": {
+        "pending": "待处理",
+        "inProgress": "进行中",
+        "done24h": "完成（24 小时）",
+        "failed24h": "失败（24 小时）",
+        "oldestPending": "最早待处理",
+        "oldestNone": "—",
+        "oldestJustNow": "刚刚",
+        "oldestMinutes": "{m} 分钟",
+        "oldestHours": "{h} 小时",
+        "oldestDays": "{d} 天"
+      },
+      "sections": {
+        "pendingHeading": "待处理任务",
+        "inProgressHeading": "进行中任务",
+        "doneHeading": "已完成（近 24 小时）",
+        "failedHeading": "已失败（近 24 小时）",
+        "empty": "本区暂无任务。",
+        "dash": "—",
+        "column": {
+          "id": "任务 ID",
+          "repo": "仓库",
+          "priority": "优先级",
+          "scheduled": "计划时间",
+          "updated": "更新时间",
+          "attempts": "尝试次数",
+          "error": "最近错误"
         }
       }
     },

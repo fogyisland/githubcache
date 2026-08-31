@@ -14,6 +14,7 @@ vi.mock('next-intl/server', () => ({
         'sections.reports': 'Reports',
         'sections.audit': 'Audit',
         'sections.refresh': 'Refresh',
+        'sections.queue': 'Queue',
       },
       'admin.shell.dashboard': {
         title: 'Dashboard',
@@ -58,6 +59,7 @@ describe('AdminSidebar i18n', () => {
     expect(html).toContain('Reports');
     expect(html).toContain('Audit');
     expect(html).toContain('Refresh');
+    expect(html).toContain('Queue');
   });
 
   it('hides admin-only sections for operator role', async () => {

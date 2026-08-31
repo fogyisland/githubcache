@@ -82,6 +82,7 @@
         "providers": "Providers",
         "audit": "Audit",
         "refresh": "Refresh",
+        "queue": "Queue",
         "webhooks": "Webhooks",
         "database": "Database",
         "insights": "Insights"
@@ -651,6 +652,56 @@
           "priority": "Priority",
           "scheduled": "Scheduled",
           "attempts": "Attempts"
+        }
+      }
+    },
+    "queue": {
+      "title": "Queue",
+      "description": "Live view of the GitHub refresh queue. Watch pending jobs drain, see what just finished, and trigger a manual tick when you want the scheduler to act now.",
+      "breadcrumb": {
+        "admin": "Admin",
+        "queue": "Queue"
+      },
+      "controls": {
+        "heading": "Run scheduler tick",
+        "hint": "Force a single scheduler tick — claims up to SCHEDULER_BATCH_SIZE pending jobs and processes them concurrently.",
+        "autoRefresh": "This page auto-refreshes every 2s.",
+        "runTickButton": "Run tick now",
+        "running": "Running…",
+        "schedulerLabel": "Scheduler:",
+        "running": "RUNNING",
+        "paused": "PAUSED",
+        "pausedAt": "paused at {when}",
+        "tickSummary": "Tick complete — claimed {claimed}, done {done}, pending {pending}, failed {failed}.",
+        "failed": "Failed: {error}"
+      },
+      "kpi": {
+        "pending": "Pending",
+        "inProgress": "In progress",
+        "done24h": "Done (24h)",
+        "failed24h": "Failed (24h)",
+        "oldestPending": "Oldest pending",
+        "oldestNone": "—",
+        "oldestJustNow": "just now",
+        "oldestMinutes": "{m}m",
+        "oldestHours": "{h}h",
+        "oldestDays": "{d}d"
+      },
+      "sections": {
+        "pendingHeading": "Pending jobs",
+        "inProgressHeading": "In-progress jobs",
+        "doneHeading": "Done (last 24h)",
+        "failedHeading": "Failed (last 24h)",
+        "empty": "No jobs in this section.",
+        "dash": "—",
+        "column": {
+          "id": "Job ID",
+          "repo": "Repository",
+          "priority": "Priority",
+          "scheduled": "Scheduled",
+          "updated": "Updated",
+          "attempts": "Attempts",
+          "error": "Last error"
         }
       }
     },
