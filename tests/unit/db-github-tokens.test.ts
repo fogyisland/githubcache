@@ -6,6 +6,7 @@ import {
   updateTokenStatus,
   deleteTokenById,
   disableTokenById,
+  updateTokenRaw,
 } from '@/lib/db/github-tokens';
 import { prisma } from '@/lib/db/client';
 import { createHash } from 'crypto';
@@ -181,5 +182,62 @@ describe('disableTokenById (M14.4)', () => {
     await disableTokenById(id, 'auto-rotation');
     const updated = await disableTokenById(id, 'auto-rotation');
     expect(updated.status).toBe('disabled');
+  });
+});
+
+describe('updateTokenRaw (M21)', () => {
+  it('overwrites token + recomputes first4/last4/hash', async () => {
+    const id = await mkRow('update-raw-1');
+    const newRaw = 'ghp_brand-new-token-1234567890ab';
+    const expectedLast4 = newRaw.slice(-4); // '90ab'
+    const expectedHash = createHash('sha256').update(newRaw).digest('hex');
+    const oldRow = await getTokenById(id);
+    const oldHash = oldRow!.tokenHash;
+
+    const updated = await updateTokenRaw(id, newRaw);
+
+    expect(updated.id).toBe(id);
+    expect(updated.token).toBe(newRaw);
+    expect(updated.tokenFirst4).toBe('ghp_');
+    expect(updated.tokenLast4).toBe(expectedLast4);
+    expect(updated.tokenHash).toBe(expectedHash);
+    expect(updated.tokenHash).not.toBe(oldHash);
+
+    // Persisted in DB
+    const after = await getTokenById(id);
+    expect(after!.token).toBe(newRaw);
+    expect(after!.tokenFirst4).toBe('ghp_');
+    expect(after!.tokenLast4).toBe(expectedLast4);
+    expect(after!.tokenHash).toBe(expectedHash);
+  });
+
+  it('preserves row id and label', async () => {
+    const id = await mkRow('update-raw-2');
+    const before = await getTokenById(id);
+    const expectedLabel = before!.label;
+
+    const newRaw = 'ghp_another-fresh-token-aabbccdd';
+    const updated = await updateTokenRaw(id, newRaw);
+
+    expect(updated.id).toBe(id);
+    expect(updated.label).toBe(expectedLabel);
+  });
+
+  it('handles short tokens (last4 === full token)', async () => {
+    const id = await mkRow('update-raw-3');
+    const shortToken = 'abcd';
+    const expectedHash = createHash('sha256').update(shortToken).digest('hex');
+
+    const updated = await updateTokenRaw(id, shortToken);
+
+    expect(updated.token).toBe(shortToken);
+    expect(updated.tokenFirst4).toBe('abcd');
+    expect(updated.tokenLast4).toBe(shortToken); // full token when len < 4
+    expect(updated.tokenHash).toBe(expectedHash);
+
+    // Persisted in DB
+    const after = await getTokenById(id);
+    expect(after!.token).toBe(shortToken);
+    expect(after!.tokenLast4).toBe(shortToken);
   });
 });
