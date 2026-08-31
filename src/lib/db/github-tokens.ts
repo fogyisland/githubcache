@@ -1,5 +1,7 @@
+import { createHash } from 'crypto';
 import { prisma } from '@/lib/db/client';
 import type { GithubToken, GithubTokenStatus, Prisma } from '@prisma/client';
+export type { GithubToken };
 
 export const findTokenByHash = (tokenHash: string): Promise<GithubToken | null> =>
   prisma.githubToken.findUnique({ where: { tokenHash } });
@@ -40,6 +42,28 @@ export function updateTokenStatus(id: bigint, status: GithubTokenStatus): Promis
   return prisma.githubToken.update({
     where: { id },
     data: { status },
+  });
+}
+
+/**
+ * M21 — Overwrite the raw plaintext token on an existing row, recomputing
+ * the first4 / last4 / sha256 hash columns so they stay consistent.
+ *
+ * Used when an operator re-submits the plaintext (e.g. legacy M4 row had
+ * `token = NULL`, or operator rotated the PAT on GitHub and wants the new
+ * one in the pool immediately).
+ *
+ * Caller is responsible for activating the new token in the in-memory
+ * pool (`addTokenToPool` from `@/lib/github/pool`) — this function only
+ * touches the DB.
+ */
+export async function updateTokenRaw(id: bigint, token: string): Promise<GithubToken> {
+  const first4 = token.slice(0, 4);
+  const last4 = token.length >= 4 ? token.slice(-4) : token;
+  const tokenHash = createHash('sha256').update(token).digest('hex');
+  return prisma.githubToken.update({
+    where: { id },
+    data: { token, tokenFirst4: first4, tokenLast4: last4, tokenHash },
   });
 }
 
