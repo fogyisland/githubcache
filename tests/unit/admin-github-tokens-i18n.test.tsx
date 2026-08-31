@@ -22,11 +22,11 @@ const githubTokensDict = flattenDict({
   breadcrumbGithubTokens: 'GitHub Tokens',
   addHeading: 'Add a token',
   status: { active: 'active', disabled: 'disabled' },
-  pool: { inPool: 'in pool', pendingActivation: 'pending activation' },
+  pool: { inPool: 'in pool', notInPool: 'not in pool' },
   quota: { chip: 'quota', warning: '{pct}% of combined token quota used ({used} / {limit}).' },
-  poolHintPrefix: 'Pool size (currently active in memory): {size}.',
-  poolHintSuffix:
-    'Adding a token here creates a DB record only — to activate it, add the token to {env} env var or {envFile} and restart the service.',
+  poolHintPrefix: 'Pool size (currently active in memory):',
+  poolHintBody:
+    'Tokens added here are stored in the database and take effect immediately. To revoke a leaked token, delete it from this list or rotate it on GitHub.',
   list: {
     heading: 'Registered tokens',
     ariaLabel: 'GitHub tokens',
@@ -56,7 +56,7 @@ const detailDict = flattenDict({
   auditAriaLabel: 'Recent audit entries for this GitHub token',
   auditColumns: { when: 'When', action: 'Action' },
   status: { active: 'active', disabled: 'disabled' },
-  pool: { inPool: 'in pool', pendingActivation: 'pending activation' },
+  pool: { inPool: 'in pool', notInPool: 'not in pool' },
   profile: {
     prefix: 'Prefix',
     fullTokenHidden: '(full token never stored)',
@@ -74,11 +74,11 @@ const detailDict = flattenDict({
 const addFormDict = flattenDict({
   labelLabel: 'Label:',
   labelPlaceholder: 'e.g. user-ci-token',
-  tokenLabel: 'Token (plaintext, will NOT be stored):',
+  tokenLabel: 'Token (plaintext, stored in DB — revoke on GitHub if leaked):',
   tokenPlaceholder: 'ghp_...',
   submit: 'Register token',
   error: { http: 'Request failed: HTTP {status}' },
-  success: 'Token registered. Activate by adding to GITHUB_TOKENS env / file and restarting.',
+  success: 'Token registered and added to the pool.',
 });
 
 const actionsDict = flattenDict({
@@ -86,7 +86,7 @@ const actionsDict = flattenDict({
   enable: 'Enable',
   delete: 'Delete',
   confirmDelete:
-    'Delete this token from the DB registry? If it is still in GITHUB_TOKENS env/file, it will re-appear on next restart.',
+    'Delete this token from the registry and remove it from the pool? It will stop taking effect immediately.',
   failedWithError: 'Failed: {error}',
   disabledOk: 'Token disabled (takes effect on next service restart).',
   enabledOk: 'Token enabled.',
@@ -190,7 +190,7 @@ vi.mock('@/lib/db/github-tokens', () => ({
 }));
 
 vi.mock('@/lib/github/pool', () => ({
-  poolHasHash: () => true,
+  poolHasId: () => true,
   poolSize: () => 3,
 }));
 
