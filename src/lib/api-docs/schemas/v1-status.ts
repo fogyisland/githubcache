@@ -15,6 +15,7 @@ export const v1StatusSchema = z.object({
     active: z.number().int().describe('GitHub tokens with status=active.'),
     exhausted: z.number().int().describe('Tokens in 429 cool-down (used >= limit and reset is in the future).'),
     total: z.number().int().describe('All GitHub tokens, including revoked and disabled.'),
+    source: z.literal('db'),
   }),
   queue: z.object({
     pending: z.number().int(),
@@ -40,7 +41,7 @@ export const v1StatusSchema = z.object({
 export const v1StatusSample: z.infer<typeof v1StatusSchema> = {
   ok: true,
   db: 'up',
-  tokens: { active: 3, exhausted: 0, total: 4 },
+  tokens: { active: 3, exhausted: 0, total: 4, source: 'db' },
   queue: { pending: 0, in_progress: 0, done: 12, failed: 0 },
   repositories: { total: 46, ok: 42, not_found: 3, forbidden: 0, error: 1 },
   version: {

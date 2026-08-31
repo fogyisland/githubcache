@@ -59,7 +59,7 @@ export async function collectV1Status(): Promise<V1Status | null> {
   return {
     ok: true,
     db: 'up',
-    tokens: { active: poolSize(), exhausted, total: tokens.length },
+    tokens: { active: poolSize(), exhausted, total: tokens.length, source: 'db' as const },
     queue: {
       pending: queueCount('pending'),
       in_progress: queueCount('in_progress'),
