@@ -13,7 +13,8 @@ export type AdminSectionSlug =
   | 'audit'
   | 'refresh'
   | 'webhooks'
-  | 'database';
+  | 'database'
+  | 'insights';
 
 /** Static metadata — `title` lives in messages, not here, so it can translate. */
 export interface AdminSection {
@@ -35,6 +36,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { slug: 'refresh', icon: '↻', href: '/admin/refresh', roles: ['admin'] },
   { slug: 'webhooks', icon: '⊜', href: '/admin/webhooks', roles: ['admin'] },
   { slug: 'database', icon: '◰', href: '/admin/database', roles: ['admin'] },
+  { slug: 'insights', icon: '◬', href: '/admin/insights', roles: ['admin'] },
 ];
 
 interface Props {

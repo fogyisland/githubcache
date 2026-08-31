@@ -82,7 +82,8 @@
         "audit": "Audit",
         "refresh": "Refresh",
         "webhooks": "Webhooks",
-        "database": "Database"
+        "database": "Database",
+        "insights": "Insights"
       },
       "statusbar": {
         "db": "DB",
@@ -844,6 +845,94 @@
         "description": "Prisma Studio is a separate process on port 5555. Start it from the project root:",
         "command": "npx prisma studio",
         "openDocs": "Open Prisma Studio docs →"
+      }
+    }
+  },
+  "insights": {
+    "title": "Insights",
+    "description": "Multi-angle analysis of cached GitHub repo metadata: popularity ranking, language distribution, stale cache, and fetch health.",
+    "breadcrumb": {
+      "admin": "Admin",
+      "insights": "Insights"
+    },
+    "hub": {
+      "heading": "Overview",
+      "kpiCached": "Cached repos",
+      "kpiOkShare": "Reachable",
+      "kpiLanguages": "Languages",
+      "kpiStale": "Stale",
+      "cardsHeading": "Drill down",
+      "cardTopReposTitle": "Top repos",
+      "cardTopReposDesc": "Repos ranked by stars / forks / watchers / updated, with optional language filter.",
+      "cardLanguagesTitle": "Language distribution",
+      "cardLanguagesDesc": "Top programming languages by repo count, with share percentages.",
+      "cardStaleTitle": "Stale cache",
+      "cardStaleDesc": "Repos not refreshed in N+ days, oldest first — candidates for proactive re-fetch.",
+      "cardHealthTitle": "Fetch health",
+      "cardHealthDesc": "fetch_status distribution plus recent failures to surface GitHub-side anomalies."
+    },
+    "topRepos": {
+      "heading": "Top repos",
+      "description": "Cached repos ordered by the chosen metadata field. Only fetch_status = ok with non-null metadata.",
+      "filterLanguage": "Language",
+      "filterLanguageAll": "All",
+      "filterSort": "Sort by",
+      "sortKey": {
+        "stars": "Stars",
+        "forks": "Forks",
+        "watchers": "Watchers",
+        "updated_at": "GitHub updatedAt",
+        "last_fetched_at": "Last fetched"
+      },
+      "column": {
+        "owner": "Repo",
+        "stars": "Stars",
+        "forks": "Forks",
+        "watchers": "Watchers",
+        "language": "Language",
+        "license": "License",
+        "updatedAt": "GitHub updated",
+        "lastFetchedAt": "Last fetched"
+      },
+      "empty": "No repos match the current filters.",
+      "pageSizeAria": "Rows per page"
+    },
+    "languages": {
+      "heading": "Language distribution",
+      "description": "Top {limit} programming languages by repo count. Only fetch_status = ok rows.",
+      "empty": "No language data yet.",
+      "count": "{count} repos",
+      "share": "{pct}%"
+    },
+    "stale": {
+      "heading": "Stale cache",
+      "description": "Repos whose last_fetched_at is older than the threshold, oldest first. Adjust the threshold to control sensitivity.",
+      "thresholdLabel": "Threshold (days)",
+      "thresholdHelp": "List repos not refreshed within this window.",
+      "thresholdApply": "Apply",
+      "empty": "No stale repos beyond the threshold.",
+      "column": {
+        "owner": "Repo",
+        "lastFetchedAt": "Last fetched",
+        "ageDays": "Stale (days)",
+        "fetchStatus": "Status"
+      }
+    },
+    "health": {
+      "heading": "Fetch health",
+      "description": "fetch_status distribution across all cached repos plus recent failures / anomalies.",
+      "kpiOk": "OK",
+      "kpiNotFound": "404",
+      "kpiForbidden": "403",
+      "kpiError": "Error",
+      "kpiTotal": "Total",
+      "recentFailuresHeading": "Recent failures",
+      "recentEmpty": "No recent failures.",
+      "column": {
+        "owner": "Repo",
+        "lastFetchedAt": "Last fetched",
+        "fetchStatus": "Status",
+        "fetchError": "Error"
       }
     }
   },

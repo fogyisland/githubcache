@@ -82,7 +82,8 @@
         "audit": "审计",
         "refresh": "刷新",
         "webhooks": "Webhook",
-        "database": "数据库"
+        "database": "数据库",
+        "insights": "内容洞察"
       },
       "statusbar": {
         "db": "数据库",
@@ -844,6 +845,94 @@
         "description": "Prisma Studio 是一个独立进程，默认监听 5555 端口。在项目根目录执行：",
         "command": "npx prisma studio",
         "openDocs": "打开 Prisma Studio 文档 →"
+      }
+    }
+  },
+  "insights": {
+    "title": "内容洞察",
+    "description": "对已入库 GitHub 仓库元数据的多个角度分析:热度排行、语言分布、陈旧缓存、获取健康度。",
+    "breadcrumb": {
+      "admin": "管理员",
+      "insights": "内容洞察"
+    },
+    "hub": {
+      "heading": "概览",
+      "kpiCached": "已缓存仓库",
+      "kpiOkShare": "可访问占比",
+      "kpiLanguages": "语言数",
+      "kpiStale": "陈旧缓存",
+      "cardsHeading": "深入分析",
+      "cardTopReposTitle": "热度排行",
+      "cardTopReposDesc": "按 stars / forks / watchers / 最近更新排序的仓库列表,支持按语言筛选。",
+      "cardLanguagesTitle": "语言分布",
+      "cardLanguagesDesc": "按仓库数量排序的编程语言 Top 20,带占比。",
+      "cardStaleTitle": "陈旧缓存",
+      "cardStaleDesc": "超过 N 天未刷新的仓库,用于发现需要主动重新拉取的目标。",
+      "cardHealthTitle": "获取健康度",
+      "cardHealthDesc": "fetch_status 分布 + 最近失败列表,定位 GitHub 接口异常。"
+    },
+    "topRepos": {
+      "heading": "热度排行",
+      "description": "按所选指标排序的已缓存仓库列表。仅包含 fetch_status = ok 且 metadata 非空的行。",
+      "filterLanguage": "语言",
+      "filterLanguageAll": "全部",
+      "filterSort": "排序",
+      "sortKey": {
+        "stars": "Stars",
+        "forks": "Forks",
+        "watchers": "Watchers",
+        "updated_at": "GitHub updatedAt",
+        "last_fetched_at": "最近拉取时间"
+      },
+      "column": {
+        "owner": "仓库",
+        "stars": "Stars",
+        "forks": "Forks",
+        "watchers": "Watchers",
+        "language": "语言",
+        "license": "License",
+        "updatedAt": "GitHub 更新",
+        "lastFetchedAt": "最近拉取"
+      },
+      "empty": "暂无符合筛选条件的仓库。",
+      "pageSizeAria": "每页行数"
+    },
+    "languages": {
+      "heading": "语言分布",
+      "description": "按仓库数量排序的编程语言 Top {limit}。仅统计 fetch_status = ok 的行。",
+      "empty": "暂无语言数据。",
+      "count": "{count} 个仓库",
+      "share": "{pct}%"
+    },
+    "stale": {
+      "heading": "陈旧缓存",
+      "description": "last_fetched_at 早于阈值的仓库,按陈旧度升序。可调整阈值控制敏感度。",
+      "thresholdLabel": "阈值(天)",
+      "thresholdHelp": "列出超过此天数未刷新的仓库。",
+      "thresholdApply": "应用",
+      "empty": "暂无超过阈值的陈旧仓库。",
+      "column": {
+        "owner": "仓库",
+        "lastFetchedAt": "上次拉取",
+        "ageDays": "陈旧天数",
+        "fetchStatus": "当前状态"
+      }
+    },
+    "health": {
+      "heading": "获取健康度",
+      "description": "全部已缓存仓库的 fetch_status 分布 + 最近失败/异常列表。",
+      "kpiOk": "正常",
+      "kpiNotFound": "404",
+      "kpiForbidden": "403",
+      "kpiError": "异常",
+      "kpiTotal": "合计",
+      "recentFailuresHeading": "最近失败",
+      "recentEmpty": "暂无失败记录。",
+      "column": {
+        "owner": "仓库",
+        "lastFetchedAt": "上次拉取",
+        "fetchStatus": "状态",
+        "fetchError": "错误"
       }
     }
   },

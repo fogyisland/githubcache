@@ -2327,3 +2327,127 @@ a {
   color: var(--color-danger, #b91c1c);
   font-size: 0.8125rem;
 }
+
+/* =========================================================================
+ * INSIGHTS (M18) — KPI grid, hub nav cards, language bar list, filter input.
+ * Inherits the same theme tokens as the rest of the admin layer.
+ * ======================================================================= */
+
+.ghc-admin-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-3, 0.75rem);
+  margin: 0;
+}
+
+.ghc-admin-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--space-3, 0.75rem);
+}
+
+.ghc-admin-card {
+  padding: var(--space-4, 1rem);
+  border: 1px solid var(--color-rule, #e5e5e5);
+  background: var(--color-surface, #fff);
+  border-radius: var(--radius-2, 4px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 0.5rem);
+}
+
+.ghc-admin-card-link {
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 120ms ease, transform 120ms ease;
+}
+
+.ghc-admin-card-link:hover,
+.ghc-admin-card-link:focus-visible {
+  border-color: var(--color-accent, #0066cc);
+  transform: translateY(-1px);
+}
+
+.ghc-admin-card-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.ghc-admin-card-desc {
+  margin: 0;
+  color: var(--color-ink-muted, #555);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.ghc-admin-bar-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 0.5rem);
+}
+
+.ghc-admin-bar-list-row {
+  display: grid;
+  grid-template-columns: 140px 1fr auto;
+  align-items: center;
+  gap: var(--space-3, 0.75rem);
+}
+
+.ghc-admin-bar-list-label {
+  font-weight: 500;
+  font-size: 0.875rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ghc-admin-bar-list-bar {
+  height: 8px;
+  background: var(--color-rule, #e5e5e5);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.ghc-admin-bar-list-fill {
+  height: 100%;
+  background: var(--color-accent, #0066cc);
+  transition: width 200ms ease;
+}
+
+.ghc-admin-bar-list-meta {
+  display: inline-flex;
+  gap: var(--space-2, 0.5rem);
+  font-size: 0.8125rem;
+  color: var(--color-ink-muted, #555);
+}
+
+.ghc-admin-bar-list-share {
+  color: var(--color-ink, #111);
+  font-weight: 500;
+}
+
+.ghc-admin-filter-input {
+  padding: var(--space-1, 0.25rem) var(--space-2, 0.5rem);
+  border: 1px solid var(--color-rule, #e5e5e5);
+  background: var(--color-surface, #fff);
+  color: var(--color-ink, #111);
+  border-radius: var(--radius-1, 2px);
+  font: inherit;
+  min-width: 5rem;
+}
+
+.ghc-admin-filter-help {
+  font-size: 0.8125rem;
+  color: var(--color-ink-muted, #555);
+}
+
+.ghc-admin-empty {
+  margin: 0;
+  padding: var(--space-4, 1rem);
+  text-align: center;
+  color: var(--color-ink-muted, #555);
+}
