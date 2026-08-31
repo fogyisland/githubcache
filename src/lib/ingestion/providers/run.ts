@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db/client';
 import { evaluateJsonPath } from './jsonpath';
-import { loadProviderSource, ProviderSourceError } from './source';
+import { loadProviderSource } from './source';
 import { parseProviderConfig, type ProviderConfig } from './schema';
 import { parseGitHubUrl } from './extract';
 

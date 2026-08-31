@@ -22,7 +22,6 @@ const FIXTURE_ROOT = path.resolve(__dirname, '..', 'fixtures');
 
 const testRepoIds: bigint[] = [];
 const testJobIds: bigint[] = [];
-let providerId: bigint;
 
 async function cleanup(): Promise<void> {
   if (testJobIds.length > 0) {
@@ -72,7 +71,6 @@ beforeEach(async () => {
       enabled: true,
     },
   });
-  providerId = provider.id;
 });
 
 describe('previewProvider', () => {
