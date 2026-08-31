@@ -7,6 +7,8 @@ import { verifyCsrf } from '@/lib/auth/csrf';
 import { listAllTokens, insertToken } from '@/lib/db/github-tokens';
 import { writeAudit } from '@/lib/audit/writer';
 import { apiError } from '@/lib/api/errors';
+import { addTokenToPool } from '@/lib/github/pool';
+import { logger } from '@/lib/logger';
 
 const PostBody = z.object({
   label: z.string().min(1).max(100),
@@ -88,6 +90,7 @@ export async function POST(req: Request): Promise<Response> {
     tokenFirst4: first4,
     tokenLast4: last4,
     tokenHash: hash,
+    token: parsed.data.token,
   }).catch((e: unknown) => {
     // Prisma P2002 = unique constraint violation on tokenHash.
     // Race window: listAllTokens() above checked for an existing hash, but
@@ -106,6 +109,16 @@ export async function POST(req: Request): Promise<Response> {
     return apiError('conflict', 'token already registered', {}, req);
   }
 
+  // Best-effort activation — if the pool add throws (e.g. Octokit
+  // construction error), the DB row is already committed, so log only.
+  // Operator can retry by re-submitting the plaintext via
+  // PATCH /api/admin/github-tokens/[id] or restart the service.
+  try {
+    addTokenToPool(row);
+  } catch (e) {
+    logger.error({ err: e, id: row.id.toString() }, 'failed to add token to pool');
+  }
+
   const fwd = req.headers.get('x-forwarded-for');
   void writeAudit({
     action: 'register_token',
@@ -119,6 +132,6 @@ export async function POST(req: Request): Promise<Response> {
   return NextResponse.json({
     ok: true,
     id: row.id.toString(),
-    message: 'Token registered. Activate by adding to GITHUB_TOKENS env / file and restarting.',
+    message: 'Token registered and added to the pool.',
   });
 }
