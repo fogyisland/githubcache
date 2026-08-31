@@ -884,6 +884,151 @@ GitHub→DB pipeline doing right now.
 
 ---
 
+## [m17-database-backup] — 2026-08-31
+
+**`/admin/database` — backup / restore (blue-green) + DB overview + tables + slow queries + Prisma Studio link.**
+Self-service DB management page for backup-before-migration. Six sections on a
+single admin-only page; backup files live in `./backups/` (browsable, downloadable,
+retained per `BACKUP_KEEP_N`). Restore uses shadow-schema + atomic `RENAME TABLE`
+swap with an automatic pre-restore snapshot as the rollback safety net. Startup
+binary probe checks for `mysqldump` + `gzip`; if either is missing the admin page
+shows a yellow banner but the server still boots.
+
+### Added
+
+**Env**
+- `BACKUP_KEEP_N` (default `10`) — number of local backup files to retain. Older
+  backups are trimmed by mtime after every successful backup.
+- `BACKUP_DIR` (default `./backups`) — directory for backup files. Resolved
+  relative to the server CWD.
+
+**Binary check**
+- `src/lib/database/binary-check.ts` — `checkBinaries()` (cache-backed probe via
+  `execFile('bin', ['--version'])` for `mysqldump` and `gzip`), `getBinaryStatus()`,
+  `binariesReady()`.
+- `src/lib/database/startup.ts` — `startupDatabaseChecks()` runs at server boot
+  (after `initPool`, before `startScheduler`). Logs warnings if either binary is
+  missing; never fails boot.
+
+**Backup**
+- `src/lib/database/backup.ts` — `buildBackupFilename(now)` → `githubcache-YYYYMMDD-HHMMSS.sql.gz`.
+  `createBackup(databaseUrl, filename?)` spawns `mysqldump --single-transaction --routines --triggers`
+  piped through `gzip -6` to file. `MYSQL_PWD` env var preferred over `--password=` flag
+  for invisible password passing. `listBackups()`, `getBackupPath(filename)` (rejects
+  path traversal), `trimRetainN()` (sort by mtime, keep newest N), `backupDir()`.
+
+**Restore (blue-green)**
+- `src/lib/database/restore.ts` — `performRestore({source, actorUserId})`.
+  Pre-restore auto-backup (always retained, bypasses trim) → `CREATE SCHEMA restore_shadow_{ts}`
+  → `gzip -dc | mysql {shadow}` → verify table count + names match pre-restore set →
+  loop `RENAME TABLE prod.T TO prod.T__rb_{ts}, shadow.T TO prod.T` → DROP rollback
+  targets → DROP SHADOW. Failure mid-loop aborts; the pre-restore snapshot is the
+  auto-rollback path.
+
+**DB overview + tables + slow queries**
+- `src/lib/database/overview.ts` — `getDatabaseOverview()` returns `version /
+  databaseName / host / port / totalBytes / tableCount` from `information_schema`.
+  `getTableStats()` joins Prisma `MODEL_TO_TABLE` mapping with row counts.
+- `src/lib/database/tables.ts` — `getTableDetails()` returns per-table columns +
+  indexes + `rowCount` + `bytes` from `information_schema.COLUMNS + STATISTICS + TABLES`.
+- `src/lib/database/slow-queries.ts` — `topSlowQueries(limit)` reads from
+  `performance_schema.events_statements_summary_by_digest` with graceful fallback
+  `{kind: 'no_permission', reason}` when the DB user lacks the `PROCESS` privilege.
+
+**Page + components**
+- `src/app/admin/database/page.tsx` — server component, admin-only. Fetches 6 things
+  in `Promise.all` (overview, tableStats, tableDetails, slow, backupsRaw, binaryStatus).
+  Normalizes `mtime: Date` → ISO string for the client `RestoreSection`.
+- `<BinaryWarning>` — yellow banner when binaries missing.
+- `<Overview>` — async server component, KV grid.
+- `<BackupSection>` — create / delete / download buttons + retention hint + success /
+  error feedback.
+- `<RestoreSection>` — two modes (existing backup / uploaded file). Confirm word
+  `RESTORE` enables submit. Client-side `MAX_UPLOAD_BYTES` (500 MiB) guard.
+- `<TablesSection>` — expandable rows showing columns + indexes (PK / NN badges).
+- `<SlowQueriesSection>` — top N table with no-permission fallback banner.
+- `<PrismaStudioLink>` — static instruction card pointing to `npx prisma studio`.
+
+**API routes**
+- `GET /api/admin/database/backup` — list backups + binary status.
+- `POST /api/admin/database/backup` — CSRF-guarded, admin-only. Creates backup,
+  audits as `database_backup`. Returns `{filename, size}`.
+- `DELETE /api/admin/database/backup?id=<filename>` — admin-only. Audits as
+  `database_backup_delete`.
+- `GET /api/admin/database/backup/[id]/download` — streams `.sql.gz` as
+  `application/gzip` with `Content-Disposition: attachment`. Path-traversal defense
+  via `getBackupPath()`.
+- `POST /api/admin/database/restore` — handles both `application/json` (`{csrf,
+  mode:'backup', filename, confirm}`) and `multipart/form-data` (`{csrf, mode:'upload',
+  confirm, file}`). Hard cap `MAX_UPLOAD_BYTES = 500 MiB`. Confirms word `RESTORE`.
+  Audits success as `database_restore`, failure as `database_restore_failed`.
+
+**Errors**
+- `payload_too_large` (HTTP 413) added to `ERROR_CODES` in
+  `src/lib/api/errors.ts` (raised by restore upload > 500 MiB).
+- `payload_too_large: { retryNo: true }` added to `RETRY_HINTS` in
+  `src/app/docs/_components/error-codes-table.tsx`.
+
+**i18n**
+- New namespace `admin.database.*` (title / description / breadcrumb / binaryWarning /
+  overview / backup / restore / tables / slowQueries / prismaStudio) in both
+  `messages/en.json` and `messages/zh.json`.
+- Added missing `admin.shell.sections.{database, webhooks}` keys — the `webhooks`
+  key was missing since M14.6 and silently broke the admin sidebar layout in
+  production. Now fixed.
+
+**Tests**
+- `tests/unit/database-backup-helpers.test.ts` — 4 cases covering filename format
+  invariants (zero-padding, chronological order, distinct timestamps).
+- `tests/unit/admin-database-i18n.test.tsx` — 3 cases (title + description render,
+  no binary-warning when binaries ready, all section stubs render together). Sync
+  mocks of all 7 sub-components + page-level mocks for the 6 helpers.
+
+### Side fix (unrelated to M17 spec)
+
+`/admin/github-tokens` `poolHint` was crashing with `Functions cannot be passed
+directly to Client Components` whenever the page was opened. The previous fix
+attempted `t.rich('poolHint', { size: (chunks) => <strong>{chunks}</strong> })`,
+which rendered but substituted the placeholder text (literal `size`), not the
+runtime value (`activePoolSize`). Replaced with 4 plain `t()` fragments
+(`poolHintPrefix`, `poolHintMid`, `poolHintEnv`, `poolHintSuffix`) + inline
+`<strong>` / `<code>` JSX. See in-repo memory `feedback_next_intl_rich_dynamic_values`
+— next-intl 4's `t.rich` callback `chunks` is the placeholder text only;
+`<tag>{dynamicValue}</tag>` inside i18n strings must split into fragments.
+
+### Migration
+
+None. All changes are additive — new files + new env vars (both defaulted). No
+Prisma schema changes.
+
+### Stats
+
+- 13 new files (`src/lib/database/{backup,restore,overview,tables,slow-queries,binary-check,startup}.ts`
+  + 6 page components + API route files)
+- 6 modified (env / errors / sidebar / error-codes-table / github-tokens page /
+  en+zh messages)
+- 7 new tests (4 helper + 3 page i18n)
+- typecheck ✓ / lint ✓ (0 errors, 7 pre-existing warnings) / `next build` ✓
+  (4 new routes: `/admin/database`, `/api/admin/database/backup`,
+  `/api/admin/database/backup/[id]/download`, `/api/admin/database/restore`)
+
+### Breaking changes
+
+None. All M17 features are additive. Existing admin pages unchanged (except
+the `poolHint` side fix and the silently-broken sidebar now correctly
+rendering all 8 sections instead of 7).
+
+### Security notes
+
+- Backup download path traversal: `getBackupPath()` resolves the requested filename
+  relative to the backup dir and verifies the result still lives inside it.
+- `MYSQL_PWD` env var preferred over `--password=` flag — password does not show
+  up in `ps` listings during the spawn window.
+- Restore is destructive (overwrites live DB) — the RESTORE confirmation word
+  is required; auto-pre-restore snapshot is always taken first.
+
+---
+
 ## [m8-prod-ready] — 2026-08-26
 
 **Deployment + Observability.** Production-ready observability surface, durable rate-limit,
