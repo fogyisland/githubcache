@@ -242,48 +242,60 @@ export async function runProvider(
   }
 
   let jobCount = 0;
-  // Enqueue for new pairs (upsert stub repo row + create refresh job).
+  // Enqueue for new pairs: bulk-insert stub repository rows + bulk-insert
+  // refresh_jobs. Using `createMany` + `skipDuplicates` avoids the per-row
+  // `$transaction` that explodes past Prisma's 5s interactive-transaction
+  // timeout at ~5k rows (M20.4 hit this with the 5852-row ComfyUI batch —
+  // original upsert loop took ~35s and exceeded the 5s tx limit).
+  //
+  // Two-step:
+  //   1. Insert all stub repository rows in one createMany (skipDuplicates
+  //      handles the race where another run already created them).
+  //   2. Look up the new IDs by (owner, name) — only the rows we JUST
+  //      inserted (skipDuplicates kept) need refresh_jobs.
+  //   3. Bulk-insert the refresh_jobs in one createMany.
   const newPairs = pairs.filter(
     (p) => status.get(`${p.owner}/${p.name}`) === 'new',
   );
   if (newPairs.length > 0) {
-    await prisma.$transaction(async (tx) => {
-      for (const p of newPairs) {
-        const repo = await tx.repository.upsert({
-          where: { owner_name: { owner: p.owner, name: p.name } },
-          create: {
-            owner: p.owner,
-            name: p.name,
-            node: { stub: true } as never,
-            fetchStatus: 'ok',
-          },
-          update: {},
-        });
-        await tx.refreshJob.create({
-          data: {
-            repositoryId: repo.id,
-            priority: 70,
-            scheduledFor: new Date(),
-          },
-        });
-        jobCount++;
-      }
+    await prisma.repository.createMany({
+      data: newPairs.map((p) => ({
+        owner: p.owner,
+        name: p.name,
+        node: { stub: true } as never,
+        fetchStatus: 'ok' as const,
+      })),
+      skipDuplicates: true,
     });
+    const repos = await prisma.repository.findMany({
+      where: { OR: newPairs.map((p) => ({ owner: p.owner, name: p.name })) },
+      select: { id: true, owner: true, name: true },
+    });
+    const idMap = new Map(repos.map((r) => [`${r.owner}/${r.name}`, r.id]));
+    const jobRows = newPairs
+      .map((p) => {
+        const id = idMap.get(`${p.owner}/${p.name}`);
+        return id !== undefined
+          ? { repositoryId: id, priority: 70, scheduledFor: new Date() }
+          : null;
+      })
+      .filter((row): row is { repositoryId: bigint; priority: number; scheduledFor: Date } => row !== null);
+    if (jobRows.length > 0) {
+      await prisma.refreshJob.createMany({ data: jobRows });
+      jobCount = jobRows.length;
+    }
   }
-  // Enqueue for stale pairs (re-fetch existing rows).
+  // Enqueue for stale pairs (re-fetch existing rows). Same createMany
+  // pattern — these rows already exist so we can map directly from the
+  // staleIds map without a re-query.
   if (staleIds.size > 0) {
-    await prisma.$transaction(async (tx) => {
-      for (const id of staleIds.values()) {
-        await tx.refreshJob.create({
-          data: {
-            repositoryId: id,
-            priority: 70,
-            scheduledFor: new Date(),
-          },
-        });
-        jobCount++;
-      }
-    });
+    const jobRows = Array.from(staleIds.values()).map((id) => ({
+      repositoryId: id,
+      priority: 70,
+      scheduledFor: new Date(),
+    }));
+    await prisma.refreshJob.createMany({ data: jobRows });
+    jobCount += jobRows.length;
   }
 
   return {
