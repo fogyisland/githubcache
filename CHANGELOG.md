@@ -166,6 +166,80 @@ None. All M19 features are additive. Sidebar grew by one entry.
 
 ---
 
+## [m20-queue-on-miss] — 2026-08-31
+
+**Cache miss now queues to `refresh_jobs` instead of synchronous fetch.**
+`lookupRepo` enqueues a stub repository + refreshJob (priority 70) on
+cache miss and returns `fetch_status: 'pending'` with `queuedAt` /
+`scheduledFor`. The scheduler tick (1 job / 1 s) drains the queue and
+writes back to `repositories`; subsequent queries hit cache.
+
+### Behaviour
+
+| Path | Old (M19) | New (M20) |
+|---|---|---|
+| `POST /api/query` cache hit | `fetch_status: 'ok'` | unchanged |
+| `POST /api/query` cache miss | synchronous `fetchRepoCore` → `ok` / `error` | enqueue → `fetch_status: 'pending'` |
+| `POST /api/query` `fetch_status: 'not_found'` | terminal | unchanged (still terminal) |
+| `POST /api/query` `fetch_status: 'error'` row | re-fetched in request path | re-enqueued (returns `pending`) |
+| `GET /api/v1/repos/[owner]/[name]` cache miss | `503 fetch_status: 'error'` | `202 fetch_status: 'pending'` + `queued_at` + `scheduled_for` |
+| `/repo/[owner]/[name]` cache miss | `notFound()` (404) | minimal pending page with enqueue notice |
+| `Summary` shape | `hit / miss / stale` | `hit / pending / not_found / error / stale` |
+| Scheduler tick | up to 10 concurrent jobs | 1 job / tick (1 req/s ceiling) |
+
+### Changed files
+
+- `src/lib/cache/lookup.ts` — `lookupRepo` no longer fetches. `ResultPending`
+  added; `enqueueRefresh()` upserts a stub repository row + creates
+  `refreshJob` (priority 70, scheduledFor=now) with a duplicate-pending
+  guard for in-flight concurrency.
+- `src/app/api/query/route.ts` — summary adds `pending` counter alongside
+  `hit / not_found / error / stale`; `cache_hit` requires no pending or
+  error rows.
+- `src/app/api/v1/repos/[owner]/[name]/route.ts` — pending branch returns
+  `202 Accepted` with `queued_at` + `scheduled_for`.
+- `src/app/repo/[owner]/[name]/page.tsx` — pending branch renders a minimal
+  page instead of `notFound()`.
+- `src/app/_components/lookup-result-card.tsx` — `[QUEUE]` chip in
+  accent color; renders enqueue timestamps.
+- `.env` — `SCHEDULER_BATCH_SIZE=1`, `SCHEDULER_TICK_MS=1000`.
+
+### Tests
+
+- `tests/integration/api-query-stale.test.ts` — five stale-path tests
+  rewritten for queue-on-miss semantics (no `firstMiss`, no `fetchRepoCore`
+  mock needed). New tests for terminal `not_found` (no re-enqueue) and
+  retryable `error` (re-enqueue → pending).
+- `tests/integration/query.test.ts` — `beforeEach` cleanup deletes
+  `refreshJobs` before repositories (FK). Two tests rewritten: cache
+  miss now asserts pending + queuedAt + refreshJob exists; concurrent
+  first-miss now asserts single refreshJob (not single upstream call).
+- `tests/integration/scheduler-tick.test.ts` — "processes multiple
+  pending jobs concurrently" renamed to "processes one job per tick at
+  SCHEDULER_BATCH_SIZE=1, drains on subsequent ticks" — asserts 1 done
+  per tick, full drain after 3 ticks.
+- `tests/integration/api-keys-flow.test.ts` — same FK cleanup fix.
+- `tests/integration/api-v1-status.test.ts` — `tokens.total` /
+  `tokens.exhausted` assertions switched to delta-based (capture baseline
+  before seeding; assert `+3` / `+1`) so the test tolerates other
+  in-flight tokens in the shared DB.
+
+838 / 840 tests passing. 2 pre-existing failures unrelated to M20:
+missing i18n key `docs.landing.errorCodes.codes.payload_too_large` and
+`reports-recent-requests` pagination test data contamination.
+
+### Breaking changes
+
+- `POST /api/query` summary shape: added `pending` field; `miss` field
+  removed (replaced by `pending`).
+- `GET /api/v1/repos/[owner]/[name]` cache miss now returns `202`
+  (was `503`); the response carries `fetch_status: 'pending'` plus
+  `queued_at` and `scheduled_for`.
+- Anonymous `/repo/[owner]/[name]` cache miss now returns `200` with a
+  pending notice (was `404`).
+
+---
+
 ## [m9-project-site] — 2026-08-26
 
 **Project-site frontend.** Public-facing homepage with a GitHub repo lookup
