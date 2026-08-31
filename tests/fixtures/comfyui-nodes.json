@@ -1,0 +1,45 @@
+{
+    "custom_nodes": [
+        {
+            "author": "m19-fixture",
+            "title": "Fixture-A",
+            "reference": "https://github.com/m19-fixture/Fixture-A",
+            "files": [
+                "https://github.com/m19-fixture/Fixture-A"
+            ]
+        },
+        {
+            "author": "m19-fixture",
+            "title": "Fixture-B",
+            "reference": "https://github.com/m19-fixture/Fixture-B",
+            "files": [
+                "https://github.com/m19-fixture/Fixture-B.git"
+            ]
+        },
+        {
+            "author": "m19-fixture",
+            "title": "Fixture-C",
+            "reference": "https://github.com/m19-fixture/Fixture-C",
+            "files": [
+                "https://github.com/m19-fixture/Fixture-C",
+                "https://github.com/m19-fixture/Fixture-C-mirror"
+            ]
+        },
+        {
+            "author": "m19-fixture",
+            "title": "Fixture-D",
+            "reference": "https://github.com/m19-fixture/Fixture-D",
+            "files": [
+                "git@github.com:m19-fixture/Fixture-D.git"
+            ]
+        },
+        {
+            "author": "m19-fixture",
+            "title": "Fixture-Dup",
+            "reference": "https://github.com/m19-fixture/Fixture-A",
+            "files": [
+                "https://github.com/m19-fixture/Fixture-A"
+            ]
+        }
+    ]
+}
