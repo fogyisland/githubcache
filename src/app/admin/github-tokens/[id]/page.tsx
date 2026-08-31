@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { getTranslations } from 'next-intl/server';
 import type { ReactElement } from 'react';
 import { getTokenById } from '@/lib/db/github-tokens';
-import { poolHasHash } from '@/lib/github/pool';
+import { poolHasId } from '@/lib/github/pool';
 import { validateSession } from '@/lib/auth/session';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
@@ -57,7 +57,7 @@ export default async function AdminGithubTokenDetailPage({
   const token = await getTokenById(id);
   if (!token) notFound();
 
-  const inPool = poolHasHash(token.tokenHash);
+  const inPool = poolHasId(token.id);
   const usagePct =
     token.requestsLimit > 0
       ? Math.round((token.requestsUsed / token.requestsLimit) * 100)
@@ -119,7 +119,7 @@ export default async function AdminGithubTokenDetailPage({
             <dt>{t('profile.poolState')}</dt>
             <dd>
               <AdminStatusChip variant={inPool ? 'ok' : 'warn'}>
-                {inPool ? t('pool.inPool') : t('pool.pendingActivation')}
+                {inPool ? t('pool.inPool') : t('pool.notInPool')}
               </AdminStatusChip>
             </dd>
           </div>

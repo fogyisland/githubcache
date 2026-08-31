@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { getTranslations } from 'next-intl/server';
 import type { ReactElement } from 'react';
 import { listAllTokens } from '@/lib/db/github-tokens';
-import { poolHasHash, poolSize } from '@/lib/github/pool';
+import { poolHasId } from '@/lib/github/pool';
 import { validateSession } from '@/lib/auth/session';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { AdminPagination } from '@/app/admin/_components/admin-pagination';
@@ -65,8 +65,6 @@ export default async function AdminGithubTokensPage({
   const totalQuotaLimit = allTokens.rows.reduce((a, tok) => a + tok.requestsLimit, 0);
   const quotaPct = totalQuotaLimit > 0 ? Math.round((totalQuotaUsed / totalQuotaLimit) * 100) : 0;
 
-  const activePoolSize = poolSize();
-
   const columns: AdminColumn<TokenRow>[] = [
     { key: 'label', header: t('list.column.label'), render: (tok) => tok.label },
     {
@@ -91,10 +89,10 @@ export default async function AdminGithubTokensPage({
       key: 'pool',
       header: t('list.column.poolState'),
       render: (tok) => {
-        const inPool = poolHasHash(tok.tokenHash);
+        const inPool = poolHasId(tok.id);
         return (
           <AdminStatusChip variant={inPool ? 'ok' : 'warn'}>
-            {inPool ? t('pool.inPool') : t('pool.pendingActivation')}
+            {inPool ? t('pool.inPool') : t('pool.notInPool')}
           </AdminStatusChip>
         );
       },
@@ -153,11 +151,7 @@ export default async function AdminGithubTokensPage({
         </div>
       ) : null}
 
-      <p className="ghc-admin-hint">
-        {t('poolHintPrefix')} <strong>{activePoolSize}</strong>. {t('poolHintMid')}{' '}
-        <code>GITHUB_TOKENS</code> {t('poolHintEnv')} <code>GITHUB_TOKENS_FILE</code>{' '}
-        {t('poolHintSuffix')}
-      </p>
+      <p className="ghc-admin-hint">{t('poolHintBody')}</p>
 
       <section>
         <h2 className="ghc-admin-section-title">{t('addHeading')}</h2>
