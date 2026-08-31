@@ -1,12 +1,10 @@
-import { createHash } from 'crypto';
 import { Octokit } from '@octokit/rest';
+import type { GithubToken } from '@prisma/client';
 import { logger } from '@/lib/logger';
 import { env } from '@/lib/config/env';
-import { loadTokensFromEnv } from './tokens-loader';
 import {
   disableTokenById,
   listAllTokens,
-  insertToken,
   updateTokenQuota,
 } from '@/lib/db/github-tokens';
 
@@ -47,36 +45,23 @@ export interface PooledToken {
 
 export async function initPool(): Promise<void> {
   shuttingDown = false;
-
-  // 1. Load tokens from env
-  const envTokens = loadTokensFromEnv();
-  const envHashes = new Set(envTokens.map((t) => t.hash));
-
-  // 2. Read all DB rows
   const dbRows = (await listAllTokens({ skip: 0, take: 1000 })).rows;
-  const dbByHash = new Map(dbRows.map((r) => [r.tokenHash, r]));
+  pool.clear();
 
-  // 3. For each env token, ensure DB row exists; build in-memory entry
-  for (const envToken of envTokens) {
-    let row = dbByHash.get(envToken.hash);
-    if (!row) {
-      row = await insertToken({
-        label: `env-${envToken.first4}${envToken.last4}`,
-        tokenFirst4: envToken.first4,
-        tokenLast4: envToken.last4,
-        tokenHash: envToken.hash,
-      });
-      logger.info({ id: row.id.toString(), label: row.label }, 'inserted new github token');
-    }
-    if (row.status === 'disabled') {
-      logger.warn({ id: row.id.toString(), label: row.label }, 'skipping disabled token');
+  for (const row of dbRows) {
+    if (row.token === null) {
+      logger.warn(
+        { id: row.id.toString(), label: row.label },
+        'github token row has NULL token — skipping (re-add via admin UI)',
+      );
       continue;
     }
+    if (row.status === 'disabled') continue;
     pool.set(row.id, {
       id: row.id,
       label: row.label,
-      raw: envToken.raw,
-      octokit: new Octokit({ auth: envToken.raw }),
+      raw: row.token,
+      octokit: new Octokit({ auth: row.token }),
       requestsUsed: row.requestsUsed,
       requestsLimit: row.requestsLimit,
       resetAt: row.resetAt,
@@ -85,17 +70,6 @@ export async function initPool(): Promise<void> {
     });
   }
 
-  // 4. Operators manage removal via admin tools (future M7). Pool never deletes DB rows.
-  //    If a token is in DB but NOT in env, skip it silently (operator removed the env var).
-  const orphans = dbRows.filter((r) => !envHashes.has(r.tokenHash));
-  if (orphans.length > 0) {
-    logger.warn(
-      { count: orphans.length },
-      'github tokens present in DB but not in env — skipping (operator must disable via admin tools)',
-    );
-  }
-
-  // 5. Start persist timer
   if (persistTimer) clearInterval(persistTimer);
   persistTimer = setInterval(() => {
     if (Date.now() - lastPersistAt >= FLUSH_INTERVAL_MS) {
@@ -103,10 +77,7 @@ export async function initPool(): Promise<void> {
     }
   }, FLUSH_INTERVAL_MS);
 
-  logger.info(
-    { poolSize: pool.size, source: envTokens.length },
-    'pool initialized',
-  );
+  logger.info({ poolSize: pool.size }, 'pool initialized');
 }
 
 export function pickToken(): PooledToken | null {
@@ -240,16 +211,53 @@ export function poolSize(): number {
 }
 
 /**
- * Returns true if the pool currently has an entry for the given token hash.
- * Used by the admin UI to show whether a DB row is "active in pool" or
- * "pending activation" (added to DB but not yet in env/file).
- *
- * Re-hashes on every call — fine for admin UI with O(10) tokens.
+ * O(1) lookup — true when the in-memory pool contains an entry for this DB id.
+ * Used by admin UI to display the "in pool" / "not in pool" chip.
  */
-export function poolHasHash(hash: string): boolean {
-  for (const entry of pool.values()) {
-    const entryHash = createHash('sha256').update(entry.raw).digest('hex');
-    if (entryHash === hash) return true;
+export function poolHasId(id: bigint): boolean {
+  return pool.has(id);
+}
+
+/**
+ * Adds a token to the in-memory pool from a DB row. Called by:
+ *   - initPool() at boot for every non-null active row
+ *   - POST /api/admin/github-tokens after inserting a new row
+ *   - PATCH /api/admin/github-tokens/[id] when re-enabling a disabled row
+ *
+ * `token === null` rows are silently skipped (legacy M4 rows — operator
+ * must re-add via the admin UI). Non-active rows are removed from the
+ * pool if present.
+ */
+export function addTokenToPool(row: GithubToken): void {
+  if (row.token === null) return;
+  if (row.status !== 'active') {
+    pool.delete(row.id);
+    return;
   }
-  return false;
+  pool.set(row.id, {
+    id: row.id,
+    label: row.label,
+    raw: row.token,
+    octokit: new Octokit({ auth: row.token }),
+    requestsUsed: row.requestsUsed,
+    requestsLimit: row.requestsLimit,
+    resetAt: row.resetAt,
+    lastUsedAt: row.lastUsedAt,
+    dirty: false,
+  });
+  logger.info({ id: row.id.toString(), label: row.label }, 'token added to pool');
+}
+
+/**
+ * Removes a token from the in-memory pool. Called by:
+ *   - DELETE /api/admin/github-tokens/[id] after the DB row is gone
+ *   - PATCH /api/admin/github-tokens/[id] when disabling a row
+ *   - autoDisableToken (M14.4) when 429 threshold trips
+ *
+ * No-op if the token isn't currently in the pool.
+ */
+export function removeTokenFromPool(id: bigint): void {
+  if (pool.delete(id)) {
+    logger.info({ tokenId: id.toString() }, 'token removed from pool');
+  }
 }
