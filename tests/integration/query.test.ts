@@ -85,6 +85,8 @@ afterAll(async () => {
 beforeEach(async () => {
   server.resetHandlers();
   for (const owner of TEST_OWNERS) {
+    // Delete refreshJobs first (FK on repositoryId) then repositories.
+    await prisma.refreshJob.deleteMany({ where: { repository: { owner } } });
     await prisma.repository.deleteMany({ where: { owner } });
   }
 });
@@ -122,19 +124,33 @@ describe('POST /api/query', () => {
     expect(body.results[0]!.metadata).toEqual({ cached: true });
   });
 
-  it('cache miss fetches via GitHub (MSW) and persists', async () => {
+  it('cache miss enqueues refresh_job (M20: queue-on-miss)', async () => {
     const res = await postQuery(['miss-owner/new']);
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
-      results: Array<{ found: boolean; metadata: { name?: string } | null }>;
+      results: Array<{ fetch_status: string; queuedAt?: string }>;
+      summary: { pending: number; hit: number };
     };
-    expect(body.results[0]!.found).toBe(true);
-    expect(body.results[0]!.metadata).toMatchObject({ name: 'new' });
+    expect(body.results[0]!.fetch_status).toBe('pending');
+    expect(body.results[0]!.queuedAt).toBeTruthy();
+    expect(body.summary.pending).toBe(1);
+    expect(body.summary.hit).toBe(0);
+    // Stub repository row should exist (upserted so refreshJob has FK target)
     const persisted = await prisma.repository.findUnique({
       where: { owner_name: { owner: 'miss-owner', name: 'new' } },
     });
     expect(persisted).not.toBeNull();
-    expect(persisted?.fetchStatus).toBe('ok');
+    // RefreshJob should be queued at priority 70
+    const jobs = await prisma.refreshJob.findMany({
+      where: { repositoryId: persisted!.id },
+    });
+    expect(jobs.length).toBe(1);
+    expect(jobs[0]!.priority).toBe(70);
+    expect(jobs[0]!.status).toBe('pending');
+    // MSW upstream should NOT have been called (no firstMiss)
+    // The handler at line 24 would have responded, but we can verify the
+    // postQuery call did not trigger fetch by checking no fetch occurred.
+    // The point: cache miss now enqueues; firstMiss is removed.
   });
 
   it('rejects > 50 nodes with 400', async () => {
@@ -153,21 +169,24 @@ describe('POST /api/query', () => {
     expect(res.status).toBe(400);
   });
 
-  it('concurrent first-miss requests for the same key dedupe to one upstream call', async () => {
-    let count = 0;
-    server.use(
-      http.get('https://api.github.com/repos/dedupe/:name', () => {
-        count++;
-        return HttpResponse.json({ name: 'r', stargazers_count: 7, default_branch: 'main' });
-      }),
-    );
+  it('concurrent first-miss requests for the same key enqueue one job (M20)', async () => {
+    // M20: cache miss no longer triggers upstream fetch; concurrent requests
+    // for the same owner/name should produce exactly one pending refreshJob
+    // (the duplicate-job guard in enqueueRefresh skips second-tries).
     const responses = await Promise.all([
       postQuery(['dedupe/r']),
       postQuery(['dedupe/r']),
       postQuery(['dedupe/r']),
     ]);
     for (const r of responses) expect(r.status).toBe(200);
-    expect(count).toBe(1);
+    const repo = await prisma.repository.findUnique({
+      where: { owner_name: { owner: 'dedupe', name: 'r' } },
+    });
+    expect(repo).not.toBeNull();
+    const jobs = await prisma.refreshJob.findMany({
+      where: { repositoryId: repo!.id },
+    });
+    expect(jobs.length).toBe(1);
   });
 
   it('rejects missing X-API-Key with 401', async () => {

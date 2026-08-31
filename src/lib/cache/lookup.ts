@@ -1,9 +1,5 @@
-import type { FetchStatus, Prisma } from '@prisma/client';
-import { GitHubUnavailable, NotFoundError } from '@/lib/errors';
-import { logger } from '@/lib/logger';
-import { fetchRepoCore } from '@/lib/github/client';
-import { parseRepoResponse } from '@/lib/github/fields';
-import { storeRepoMetadata } from '@/lib/cache/write';
+import type { FetchStatus } from '@prisma/client';
+import { prisma } from '@/lib/db/client';
 import { getRepoMetadata } from '@/lib/cache/read';
 import { nextDueForStatus } from '@/lib/scheduler/aging';
 
@@ -24,6 +20,20 @@ export interface ResultNotFound {
   fetch_status: 'not_found';
   error: string;
 }
+/**
+ * M20: cache miss returns a 'pending' result instead of synchronously
+ * fetching GitHub. The owner/name is enqueued into refresh_jobs; the
+ * scheduler tick (next batch claim) will fetch the metadata and write
+ * back to the repositories table. Subsequent queries will hit cache.
+ */
+export interface ResultPending {
+  canonical: string;
+  original: string;
+  found: false;
+  fetch_status: 'pending';
+  queuedAt: string; // ISO timestamp when the job was enqueued
+  scheduledFor: string; // ISO timestamp when scheduler is expected to run
+}
 export interface ResultError {
   canonical: string;
   original: string;
@@ -31,7 +41,7 @@ export interface ResultError {
   fetch_status: 'error';
   error: string;
 }
-export type QueryResult = ResultOk | ResultNotFound | ResultError;
+export type QueryResult = ResultOk | ResultNotFound | ResultPending | ResultError;
 
 export const STALE_WARNING = 'data may be delayed';
 
@@ -41,58 +51,49 @@ export const STALE_WARNING = 'data may be delayed';
 const pending = new Map<string, Promise<unknown>>();
 
 /**
- * Fetch + write a repo that is not yet in the cache (or whose prior row is
- * in a non-'ok' state that we want to retry). Deduplicates concurrent
- * requests for the same owner/name.
+ * M20: enqueue a refresh job for an owner/name that is missing or stale
+ * in the cache. Upserts a stub repositories row (so refreshJob has a
+ * repositoryId foreign key) and creates a refresh_job at priority 70.
  *
- * Throws GitHubUnavailable on network errors so callers can fall back to
- * a stale 'ok' row (M8.2). NotFoundError is caught internally and turned
- * into a 'not_found' cache row.
+ * Idempotent: if a pending job already exists for the same repo, we
+ * don't create a duplicate — claim will pick it up on the next tick.
  */
-async function firstMiss(owner: string, name: string): Promise<void> {
-  const key = `${owner}/${name}`;
-  const existing = pending.get(key);
+async function enqueueRefresh(owner: string, name: string): Promise<{
+  queuedAt: Date;
+  scheduledFor: Date;
+}> {
+  const queuedAt = new Date();
+  // repositoryId is a FK on refresh_jobs, so we need a repositories row
+  // even before the first fetch. Upsert keeps any existing metadata
+  // (e.g. a stale 'ok' row) untouched on update.
+  const repo = await prisma.repository.upsert({
+    where: { owner_name: { owner, name } },
+    create: {
+      owner,
+      name,
+      node: { stub: true } as never,
+      fetchStatus: 'ok',
+    },
+    update: {},
+    select: { id: true },
+  });
+  // Skip duplicate pending job for the same repo (queue depth 1).
+  const existing = await prisma.refreshJob.findFirst({
+    where: { repositoryId: repo.id, status: 'pending' },
+    select: { scheduledFor: true, createdAt: true },
+  });
   if (existing) {
-    await existing;
-    return;
+    return { queuedAt: existing.createdAt, scheduledFor: existing.scheduledFor };
   }
-  const p = (async () => {
-    try {
-      const { data, etag } = await fetchRepoCore(owner, name);
-      const baseWrite = {
-        owner,
-        name,
-        node: key as unknown as Prisma.InputJsonValue,
-        metadata: parseRepoResponse(data),
-        fetchStatus: 'ok' as const,
-      };
-      if (etag !== undefined) {
-        await storeRepoMetadata({ ...baseWrite, etag });
-      } else {
-        await storeRepoMetadata(baseWrite);
-      }
-    } catch (e: unknown) {
-      if (e instanceof NotFoundError) {
-        await storeRepoMetadata({
-          owner,
-          name,
-          node: key as unknown as Prisma.InputJsonValue,
-          metadata: null,
-          fetchStatus: 'not_found',
-          fetchError: '404',
-        });
-        return;
-      }
-      logger.error({ err: e, owner, name }, 'first-miss fetch failed');
-      throw e;
-    }
-  })();
-  pending.set(key, p);
-  try {
-    await p;
-  } finally {
-    pending.delete(key);
-  }
+  const scheduledFor = queuedAt;
+  await prisma.refreshJob.create({
+    data: {
+      repositoryId: repo.id,
+      priority: 70,
+      scheduledFor,
+    },
+  });
+  return { queuedAt, scheduledFor };
 }
 
 /**
@@ -101,7 +102,7 @@ async function firstMiss(owner: string, name: string): Promise<void> {
  * hits whose 'ok' fetch has aged past the 24h TTL.
  *
  * Returns false when lastFetchedAt is null (never fetched — caller treats
- * this as fresh and overwrites via firstMiss).
+ * this as fresh and overwrites via enqueueRefresh + scheduler fetch).
  */
 function isStale(
   fetchStatus: FetchStatus,
@@ -132,20 +133,36 @@ function buildOkResult(
   };
 }
 
+function buildPendingResult(
+  owner: string,
+  name: string,
+  original: string,
+  queuedAt: Date,
+  scheduledFor: Date,
+): ResultPending {
+  return {
+    canonical: `${owner}/${name}`,
+    original,
+    found: false,
+    fetch_status: 'pending',
+    queuedAt: queuedAt.toISOString(),
+    scheduledFor: scheduledFor.toISOString(),
+  };
+}
+
 /**
  * Look up a single repo. Used by:
  * - POST /api/query (per-node, in a batch)
  * - The public form server action (M9.4)
  * - The /repo/[owner]/[name] detail page (M9.6)
  *
- * Behaviour:
- * 1. Read cache. If 'ok' → return with stale flag. If 'not_found' → return
- *    not_found. If forbidden/error → fall through to first-miss.
- * 2. Not cached OR non-ok cache → firstMiss (fetches GitHub + writes).
- * 3. On GitHubUnavailable during first-miss AND we have a prior 'ok' row
- *    → serve that row with stale:true + warning (M8.2).
- * 4. On GitHubUnavailable with no prior 'ok' row → return error.
- * 5. Read again. Return appropriate result based on the new row state.
+ * Behaviour (M20 — queue-on-miss):
+ * 1. Read cache. If 'ok' → return with stale flag.
+ * 2. If 'not_found' → return not_found (terminal, do not re-enqueue).
+ * 3. Otherwise (missing row / 'forbidden' / 'error') → enqueue a refresh
+ *    job and return a 'pending' result. The scheduler tick will fetch
+ *    the metadata on its next claimBatch pass and write back to the
+ *    repositories table. Subsequent queries will hit cache.
  */
 export async function lookupRepo(owner: string, name: string): Promise<QueryResult> {
   const original = `${owner}/${name}`;
@@ -163,27 +180,12 @@ export async function lookupRepo(owner: string, name: string): Promise<QueryResu
         error: 'Repository not found or private',
       };
     }
-    // forbidden/error: stale cache hit, treat as miss to allow refetch.
-    // M4 multi-token pool handles forbidden rotation.
+    // forbidden/error: re-enqueue so scheduler can retry.
   }
   try {
-    await firstMiss(owner, name);
+    const { queuedAt, scheduledFor } = await enqueueRefresh(owner, name);
+    return buildPendingResult(owner, name, original, queuedAt, scheduledFor);
   } catch (e: unknown) {
-    // M8.2: GitHubUnavailable (network down / DNS fail / connection refused)
-    // triggers the stale path. If we have a prior 'ok' row, serve it with
-    // stale:true + a warning. Otherwise fall through to the error response.
-    if (e instanceof GitHubUnavailable) {
-      const stale = await getRepoMetadata(owner, name);
-      if (stale.found && stale.fetchStatus === 'ok') {
-        return buildOkResult(
-          owner,
-          name,
-          original,
-          stale.metadata,
-          stale.lastFetchedAt,
-        );
-      }
-    }
     const msg = e instanceof Error ? e.message : 'unknown';
     return {
       canonical: original,
@@ -193,24 +195,4 @@ export async function lookupRepo(owner: string, name: string): Promise<QueryResu
       error: msg,
     };
   }
-  const r2 = await getRepoMetadata(owner, name);
-  if (!r2.found) {
-    return {
-      canonical: original,
-      original,
-      found: false,
-      fetch_status: 'error',
-      error: 'first-miss did not write a row',
-    };
-  }
-  if (r2.fetchStatus === 'not_found') {
-    return {
-      canonical: original,
-      original,
-      found: false,
-      fetch_status: 'not_found',
-      error: 'Repository not found or private',
-    };
-  }
-  return buildOkResult(owner, name, original, r2.metadata, r2.lastFetchedAt);
 }

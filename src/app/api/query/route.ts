@@ -65,7 +65,9 @@ export async function POST(req: Request): Promise<Response> {
 
   const summary = {
     hit: results.filter((r) => r.fetch_status === 'ok' && r.found).length,
-    miss: results.filter((r) => !r.found).length,
+    pending: results.filter((r) => r.fetch_status === 'pending').length,
+    not_found: results.filter((r) => r.fetch_status === 'not_found').length,
+    error: results.filter((r) => r.fetch_status === 'error').length,
     stale: results.filter((r) => 'stale' in r && r.stale === true).length,
   };
   const response = NextResponse.json({ results, summary });
@@ -79,7 +81,7 @@ export async function POST(req: Request): Promise<Response> {
     apiKeyId: apiKey.id,
     endpoint: '/api/query',
     ...(firstNode !== undefined ? { repoRequested: firstNode.original } : {}),
-    cacheHit: summary.hit === results.length,
+    cacheHit: summary.hit > 0 && summary.pending === 0 && summary.error === 0,
     durationMs: Date.now() - start,
     statusCode: 200,
     ...(fwd !== null ? { ip: fwd ?? undefined } : {}),

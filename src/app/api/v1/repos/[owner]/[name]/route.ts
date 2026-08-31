@@ -64,6 +64,27 @@ export async function GET(req: Request, ctx: RouteContext): Promise<Response> {
       { status: 404 },
     );
   }
+  if (result.fetch_status === 'pending') {
+    // M20: cache miss → enqueued for scheduler fetch. v1 has no wait param,
+    // so we return 202 Accepted with the same pending semantics as /api/query.
+    void recordRequest({
+      endpoint: '/api/v1/repos/[owner]/[name]',
+      repoRequested,
+      cacheHit: false,
+      durationMs: Date.now() - start,
+      statusCode: 202,
+      ...(ip !== null ? { ip } : {}),
+    }).catch((e: unknown) => logger.error({ err: e }, 'request log failed'));
+    return NextResponse.json(
+      {
+        repository: { owner, name },
+        fetch_status: 'pending',
+        queued_at: result.queuedAt,
+        scheduled_for: result.scheduledFor,
+      },
+      { status: 202 },
+    );
+  }
   if (result.fetch_status === 'error') {
     logger.warn({ owner, name, error: result.error }, 'public v1 repo lookup error');
     void recordRequest({

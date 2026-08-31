@@ -276,6 +276,27 @@ export default async function RepoDetailPage({ params }: PageProps): Promise<Rea
   if (result.fetch_status === 'not_found') {
     notFound();
   }
+  if (result.fetch_status === 'pending') {
+    // M20: cache miss — repo was just enqueued for the scheduler. Show a
+    // minimal pending page so the URL still resolves (instead of 404).
+    return (
+      <main className="mx-auto max-w-3xl px-4 py-12">
+        <nav className="mb-4 text-sm">
+          <Link href="/" className="ghc-link">
+            {tHero('backToAll')}
+          </Link>
+        </nav>
+        <h1 className="ghc-display-name text-2xl">{result.canonical}</h1>
+        <p
+          className="ghc-fade-up mt-4 border border-[color:var(--color-accent)] px-4 py-3 text-sm text-[color:var(--color-accent)]"
+          role="status"
+        >
+          Enqueued for refresh at {result.queuedAt}; scheduled for{' '}
+          {result.scheduledFor}. Reload in a moment.
+        </p>
+      </main>
+    );
+  }
   if (!('stale' in result)) {
     return (
       <main className="mx-auto max-w-3xl px-4 py-12">

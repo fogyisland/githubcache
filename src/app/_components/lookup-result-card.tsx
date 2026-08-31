@@ -89,7 +89,19 @@ export function LookupResultCard({ result }: Props) {
       </div>
     );
   }
-  // ResultOk is the only branch with `stale` discriminator; narrow on it.
+  // ResultPending — cache miss, enqueued for the scheduler (M20).
+  if (result.fetch_status === 'pending') {
+    return (
+      <div className="ghc-fade-up mt-5 border border-[color:var(--color-accent)] px-4 py-3 text-sm text-[color:var(--color-accent)]">
+        <span className="font-mono font-semibold">
+          <span className="ghc-status ghc-status-pending">[QUEUE]</span>{' '}
+          {result.canonical}
+        </span>{' '}
+        — enqueued at {result.queuedAt}; scheduled for {result.scheduledFor}
+      </div>
+    );
+  }
+  // ResultError is the only remaining branch without `stale` discriminator.
   if (!('stale' in result)) {
     return (
       <div className="ghc-fade-up mt-5 border border-[color:var(--color-danger)] px-4 py-3 text-sm text-[color:var(--color-danger)]">

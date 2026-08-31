@@ -138,7 +138,11 @@ describe('runTick', () => {
     expect(updated?.lockedUntil).toBeNull();
   });
 
-  it('processes multiple pending jobs concurrently', async () => {
+  it('processes one job per tick at SCHEDULER_BATCH_SIZE=1, drains on subsequent ticks', async () => {
+    // M20.3: SCHEDULER_BATCH_SIZE=1 enforces a 1-req/s ceiling against GitHub.
+    // One runTick claims and processes ONE pending job; the next tick picks
+    // up the next-highest-priority pending. This test seeds 3 jobs and runs
+    // 3 ticks; after the third tick all three should be done.
     const r2 = await prisma.repository.create({
       data: { owner: TEST_OWNER, name: 'tick-repo-2', node: { id: 77_777_778 }, fetchStatus: 'ok' },
     });
@@ -170,8 +174,25 @@ describe('runTick', () => {
     });
 
     server.use(ghOk('tick-repo'), ghOk('tick-repo-2'), ghOk('tick-repo-3'));
-    await runTick();
 
+    // Tick 1: one of the three jobs should be done, the others still pending.
+    await runTick();
+    const after1 = await prisma.refreshJob.findMany({
+      where: { id: { in: [j1.id, j2.id, j3.id] } },
+    });
+    expect(after1.filter((j) => j.status === 'done')).toHaveLength(1);
+    expect(after1.filter((j) => j.status === 'pending')).toHaveLength(2);
+
+    // Tick 2: second job done.
+    await runTick();
+    const after2 = await prisma.refreshJob.findMany({
+      where: { id: { in: [j1.id, j2.id, j3.id] } },
+    });
+    expect(after2.filter((j) => j.status === 'done')).toHaveLength(2);
+    expect(after2.filter((j) => j.status === 'pending')).toHaveLength(1);
+
+    // Tick 3: all three done, no more pending.
+    await runTick();
     const all = await prisma.refreshJob.findMany({
       where: { id: { in: [j1.id, j2.id, j3.id] } },
     });

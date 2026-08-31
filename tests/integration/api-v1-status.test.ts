@@ -96,6 +96,12 @@ describe('GET /api/v1/status — full endpoint', () => {
   });
 
   it('4) tokens.total reflects DB count of active github_tokens', async () => {
+    // Capture baseline (other tests in the shared DB may have seeded
+    // tokens under different prefixes).
+    const baseRes = await GET();
+    const baseBody = (await baseRes.json()) as { tokens: { total: number } };
+    const baselineTotal = baseBody.tokens.total;
+
     // Seed 3 active tokens.
     await prisma.githubToken.createMany({
       data: [
@@ -125,7 +131,7 @@ describe('GET /api/v1/status — full endpoint', () => {
 
     const res = await GET();
     const body = await res.json();
-    expect(body.tokens.total).toBe(3);
+    expect(body.tokens.total).toBe(baselineTotal + 3);
     // poolSize is still 0 (no initPool in tests).
     expect(body.tokens.active).toBe(0);
     // None exhausted (default requestsUsed=0, requestsLimit=5000).
@@ -133,6 +139,14 @@ describe('GET /api/v1/status — full endpoint', () => {
   });
 
   it('4b) tokens.exhausted counts rows where requestsUsed >= requestsLimit and resetAt is in the future', async () => {
+    // Capture baseline.
+    const baseRes = await GET();
+    const baseBody = (await baseRes.json()) as {
+      tokens: { total: number; exhausted: number };
+    };
+    const baselineTotal = baseBody.tokens.total;
+    const baselineExhausted = baseBody.tokens.exhausted;
+
     // Two tokens: one exhausted (used >= limit, reset in future), one not.
     const future = new Date(Date.now() + 60 * 60_000);
     await prisma.githubToken.create({
@@ -175,8 +189,8 @@ describe('GET /api/v1/status — full endpoint', () => {
 
     const res = await GET();
     const body = await res.json();
-    expect(body.tokens.total).toBe(3);
-    expect(body.tokens.exhausted).toBe(1);
+    expect(body.tokens.total).toBe(baselineTotal + 3);
+    expect(body.tokens.exhausted).toBe(baselineExhausted + 1);
   });
 
   it('5) repositories counts match seeded rows', async () => {
