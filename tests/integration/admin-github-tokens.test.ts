@@ -12,6 +12,7 @@ import {
 import { hashPassword } from '@/lib/auth/password';
 import { prisma } from '@/lib/db/client';
 import { createHash } from 'crypto';
+import { addTokenToPool, poolHasId } from '@/lib/github/pool';
 
 const TEST_EMAIL_PREFIX = 'admin-gh-tokens-int-';
 const ADMIN_EMAIL = `${TEST_EMAIL_PREFIX}admin-${Date.now()}@example.test`;
@@ -190,7 +191,7 @@ describe('POST /api/admin/github-tokens', () => {
     const body = (await res.json()) as { ok: boolean; id: string; message: string };
     expect(body.ok).toBe(true);
     expect(body.id).toMatch(/^\d+$/);
-    expect(body.message).toContain('Activate');
+    expect(body.message).toBe('Token registered and added to the pool.');
 
     // Verify row in DB
     const row = await prisma.githubToken.findUnique({ where: { id: BigInt(body.id) } });
@@ -200,6 +201,10 @@ describe('POST /api/admin/github-tokens', () => {
     expect(row!.tokenLast4).toBe('aabb'); // last 4 of `ghp_aabbccddee11223344556677889900aabb`
     const expectedHash = createHash('sha256').update(raw).digest('hex');
     expect(row!.tokenHash).toBe(expectedHash);
+    expect(row!.token).toBe(raw);
+
+    // M21: live activation — token is in the pool immediately, no restart needed
+    expect(poolHasId(BigInt(body.id))).toBe(true);
 
     // Audit
     await new Promise((r) => setTimeout(r, 100));
@@ -343,14 +348,19 @@ describe('PATCH /api/admin/github-tokens/[id]', () => {
         tokenFirst4: raw.slice(0, 4),
         tokenLast4: raw.slice(-4),
         tokenHash: hash,
+        token: raw,
         status: 'active',
       },
     });
+    // Seed the pool so PATCH-disable can verify removal
+    addTokenToPool(row);
     return row.id;
   }
 
-  it('disables a token and writes disable_token audit', async () => {
+  it('disables a token, drops it from the pool, and writes disable_token audit', async () => {
     const id = await makeTokenRow();
+    // Seeded in the pool by makeTokenRow()
+    expect(poolHasId(id)).toBe(true);
 
     const res = await patchToken(
       new Request(`http://x/api/admin/github-tokens/${id}`, {
@@ -364,6 +374,9 @@ describe('PATCH /api/admin/github-tokens/[id]', () => {
 
     const after = await prisma.githubToken.findUnique({ where: { id } });
     expect(after!.status).toBe('disabled');
+
+    // M21: live removal — token is dropped from the pool immediately
+    expect(poolHasId(id)).toBe(false);
 
     await new Promise((r) => setTimeout(r, 100));
     const audits = await prisma.auditLog.findMany({
@@ -414,14 +427,19 @@ describe('DELETE /api/admin/github-tokens/[id]', () => {
         tokenFirst4: raw.slice(0, 4),
         tokenLast4: raw.slice(-4),
         tokenHash: hash,
+        token: raw,
         status: 'active',
       },
     });
+    // Seed the pool so DELETE can verify removal
+    addTokenToPool(row);
     return row.id;
   }
 
-  it('removes the row and writes delete_token audit', async () => {
+  it('removes the row, drops it from the pool, and writes delete_token audit', async () => {
     const id = await makeTokenRow();
+    // Seeded in the pool by makeTokenRow()
+    expect(poolHasId(id)).toBe(true);
 
     const res = await deleteToken(
       new Request(`http://x/api/admin/github-tokens/${id}`, {
@@ -436,6 +454,9 @@ describe('DELETE /api/admin/github-tokens/[id]', () => {
     // Verify row gone
     const after = await prisma.githubToken.findUnique({ where: { id } });
     expect(after).toBeNull();
+
+    // M21: live removal — token is dropped from the pool immediately
+    expect(poolHasId(id)).toBe(false);
 
     await new Promise((r) => setTimeout(r, 100));
     const audits = await prisma.auditLog.findMany({
@@ -473,5 +494,97 @@ describe('DELETE /api/admin/github-tokens/[id]', () => {
     // Verify row still exists
     const after = await prisma.githubToken.findUnique({ where: { id } });
     expect(after).not.toBeNull();
+  });
+});
+
+describe('M21 — DB-direct token activation', () => {
+  it('POST stores raw token + adds to pool immediately', async () => {
+    const raw = 'ghp_m21intpost00000000000000000000';
+    const res = await postToken(
+      new Request('http://x/api/admin/github-tokens', {
+        method: 'POST',
+        headers: authHeaders({ 'content-type': 'application/json' }),
+        body: JSON.stringify({ label: 'gh-int-m21-post', token: raw, csrf: csrfToken }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean; id: string; message: string };
+    expect(body.ok).toBe(true);
+    expect(body.message).toBe('Token registered and added to the pool.');
+    const id = BigInt(body.id);
+
+    // DB row has the raw plaintext (M21: stored for live re-add on enable)
+    const row = await prisma.githubToken.findUnique({ where: { id } });
+    expect(row).not.toBeNull();
+    expect(row!.token).toBe(raw);
+
+    // Pool has the id — live activation, no restart required
+    expect(poolHasId(id)).toBe(true);
+  });
+
+  it('PATCH disabled removes from pool; PATCH enabled re-adds', async () => {
+    const raw = 'ghp_m21intpatch00000000000000000000';
+    const res = await postToken(
+      new Request('http://x/api/admin/github-tokens', {
+        method: 'POST',
+        headers: authHeaders({ 'content-type': 'application/json' }),
+        body: JSON.stringify({ label: 'gh-int-m21-patch', token: raw, csrf: csrfToken }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { id: string };
+    const id = BigInt(body.id);
+    expect(poolHasId(id)).toBe(true);
+
+    // Disable: live removal
+    const patchRes = await patchToken(
+      new Request(`http://x/api/admin/github-tokens/${id}`, {
+        method: 'PATCH',
+        headers: authHeaders({ 'content-type': 'application/json' }),
+        body: JSON.stringify({ status: 'disabled', csrf: csrfToken }),
+      }),
+      { params: { id: String(id) } },
+    );
+    expect(patchRes.status).toBe(200);
+    expect(poolHasId(id)).toBe(false);
+
+    // Re-enable: live re-add (route fetches the row and re-pools it)
+    const reEnableRes = await patchToken(
+      new Request(`http://x/api/admin/github-tokens/${id}`, {
+        method: 'PATCH',
+        headers: authHeaders({ 'content-type': 'application/json' }),
+        body: JSON.stringify({ status: 'active', csrf: csrfToken }),
+      }),
+      { params: { id: String(id) } },
+    );
+    expect(reEnableRes.status).toBe(200);
+    expect(poolHasId(id)).toBe(true);
+  });
+
+  it('DELETE removes from pool', async () => {
+    const raw = 'ghp_m21intdelete00000000000000000000';
+    const res = await postToken(
+      new Request('http://x/api/admin/github-tokens', {
+        method: 'POST',
+        headers: authHeaders({ 'content-type': 'application/json' }),
+        body: JSON.stringify({ label: 'gh-int-m21-delete', token: raw, csrf: csrfToken }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { id: string };
+    const id = BigInt(body.id);
+    expect(poolHasId(id)).toBe(true);
+
+    // Delete: live removal + DB row gone
+    const delRes = await deleteToken(
+      new Request(`http://x/api/admin/github-tokens/${id}`, {
+        method: 'DELETE',
+        headers: authHeaders({ 'content-type': 'application/json' }),
+        body: JSON.stringify({ csrf: csrfToken }),
+      }),
+      { params: { id: String(id) } },
+    );
+    expect(delRes.status).toBe(200);
+    expect(poolHasId(id)).toBe(false);
   });
 });
