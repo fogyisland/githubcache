@@ -8,6 +8,164 @@ once a stable release is cut. Until then, milestone tags serve as the version an
 
 ---
 
+## [m19-providers] — 2026-08-31
+
+**`/admin/providers` — JSON-driven ingestion sources.**
+Operators can declare a `slug / kind=file|http / itemsPath / urlField`
+configuration and have the cache ingest every GitHub `owner/name` pair
+the source returns. Designed to be useful even when no GitHub tokens
+are configured (preview + classify against the existing
+`repositories` table work without tokens; only the eventual
+`refreshJob` fetch requires them).
+
+### Pages
+
+| Route | Purpose |
+|---|---|
+| `/admin/providers` | List view. AdminTable over `ingestion_providers`. New button → `/admin/providers/new` |
+| `/admin/providers/new` | Create form (admin-only) |
+| `/admin/providers/[id]` | Edit form with Preview button, Toggle + Delete actions |
+| `/admin/ingestion` | New "Run via provider" card below the recent-jobs table |
+
+### Added
+
+**Library — `src/lib/ingestion/providers/`**
+- `schema.ts` — Zod discriminated union (`kind: 'file' | 'http'`)
+  with `ProviderConfigSchema` + `parseProviderConfig`.
+- `jsonpath.ts` — minimal JSONPath evaluator supporting `$.a.b.c`,
+  `$.a[0]`, `$.a[*].b`, `$.a[*][N]`, `$.a[*][*]`. Sticky regex tokenizer;
+  `JsonPathError` on unsupported / malformed paths.
+- `extract.ts` — `parseGitHubUrl(input)` — accepts `https://github.com/o/n[.git]`,
+  `git@github.com:o/n[.git]`, scheme-less forms; returns `{owner, name}` or `null`.
+- `source.ts` — `loadProviderSource(config, opts)`:
+  - File source gated by `PROVIDER_FILE_ROOTS` (comma-separated absolute
+    dirs); resolves and enforces `isUnder(child, parents)` containment.
+  - HTTP source via `fetch` with optional `headers` + `AbortSignal`.
+  - Throws typed `ProviderSourceError` with `code ∈ {FILE_NOT_FOUND,
+    FILE_OUT_OF_ROOTS, HTTP_ERROR, JSON_PARSE, BAD_ITEMSPATH}`.
+- `run.ts` — `previewProvider(slug, opts)` + `runProvider(slug, opts)`:
+  - `extractUniquePairs()` — load → evaluateJsonPath(itemsPath) →
+    per-item urlField → `parseGitHubUrl` → dedupe.
+  - `classifyAgainstDb()` — `existing_ok` (fetch_status='ok' AND
+    `last_fetched_at` IS NOT NULL) / `stale` (everything else in DB) /
+    `new` (not in DB). Returns up to 20 sample pairs.
+  - `runProvider(dryRun=true)` is a pure preview. `dryRun=false`
+    upserts repository stubs + enqueues `refresh_jobs` (priority 70)
+    for stale + new rows in a single transaction.
+- `db.ts` — thin CRUD helpers: `listProviders` / `getProviderById` /
+  `getProviderBySlug` / `createProvider` / `updateProvider` / `deleteProvider`.
+
+**API — `src/app/api/admin/providers/`**
+- `GET /api/admin/providers` — list, optional `?enabled=true|false` filter
+  (admin+operator).
+- `POST /api/admin/providers` — create (admin-only). Rejects duplicate
+  slug. Audit-logged.
+- `GET /api/admin/providers/[id]` — read one (admin+operator).
+- `PATCH /api/admin/providers/[id]` — partial update; slug immutable;
+  config re-parsed on every write (admin-only). Audit-logged.
+- `DELETE /api/admin/providers/[id]` — remove (admin-only). Audit-logged.
+- `POST /api/admin/providers/[id]/toggle` — flip `enabled` (admin-only).
+  Audit-logged.
+- `POST /api/admin/providers/[id]/preview` — preview (admin+operator).
+  Returns `{ totals, sample, poolEmpty }`.
+- `POST /api/admin/providers/[id]/run` — run (admin+operator). Returns
+  `{ totals, jobCount, dryRun, poolEmpty }`. Audit-logged on `dryRun=false`.
+  `poolEmpty=true` warns the UI that jobs will fail at fetch.
+
+**Pages**
+- `/admin/providers/page.tsx` — admin-only list. Reads via
+  `listProviders()`. New button in page-header actions.
+- `/admin/providers/new/page.tsx` — admin-only. Renders
+  `<ProviderForm mode="create">`.
+- `/admin/providers/[id]/page.tsx` — admin-only. Pre-fills form via
+  `ProviderConfigSchema.parse(row.configJson)`. Renders `<ProviderToggle>`
+  + `<ProviderDelete>` in the page-header actions slot.
+- `_components/provider-form.tsx` — shared client form (create/edit).
+  Kind=file vs http branching; itemsPath + urlField inputs;
+  enabled checkbox; slug immutability on edit.
+- `_components/provider-actions.tsx` — Toggle button client island.
+- `_components/provider-delete.tsx` — Delete button client island with
+  confirmation prompt.
+- `/admin/ingestion/_components/run-via-provider.tsx` — Run-via-Provider
+  client island. Fetches provider list + CSRF in parallel; exposes
+  `<select>` + limit + dryRun + Preview/Run buttons; shows
+  `poolEmptyWarning` banner when the run/preview response carries
+  `poolEmpty: true`.
+
+**Sidebar**
+- New slug `providers` (icon `⊡`, admin-only) added to `admin-sidebar.tsx`
+  between `ingestion` and `audit`. Routes to `/admin/providers`.
+- `/api/admin/palette/route.ts` extended with the new section (also adds
+  `ingestion` which was previously missing from the palette payload).
+
+**Migration**
+- `prisma/migrations/m19_ingestion_providers/migration.sql`:
+  ```sql
+  CREATE TABLE ingestion_providers (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    slug VARCHAR(64) NOT NULL,
+    name VARCHAR(128) NOT NULL,
+    source_type VARCHAR(32) NOT NULL DEFAULT 'json',
+    config_json JSON NOT NULL,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3)
+                          ON UPDATE CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (id),
+    UNIQUE KEY ingestion_providers_slug_unique (slug)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+  ```
+  Uses `utf8mb4_unicode_ci` (not `utf8mb4_0900_ai_ci`) — the MySQL 8.0
+  default is unavailable on this project's MySQL 5.7.44 instance.
+
+**i18n**
+- New namespace `admin.providers.*` in both `messages/en.json` and
+  `messages/zh.json`: `title / description / breadcrumbAdmin /
+  breadcrumbProviders / sourceType / status / field / list.{heading,
+  emptyTitle, emptyDescription, column} / form.{createHeading,
+  editHeading, slugHelp, namePlaceholder, fileHeading, filePathLabel,
+  filePathPlaceholder, httpHeading, urlLabel, urlPlaceholder,
+  itemsPathLabel, itemsPathPlaceholder, itemsPathHelp, urlFieldLabel,
+  urlFieldPlaceholder, urlFieldHelp, submitCreate, submitEdit,
+  submittingCreate, submittingEdit} / actions.{edit, delete, enable,
+  disable, preview, run, confirmDelete} / runCard.{heading, description,
+  chooseProvider, noProviders, dryRun, limitLabel, submitPreview,
+  submitRun, previewResult.{items, urls, unique, existing, stale, new,
+  invalid}, poolEmptyWarning, runOk, previewOk, previewFailed,
+  runFailed, createFailed}`.
+- New sidebar section key `admin.shell.sections.providers` (zh: "数据源",
+  en: "Providers").
+
+**Tests**
+- `tests/unit/ingestion-providers-schema.test.ts` — 16 tests.
+- `tests/unit/ingestion-providers-jsonpath.test.ts` — 19 tests.
+- `tests/unit/ingestion-providers-extract.test.ts` — 18 tests.
+- `tests/unit/ingestion-providers-source.test.ts` — 16 tests
+  (mocks `fs` + global `fetch`).
+- `tests/integration/ingestion-providers.test.ts` — 6 tests against
+  the shared test DB. Unique `TEST_OWNER_PREFIX = 'm19-fixture'` to
+  avoid collisions with other tests.
+- `tests/unit/admin-ingestion-i18n.test.tsx` — extended mock list to
+  include the new `<RunViaProvider />` island.
+
+**Env**
+- `PROVIDER_FILE_ROOTS` (default unset) — comma-separated absolute
+  directories allowed as file-source roots. Each file path is resolved
+  and must be inside one of these roots or the loader throws
+  `FILE_OUT_OF_ROOTS`.
+
+### Stats
+
+- 11 commits (M19.1 → M19.11), 16 new files, 6 modified
+- 69 new unit tests + 6 new integration tests = 75 new M19 tests
+- typecheck ✓ / lint ✓ (0 errors)
+
+### Breaking changes
+
+None. All M19 features are additive. Sidebar grew by one entry.
+
+---
+
 ## [m9-project-site] — 2026-08-26
 
 **Project-site frontend.** Public-facing homepage with a GitHub repo lookup
