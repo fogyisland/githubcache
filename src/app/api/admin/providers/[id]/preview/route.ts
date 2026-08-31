@@ -12,6 +12,7 @@ import {
   ProviderDisabledError,
 } from '@/lib/ingestion/providers/run';
 import { ProviderSourceError } from '@/lib/ingestion/providers/source';
+import { poolSize } from '@/lib/github/pool';
 
 /**
  * POST /api/admin/providers/[id]/preview
@@ -65,7 +66,8 @@ export async function POST(
     const result = await previewProvider(provider.slug, {
       ...(parsed.data.limit !== undefined ? { limit: parsed.data.limit } : {}),
     });
-    return NextResponse.json(result);
+    const poolEmpty = poolSize() === 0;
+    return NextResponse.json({ ...result, poolEmpty });
   } catch (e: unknown) {
     if (e instanceof ProviderNotFoundError) {
       return apiError('not_found', 'provider not found', {}, req);
