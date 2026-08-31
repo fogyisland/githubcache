@@ -345,17 +345,15 @@
         "disabled": "已禁用"
       },
       "pool": {
-        "inPool": "池内",
-        "pendingActivation": "待激活"
+        "inPool": "已加入池",
+        "notInPool": "未加入池"
       },
       "quota": {
         "chip": "配额",
         "warning": "已使用合并配额的 {pct}%（{used} / {limit}）。"
       },
       "poolHintPrefix": "池大小(当前内存中活跃):",
-      "poolHintMid": "在此处添加令牌仅创建数据库记录 — 若要激活,请将令牌加入",
-      "poolHintEnv": "环境变量,或",
-      "poolHintSuffix": "文件,然后重启服务。",
+      "poolHintBody": "此处添加的令牌存储于数据库并立即生效。如需吊销已泄露的令牌，请在此列表删除或在 GitHub 轮换。",
       "list": {
         "heading": "已注册令牌",
         "ariaLabel": "GitHub 令牌",
@@ -376,19 +374,19 @@
       "addForm": {
         "labelLabel": "标签：",
         "labelPlaceholder": "例如 user-ci-token",
-        "tokenLabel": "令牌（明文，不会保存）：",
+        "tokenLabel": "Token(明文，存于数据库——若泄露请在 GitHub 吊销):",
         "tokenPlaceholder": "ghp_...",
         "submit": "注册令牌",
         "error": {
           "http": "请求失败：HTTP {status}"
         },
-        "success": "令牌已注册。激活方法：加入 GITHUB_TOKENS 环境变量或文件后重启服务。"
+        "success": "令牌已注册并加入池。"
       },
       "actions": {
         "disable": "禁用",
         "enable": "启用",
         "delete": "删除",
-        "confirmDelete": "确认从数据库注册表中删除该令牌？若它仍在 GITHUB_TOKENS 环境变量或文件中，下次重启后会自动重现。",
+        "confirmDelete": "从注册表删除该令牌并将其从池中移除？该令牌将立即停止生效。",
         "failedWithError": "失败：{error}",
         "disabledOk": "令牌已禁用（下次服务重启后生效）。",
         "enabledOk": "令牌已启用。",
