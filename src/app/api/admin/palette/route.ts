@@ -36,6 +36,8 @@ export async function GET(req: Request): Promise<Response> {
     { slug: 'api-keys', title: 'API Keys', icon: '⌬', roles: ['admin', 'operator'] },
     { slug: 'github-tokens', title: 'GitHub Tokens', icon: '⊕', roles: ['admin', 'operator'] },
     { slug: 'reports', title: 'Reports', icon: '⊟', roles: ['admin', 'operator'] },
+    { slug: 'ingestion', title: 'Ingestion', icon: '⊱', roles: ['admin'] },
+    { slug: 'providers', title: 'Providers', icon: '⊡', roles: ['admin'] },
     { slug: 'audit', title: 'Audit', icon: '◭', roles: ['admin'] },
     { slug: 'refresh', title: 'Refresh', icon: '↻', roles: ['admin'] },
   ];

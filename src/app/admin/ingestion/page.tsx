@@ -14,6 +14,7 @@ import { IngestionKpis } from './_components/ingestion-kpis';
 import { FetchStatusBreakdown } from './_components/fetch-status-breakdown';
 import { SchedulerStateCard } from './_components/scheduler-state-card';
 import { RecentJobsTable } from './_components/recent-jobs-table';
+import { RunViaProvider } from './_components/run-via-provider';
 
 const PAGE_SIZE_DEFAULT = 50;
 const PAGE_SIZE_MAX = 200;
@@ -85,6 +86,7 @@ export default async function AdminIngestionPage({
       />
       <FetchStatusBreakdown {...breakdown} />
       <RecentJobsTable rows={jobs} limit={limit} offset={offset} />
+      <RunViaProvider />
     </div>
   );
 }
