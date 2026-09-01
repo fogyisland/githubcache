@@ -3,10 +3,20 @@ import { env } from '@/lib/config/env';
 import { runTick } from './tick';
 import { nightlySweep } from './sweep';
 import { runWorkerTick } from '@/lib/webhooks/worker';
+import {
+  pauseRefreshTick,
+  resumeRefreshTick,
+  setRefreshTickFn,
+} from './refresh-tick';
 
 // Re-export pause/resume state helpers. Defined in `./state` to avoid a
 // circular import with `./tick` (which imports `isPaused`).
 export { pause, resume, isPaused, getPausedAt } from './state';
+
+// Re-export refresh-tick interval controls so existing call sites
+// (`runTick` in `./tick` and admin pages) can import from `@/lib/scheduler`.
+// Internally they live in `./refresh-tick` to break a circular dep.
+export { pauseRefreshTick, resumeRefreshTick } from './refresh-tick';
 
 interface SchedulerHandle {
   stop(): void;
@@ -15,11 +25,12 @@ interface SchedulerHandle {
 let activeHandle: SchedulerHandle | null = null;
 
 /**
- * Start the in-process scheduler. Sets up two intervals:
+ * Start the in-process scheduler. Sets up three intervals:
  *  - tick: every SCHEDULER_TICK_MS (default 60s) — drain the refresh_jobs queue
  *  - sweep: every NIGHTLY_SWEEP_INTERVAL_MS (default 24h) — re-enqueue all ok repos
+ *  - webhook worker: every WEBHOOK_WORKER_TICK_MS (default 15s) — deliver due webhooks
  *
- * Returns a handle with `stop()` to halt both intervals. Production wiring
+ * Returns a handle with `stop()` to halt all intervals. Production wiring
  * (SIGTERM/SIGINT → stop()) is in src/server.ts (M5.6).
  *
  * If SCHEDULER_ENABLED=false, this is a no-op and returns a noop handle.
@@ -43,11 +54,11 @@ export function startScheduler(): SchedulerHandle {
     return activeHandle;
   }
 
-  const tickInterval = setInterval(() => {
-    runTick().catch((e: unknown) => {
-      logger.error({ err: e }, 'runTick failed');
-    });
-  }, env.SCHEDULER_TICK_MS);
+  // M22.2 — the refresh-tick interval lives in `./refresh-tick` so it can be
+  // fully clearInterval'd during rate-limit auto-pause. Inject the runTick
+  // reference and start the interval.
+  setRefreshTickFn(runTick);
+  resumeRefreshTick();
 
   const sweepInterval = setInterval(() => {
     nightlySweep().catch((e: unknown) => {
@@ -66,7 +77,6 @@ export function startScheduler(): SchedulerHandle {
   }, env.WEBHOOK_WORKER_TICK_MS);
 
   // Don't keep the process alive solely for these timers (in case Next.js exits)
-  tickInterval.unref?.();
   sweepInterval.unref?.();
   webhookWorkerInterval.unref?.();
 
@@ -82,7 +92,7 @@ export function startScheduler(): SchedulerHandle {
 
   activeHandle = {
     stop: () => {
-      clearInterval(tickInterval);
+      pauseRefreshTick();
       clearInterval(sweepInterval);
       clearInterval(webhookWorkerInterval);
       activeHandle = null;

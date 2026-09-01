@@ -4,6 +4,10 @@ import { prisma } from '@/lib/db/client';
 import { env } from '@/lib/config/env';
 import { logger } from '@/lib/logger';
 import { isPaused, pause, resume } from '@/lib/scheduler/state';
+import {
+  pauseRefreshTick,
+  resumeRefreshTick,
+} from '@/lib/scheduler/refresh-tick';
 import { poolStatus } from '@/lib/github/pool';
 
 export interface TickResult {
@@ -33,6 +37,11 @@ function scheduleAutoResume(resetAt: Date, reason: string): void {
     autoPaused = false;
     autoResumeTimer = null;
     resume();
+    // M22.2 — recreate the refresh-tick interval. The setInterval was
+    // cleared in the matching auto-pause branch above, so without this
+    // call the scheduler stays asleep even after the rate-limit window
+    // resets.
+    resumeRefreshTick();
     logger.info({ reason }, 'rate-limit window reset; auto-resumed scheduler');
   }, ms);
   autoResumeTimer.unref?.();
@@ -78,6 +87,10 @@ export async function runTick(): Promise<TickResult> {
     if (!autoPaused) {
       autoPaused = true;
       pause();
+      // M22.2 — fully clearInterval the refresh tick so no 1Hz setInterval
+      // callbacks fire during the rate-limit window. The scheduler is
+      // literally asleep until resumeRefreshTick() is called below.
+      pauseRefreshTick();
       logger.warn(
         {
           exhausted: status.exhausted,
@@ -98,6 +111,9 @@ export async function runTick(): Promise<TickResult> {
       autoResumeTimer = null;
     }
     resume();
+    // M22.2 — recreate the refresh tick interval. Callsite is the FIRST tick
+    // after the rate-limit reset, so this restores the 1Hz cadence.
+    resumeRefreshTick();
     logger.info('github tokens available again; auto-resumed scheduler');
   }
 
