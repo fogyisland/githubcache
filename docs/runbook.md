@@ -59,8 +59,9 @@ Response body fields:
    - Or rotate to fresh tokens via the admin UI
 4. If tokens are **disabled**, fix the underlying issue, then re-enable them
    in the admin UI.
-5. If there are no tokens at all, add via env (`GITHUB_TOKENS=ghp_aaa,ghp_bbb`)
-   or `GITHUB_TOKENS_FILE=/path/to/tokens`, then restart.
+5. If there are no tokens at all, add them via **`/admin/github-tokens`**
+   (M21 stores raw PATs in the `github_tokens.token` column and they take
+   effect immediately — no env-var edit, no restart).
 
 ### Alert: `githubcache_queue_pending_high` (> 5000)
 
@@ -132,6 +133,26 @@ npx prisma migrate dev --name <short_description>
 This auto-generates SQL at
 `prisma/migrations/<timestamp>_<name>/migration.sql`. Review the generated SQL
 carefully before committing — Prisma's auto-diff is good but not infallible.
+
+## M21 — Backfilling raw tokens
+
+M21 changed the GitHub token loader to read from the `github_tokens` table
+instead of `GITHUB_TOKENS` / `GITHUB_TOKENS_FILE` env vars. As a result, any
+token row that was added before M21 has `token = NULL` and will NOT enter
+the in-memory pool.
+
+After the M21 deploy + service restart, operators MUST re-add the plaintext
+for any legacy rows via the admin form:
+
+1. Open **`/admin/github-tokens`** and locate the row.
+2. The chip will read **"not in pool"**.
+3. Re-submit the plaintext via the form. The POST handler overwrites
+   `token` and adds the row to the pool immediately — no restart needed.
+4. Verify **`/api/v1/status`** reports `tokens.source = 'db'` and that
+   `tokens.active` includes the re-added token.
+
+To revoke a leaked token: delete it from **`/admin/github-tokens`** (it stops
+taking effect immediately) or rotate it on GitHub.
 
 ## Incident: GitHub fully down
 

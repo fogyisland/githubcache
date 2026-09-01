@@ -46,15 +46,13 @@ All env vars are validated by `src/lib/config/env.ts` (zod schema).
 | `PORT` | no | `3000` | HTTP port |
 | `NODE_ENV` | no | `development` | Runtime mode (`development` / `production` / `test`) |
 | `LOG_LEVEL` | no | `info` | pino log level (`fatal` / `error` / `warn` / `info` / `debug` / `trace`) |
-| `GITHUB_TOKEN` | one required* | — | Legacy single GitHub token (M1) |
-| `GITHUB_TOKENS` | one required* | — | Comma-separated GitHub tokens (M4 pool) |
-| `GITHUB_TOKENS_FILE` | one required* | — | Path to file with one token per line (takes precedence over `GITHUB_TOKENS`) |
 | `SCHEDULER_BATCH_SIZE` | no | `10` | Refresh jobs per scheduler tick |
 | `SCHEDULER_TICK_MS` | no | `60000` | Scheduler tick interval (ms) |
 | `NIGHTLY_SWEEP_INTERVAL_MS` | no | `86400000` | Full re-check interval (ms) |
 | `SCHEDULER_ENABLED` | no | `true` | Set `false` to disable background refresh |
 
-*At least one of `GITHUB_TOKEN`, `GITHUB_TOKENS`, or `GITHUB_TOKENS_FILE` must be set.
+GitHub tokens are managed in the database — add them via **`/admin/github-tokens`**.
+The `GITHUB_TOKEN` / `GITHUB_TOKENS` / `GITHUB_TOKENS_FILE` env vars were removed in M21.
 
 ## Deploy
 
