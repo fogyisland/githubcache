@@ -231,10 +231,18 @@ export async function fetchRepoCore(
         const remainingRaw = err.response?.headers?.['x-ratelimit-remaining'];
         const remaining =
           remainingRaw !== undefined ? Number.parseInt(remainingRaw, 10) : NaN;
-        // 403 with remaining=0 means this token is exhausted — rotate to next
+        // 403 with remaining=0 means this token is exhausted — mark it
+        // exhausted in the pool so poolStatus() reports it, then rotate.
+        // Without recordUsage() the in-memory entry stays fresh-looking
+        // and the scheduler keeps picking it (M22.1 fix).
         if (remaining === 0) {
+          const resetRaw = err.response?.headers?.['x-ratelimit-reset'];
+          const reset = resetRaw !== undefined ? Number.parseInt(resetRaw, 10) : 0;
+          if (Number.isFinite(reset) && reset > 0) {
+            await recordUsage(picked.id, 0, reset);
+          }
           logger.warn(
-            { tokenId: picked.id.toString(), attempt },
+            { tokenId: picked.id.toString(), attempt, resetAt: reset },
             'github token exhausted, rotating',
           );
           continue;
