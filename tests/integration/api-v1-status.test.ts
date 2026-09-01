@@ -48,6 +48,7 @@ describe('GET /api/v1/status — full endpoint', () => {
         active: expect.any(Number),
         exhausted: expect.any(Number),
         total: expect.any(Number),
+        source: 'db',
       }),
       queue: expect.objectContaining({
         pending: expect.any(Number),
@@ -353,7 +354,7 @@ describe('GET /api/v1/status — full endpoint', () => {
       const body = await res.json();
       expect(body.ok).toBe(false);
       expect(body.db).toBe('down');
-      expect(body.tokens).toEqual({ active: 0, exhausted: 0, total: 0 });
+      expect(body.tokens).toEqual({ active: 0, exhausted: 0, total: 0, source: 'db' });
       expect(body.queue).toEqual({
         pending: 0,
         in_progress: 0,
