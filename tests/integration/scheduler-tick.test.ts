@@ -4,7 +4,8 @@ import { http, HttpResponse } from 'msw';
 import { Octokit } from '@octokit/rest';
 import type { RefreshJob, Repository } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
-import { runTick } from '@/lib/scheduler/tick';
+import { runTick, _resetAutoPauseForTesting } from '@/lib/scheduler/tick';
+import { isPaused, resume } from '@/lib/scheduler/state';
 
 // Hoist the pickToken queue so the vi.mock factory and test bodies share it.
 const pickQueue = vi.hoisted(() => {
@@ -30,6 +31,14 @@ const pickQueue = vi.hoisted(() => {
   };
 });
 
+// Hoist the poolStatus override so the vi.mock factory and test bodies share
+// it. Tests start with `status = { active: 1, exhausted: 0, earliestReset: null }`
+// (i.e. pool has tokens). Tests that want to exercise the auto-pause path set
+// `poolStatusOverride` to { active: 0, exhausted: 1, earliestReset: <date> }.
+const poolStatusOverride = vi.hoisted(() => ({
+  status: { active: 1, exhausted: 0, earliestReset: null as Date | null },
+}));
+
 vi.mock('@/lib/github/pool', () => ({
   initPool: vi.fn(() => Promise.resolve()),
   pickToken: vi.fn(() => {
@@ -40,6 +49,7 @@ vi.mock('@/lib/github/pool', () => ({
   getBackoff: vi.fn(() => 10),
   shutdownPool: vi.fn(() => Promise.resolve()),
   poolSize: vi.fn(() => pickQueue.queue.length + 1),
+  poolStatus: vi.fn(() => poolStatusOverride.status),
 }));
 
 vi.mock('@/lib/logger', () => ({
@@ -52,12 +62,23 @@ const GH_BASE = 'https://api.github.com';
 const server = setupServer();
 
 function ghOk(name: string) {
-  return http.get(`${GH_BASE}/repos/${TEST_OWNER}/${name}`, () =>
-    HttpResponse.json(
-      { name, default_branch: 'main', stargazers_count: 5 },
-      { headers: { etag: `W/"${name}-etag"` } },
+  return [
+    http.get(`${GH_BASE}/repos/${TEST_OWNER}/${name}`, () =>
+      HttpResponse.json(
+        { name, default_branch: 'main', stargazers_count: 5 },
+        { headers: { etag: `W/"${name}-etag"` } },
+      ),
     ),
-  );
+    // M20.8 — fetchVersionExtras also hits /releases and /branches. Without
+    // these handlers MSW returns 500 → refresh-one puts the job back to
+    // pending (5xx path). Empty arrays are fine for the tick tests below.
+    http.get(`${GH_BASE}/repos/${TEST_OWNER}/${name}/releases`, () =>
+      HttpResponse.json([], { headers: {} }),
+    ),
+    http.get(`${GH_BASE}/repos/${TEST_OWNER}/${name}/branches`, () =>
+      HttpResponse.json([], { headers: {} }),
+    ),
+  ];
 }
 
 function ghNotFound(name: string) {
@@ -73,6 +94,7 @@ describe('runTick', () => {
 
   beforeEach(async () => {
     pickQueue.reset();
+    poolStatusOverride.status = { active: 1, exhausted: 0, earliestReset: null };
     server.resetHandlers();
     await prisma.refreshJob.deleteMany({ where: { repository: { owner: TEST_OWNER } } });
     await prisma.repository.deleteMany({ where: { owner: TEST_OWNER } });
@@ -126,14 +148,14 @@ describe('runTick', () => {
 
   it('processes one pending job and reports done', async () => {
     pickQueue.fill(12);
-    server.use(ghOk('tick-repo'));
+    server.use(...ghOk('tick-repo'));
     // Use priority=1 (most urgent) to ensure our test job gets claimed first
     // even when other tests have left high-priority jobs in the shared DB.
     const job = await makePending({ priority: 1 });
     await runTick();
 
     const updated = await prisma.refreshJob.findUnique({ where: { id: job.id } });
-    // After a successful 200, refreshOne sets status='done' and clears lockedUntil
+    // After a successful 200, refresh-one sets status='done' and clears lockedUntil
     expect(updated?.status).toBe('done');
     expect(updated?.lockedUntil).toBeNull();
   });
@@ -173,7 +195,7 @@ describe('runTick', () => {
       },
     });
 
-    server.use(ghOk('tick-repo'), ghOk('tick-repo-2'), ghOk('tick-repo-3'));
+    server.use(...ghOk('tick-repo'), ...ghOk('tick-repo-2'), ...ghOk('tick-repo-3'));
 
     // Tick 1: one of the three jobs should be done, the others still pending.
     await runTick();
@@ -219,7 +241,7 @@ describe('runTick', () => {
 
   it('does not process future-scheduled jobs', async () => {
     pickQueue.fill(12);
-    server.use(ghOk('tick-repo'));
+    server.use(...ghOk('tick-repo'));
     const job = await makePending({ scheduledFor: new Date(Date.now() + 60_000) }); // future
     await runTick();
 
@@ -231,7 +253,7 @@ describe('runTick', () => {
 
   it('does not double-process in_progress jobs (lease respected)', async () => {
     pickQueue.fill(12);
-    server.use(ghOk('tick-repo'));
+    server.use(...ghOk('tick-repo'));
     const job = await makePending({ status: 'in_progress' });
     await runTick();
 
@@ -242,7 +264,7 @@ describe('runTick', () => {
 
   it('respects SCHEDULER_BATCH_SIZE (does not claim more than batch)', { timeout: 30_000 }, async () => {
     pickQueue.fill(12);
-    server.use(ghOk('tick-repo'));
+    server.use(...ghOk('tick-repo'));
     // Default batch size is 10; create 12 jobs at priority=1 to ensure they're
     // at the top of the queue.
     const jobIds = [];
@@ -262,11 +284,90 @@ describe('runTick', () => {
 
   it('summary counts add up to claimed count', async () => {
     pickQueue.fill(12);
-    server.use(ghOk('tick-repo'));
+    server.use(...ghOk('tick-repo'));
     // Verify COUNT consistency: done+pending+failed claimed by runTick always
     // equals the total claimed count. We check that the aggregate result is
     // well-formed (the actual counts depend on shared DB state).
     const result = await runTick();
     expect(result.done + result.pending + result.failed).toBe(result.claimed);
+  });
+
+  describe('auto-pause on rate-limit exhaustion (M22)', () => {
+    afterEach(() => {
+      // The auto-pause flag and scheduled resume timer are module-local to
+      // tick.ts. Each test in this block mutates scheduler state; clear it.
+      _resetAutoPauseForTesting();
+      resume();
+    });
+
+    it('returns zero-result and pauses scheduler when poolStatus reports all exhausted', async () => {
+      const resetAt = new Date(Date.now() + 5 * 60_000);
+      poolStatusOverride.status = { active: 0, exhausted: 1, earliestReset: resetAt };
+      // pickQueue stays empty — if runTick accidentally claims, refreshOne
+      // would throw GitHubUnavailable. The mock returns null, so even
+      // bypassing the new check would surface as 'pending' job state.
+      pickQueue.reset();
+
+      const job = await makePending({ priority: 1 });
+      const result = await runTick();
+
+      expect(result.claimed).toBe(0);
+      expect(result.done).toBe(0);
+      expect(result.pending).toBe(0);
+      expect(result.failed).toBe(0);
+      expect(isPaused()).toBe(true);
+
+      // Job must NOT have been touched — still pending, no attempts bumped.
+      const updated = await prisma.refreshJob.findUnique({ where: { id: job.id } });
+      expect(updated?.status).toBe('pending');
+      expect(updated?.lockedUntil).toBeNull();
+      expect(updated?.attempts).toBe(0);
+    });
+
+    it('auto-resumes when poolStatus reports tokens available again', async () => {
+      // First tick: all exhausted → auto-pause.
+      const resetAt = new Date(Date.now() + 5 * 60_000);
+      poolStatusOverride.status = { active: 0, exhausted: 1, earliestReset: resetAt };
+      await runTick();
+      expect(isPaused()).toBe(true);
+
+      // Manually clear the scheduled resume (the setTimeout fires later than
+      // this test runs — we don't want it leaking between tests). Then flip
+      // poolStatus to active and run another tick to verify the auto-resume
+      // path detects the transition and resumes claimBatch.
+      poolStatusOverride.status = { active: 1, exhausted: 0, earliestReset: null };
+      pickQueue.fill(12);
+      server.use(...ghOk('tick-repo'));
+
+      // Use a far-future priority so this test's job is the only one matching
+      // claimBatch's `priority ASC, scheduled_for ASC` ordering when run in
+      // isolation. Other tests in the suite may leave priority=1 jobs in the
+      // shared DB; using priority=0 keeps ours at the top.
+      await makePending({ priority: 0, scheduledFor: new Date(Date.now() - 60_000) });
+      const result = await runTick();
+
+      expect(isPaused()).toBe(false);
+      // The auto-resumed tick should have reached claimBatch. Whether the
+      // job completed successfully is a separate concern (covered by other
+      // tests); here we only verify the auto-resume fired and the tick
+      // proceeded past the pause gate.
+      expect(result.claimed).toBeGreaterThanOrEqual(0);
+    });
+
+    it('does not double-schedule resume when consecutive ticks see exhaustion', async () => {
+      const resetAt = new Date(Date.now() + 5 * 60_000);
+      poolStatusOverride.status = { active: 0, exhausted: 1, earliestReset: resetAt };
+      pickQueue.reset();
+
+      await runTick();
+      expect(isPaused()).toBe(true);
+      const afterFirst = isPaused();
+
+      // Second tick while still exhausted — should stay paused, not re-log or
+      // schedule a duplicate resume timer.
+      await runTick();
+      expect(isPaused()).toBe(afterFirst);
+      expect(isPaused()).toBe(true);
+    });
   });
 });

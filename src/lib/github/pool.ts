@@ -210,6 +210,52 @@ export function poolSize(): number {
   return pool.size;
 }
 
+export interface PoolStatus {
+  /** Entries that are not exhausted right now (safe to call GitHub). */
+  active: number;
+  /** Entries that have hit the GitHub rate-limit window (resetAt > now && requestsUsed >= requestsLimit). */
+  exhausted: number;
+  /** Soonest resetAt across all exhausted entries; null when no exhausted entries exist. */
+  earliestReset: Date | null;
+}
+
+/**
+ * Snapshot of pool state used by the scheduler to decide whether to claim jobs.
+ *
+ * Distinct from `poolSize()` (which only counts total entries) and
+ * `pickToken()` (which returns one Octokit). The scheduler needs aggregate
+ * counts to decide "should I bother running a tick right now" without
+ * touching the DB.
+ *
+ * M22 — the auto-pause-on-exhaustion feature (vs. ticking blindly) is the
+ * reason this exists; without it the tick logs 1 line/sec forever when all
+ * tokens are rate-limited.
+ */
+export function poolStatus(): PoolStatus {
+  const now = Date.now();
+  let active = 0;
+  let exhausted = 0;
+  let earliestResetMs: number | null = null;
+  for (const entry of pool.values()) {
+    const isExhausted =
+      entry.resetAt !== null &&
+      entry.resetAt.getTime() > now &&
+      entry.requestsUsed >= entry.requestsLimit;
+    if (isExhausted) {
+      exhausted += 1;
+      const ms = entry.resetAt!.getTime();
+      if (earliestResetMs === null || ms < earliestResetMs) earliestResetMs = ms;
+    } else {
+      active += 1;
+    }
+  }
+  return {
+    active,
+    exhausted,
+    earliestReset: earliestResetMs === null ? null : new Date(earliestResetMs),
+  };
+}
+
 /**
  * O(1) lookup — true when the in-memory pool contains an entry for this DB id.
  * Used by admin UI to display the "in pool" / "not in pool" chip.
