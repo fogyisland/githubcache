@@ -45,11 +45,6 @@ export type QueryResult = ResultOk | ResultNotFound | ResultPending | ResultErro
 
 export const STALE_WARNING = 'data may be delayed';
 
-// In-process dedupe: concurrent first-miss requests for the same
-// owner/name share one upstream fetch. M5 may replace with a durable
-// lock if multi-process becomes a concern.
-const pending = new Map<string, Promise<unknown>>();
-
 /**
  * M20: enqueue a refresh job for an owner/name that is missing or stale
  * in the cache. Upserts a stub repositories row (so refreshJob has a

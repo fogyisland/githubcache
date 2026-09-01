@@ -57,7 +57,7 @@ beforeEach(async () => {
   await prisma.ingestionProvider.deleteMany({
     where: { slug: { startsWith: 'm19-' } },
   });
-  const provider = await prisma.ingestionProvider.create({
+  await prisma.ingestionProvider.create({
     data: {
       slug: TEST_SLUG,
       name: 'M19 test provider',
