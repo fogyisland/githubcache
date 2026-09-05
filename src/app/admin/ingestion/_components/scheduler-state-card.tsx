@@ -1,10 +1,13 @@
 import type { ReactElement } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
+import { formatDateTime } from '@/lib/format/datetime';
+import type { TimezoneId } from '@/lib/timezone/registry';
 
 interface Props {
   isPaused: boolean;
   pausedAt: Date | null;
+  tz: TimezoneId;
 }
 
 /**
@@ -16,6 +19,7 @@ interface Props {
 export async function SchedulerStateCard({
   isPaused,
   pausedAt,
+  tz,
 }: Props): Promise<ReactElement> {
   const t = await getTranslations('admin.ingestion.scheduler');
   return (
@@ -26,7 +30,7 @@ export async function SchedulerStateCard({
       </AdminStatusChip>
       {isPaused && pausedAt ? (
         <span className="text-sm text-gray-600">
-          {t('pausedAt', { when: pausedAt.toISOString().slice(0, 19).replace('T', ' ') })}
+          {t('pausedAt', { when: formatDateTime(pausedAt, tz) })}
         </span>
       ) : null}
       <a

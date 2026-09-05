@@ -13,6 +13,8 @@ import { formatCount } from '@/lib/repo/metadata';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { AdminTable, type AdminColumn } from '@/app/admin/_components/admin-table';
 import { AdminPagination } from '@/app/admin/_components/admin-pagination';
+import { formatDate } from '@/lib/format/datetime';
+import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 
 const PAGE_SIZE_DEFAULT = 25;
 const PAGE_SIZE_MAX = 200;
@@ -53,6 +55,8 @@ export default async function AdminInsightsTopReposPage({
   if (user.role !== 'admin') {
     redirect('/admin');
   }
+
+  const userTz = resolveRequestTimezone({ dbValue: user.timezone });
 
   const sortBy: InsightsSortKey = isInsightsSortKey(searchParams.sort)
     ? searchParams.sort
@@ -124,7 +128,7 @@ export default async function AdminInsightsTopReposPage({
       key: 'lastFetchedAt',
       header: t('topRepos.column.lastFetchedAt'),
       render: (r) =>
-        r.lastFetchedAt ? r.lastFetchedAt.toISOString().slice(0, 10) : '–',
+        r.lastFetchedAt ? formatDate(r.lastFetchedAt, userTz) : '–',
     },
   ];
 

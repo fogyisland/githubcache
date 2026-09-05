@@ -11,6 +11,8 @@ import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { AdminTable, type AdminColumn } from '@/app/admin/_components/admin-table';
 import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
 import { RetryDeliveryButton } from '../_components/retry-delivery-button';
+import { formatDateTime } from '@/lib/format/datetime';
+import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 
 type DeliveryRow = Awaited<
   ReturnType<typeof listDeliveriesForSubscription>
@@ -44,6 +46,8 @@ export default async function AdminWebhookDetailPage({
   if (!user || user.role !== 'admin') {
     redirect('/admin');
   }
+
+  const userTz = resolveRequestTimezone({ dbValue: user.timezone });
 
   let id: bigint;
   try {
@@ -80,7 +84,7 @@ export default async function AdminWebhookDetailPage({
       key: 'when',
       header: t('deliveries.column.when'),
       render: (d) => {
-        const when = d.eventCreatedAt.toISOString().slice(0, 19).replace('T', ' ');
+        const when = formatDateTime(d.eventCreatedAt, userTz);
         return <span className="ghc-admin-mono">{when}</span>;
       },
     },
@@ -182,7 +186,7 @@ export default async function AdminWebhookDetailPage({
           <div>
             <dt>{t('field.createdAt')}</dt>
             <dd className="ghc-admin-mono">
-              {sub.createdAt.toISOString().slice(0, 19).replace('T', ' ')}
+              {formatDateTime(sub.createdAt, userTz)}
             </dd>
           </div>
         </dl>

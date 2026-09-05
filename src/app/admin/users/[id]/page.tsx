@@ -10,6 +10,8 @@ import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
 import { AdminTable, type AdminColumn } from '@/app/admin/_components/admin-table';
 import { UserActions } from './_components/user-actions';
 import { queryAuditLog } from '@/lib/db/audit';
+import { formatDate, formatDateTime } from '@/lib/format/datetime';
+import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 
 interface KeyRow {
   id: bigint;
@@ -52,6 +54,8 @@ export default async function AdminUserDetailPage({
   if (!session || session.role !== 'admin') {
     redirect('/admin');
   }
+
+  const userTz = resolveRequestTimezone({ dbValue: session.timezone });
 
   const t = await getTranslations('admin.users.detail');
 
@@ -96,7 +100,7 @@ export default async function AdminUserDetailPage({
     {
       key: 'created',
       header: t('keyColumns.created'),
-      render: (k) => k.createdAt.toISOString().slice(0, 10),
+      render: (k) => formatDate(k.createdAt, userTz),
     },
   ];
 
@@ -104,7 +108,7 @@ export default async function AdminUserDetailPage({
     {
       key: 'time',
       header: t('auditColumns.when'),
-      render: (r) => r.createdAt.toISOString().replace('T', ' ').slice(0, 19),
+      render: (r) => formatDateTime(r.createdAt, userTz),
     },
     {
       key: 'action',
@@ -147,13 +151,13 @@ export default async function AdminUserDetailPage({
           </div>
           <div className="ghc-admin-detail-row">
             <dt>{t('profile.created')}</dt>
-            <dd>{user.createdAt.toISOString().slice(0, 10)}</dd>
+            <dd>{formatDate(user.createdAt, userTz)}</dd>
           </div>
           <div className="ghc-admin-detail-row">
             <dt>{t('profile.lastLogin')}</dt>
             <dd>
               {user.lastLoginAt
-                ? user.lastLoginAt.toISOString().replace('T', ' ').slice(0, 19)
+                ? formatDateTime(user.lastLoginAt, userTz)
                 : t('profile.never')}
             </dd>
           </div>
@@ -171,6 +175,16 @@ export default async function AdminUserDetailPage({
             <dt>{t('profile.theme')}</dt>
             <dd>
               <code className="ghc-admin-mono">{user.theme}</code>
+            </dd>
+          </div>
+          <div className="ghc-admin-detail-row">
+            <dt>{t('profile.timezone')}</dt>
+            <dd>
+              {user.timezone ? (
+                <code className="ghc-admin-mono">{user.timezone}</code>
+              ) : (
+                <span className="ghc-admin-detail-hint">{t('profile.defaultTz')}</span>
+              )}
             </dd>
           </div>
         </dl>

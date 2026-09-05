@@ -19,6 +19,7 @@ import { RequestsOverTimeChart } from './_components/requests-over-time-chart';
 import { TopReposTable } from './_components/top-repos-table';
 import { TopKeysTable } from './_components/top-keys-table';
 import { TokenQuotaTable } from './_components/token-quota-table';
+import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 
 /**
  * Admin → Reports page (M7.4).
@@ -52,6 +53,8 @@ export default async function AdminReportsPage(): Promise<ReactElement> {
     redirect('/login');
   }
 
+  const userTz = resolveRequestTimezone({ dbValue: user.timezone });
+
   const to = new Date();
   const from = new Date(to.getTime() - 24 * 60 * 60 * 1000);
 
@@ -82,10 +85,10 @@ export default async function AdminReportsPage(): Promise<ReactElement> {
         avgLatencyMs={avg}
         activeApiKeys={activeKeys}
       />
-      <RequestsOverTimeChart data={overTime} />
+      <RequestsOverTimeChart data={overTime} tz={userTz} />
       <TopReposTable rows={repos} />
-      <TopKeysTable rows={keys.map((k) => ({ ...k, keyId: k.keyId.toString() }))} />
-      <TokenQuotaTable rows={quota.map((tt) => ({ ...tt, id: tt.id.toString() }))} />
+      <TopKeysTable rows={keys.map((k) => ({ ...k, keyId: k.keyId.toString() }))} tz={userTz} />
+      <TokenQuotaTable rows={quota.map((tt) => ({ ...tt, id: tt.id.toString() }))} tz={userTz} />
     </div>
   );
 }

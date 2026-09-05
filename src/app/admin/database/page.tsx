@@ -13,6 +13,7 @@ import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { BinaryWarning } from './_components/binary-warning';
 import { Overview } from './_components/overview';
 import { BackupSection } from './_components/backup-section';
+import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 
 interface BackupRowForClient {
   filename: string;
@@ -62,6 +63,8 @@ export default async function AdminDatabasePage(): Promise<ReactElement> {
     redirect('/admin');
   }
 
+  const userTz = resolveRequestTimezone({ dbValue: user.timezone });
+
   const [overview, tableStats, tableDetails, slow, backupsRaw, binaryStatus] =
     await Promise.all([
       getDatabaseOverview(),
@@ -110,7 +113,7 @@ export default async function AdminDatabasePage(): Promise<ReactElement> {
         totalBytes={overview.totalBytes}
       />
 
-      <BackupSection initialBackups={backups} keepN={env.BACKUP_KEEP_N} />
+      <BackupSection initialBackups={backups} keepN={env.BACKUP_KEEP_N} tz={userTz} />
       <RestoreSection backups={backups} />
       <TablesSection stats={tableStats} details={tableDetails} />
       <SlowQueriesSection result={slow} limit={SLOW_QUERY_LIMIT} />

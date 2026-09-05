@@ -8,6 +8,8 @@ import { AdminTable, type AdminColumn } from '@/app/admin/_components/admin-tabl
 import { LimitsForm } from './_components/limits-form';
 import { KeyActions } from './_components/key-actions';
 import { queryAuditLog } from '@/lib/db/audit';
+import { formatDateTime } from '@/lib/format/datetime';
+import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 
 interface AuditRow {
   id: bigint;
@@ -31,6 +33,10 @@ export default async function AdminApiKeyDetailPage({
 }: {
   params: { id: string };
 }): Promise<ReactElement> {
+  // api-keys detail doesn't validate its own session (layout.tsx gates auth);
+  // read timezone from cookie/default only — no DB roundtrip.
+  const userTz = resolveRequestTimezone({});
+
   const id = BigInt(params.id);
   const key = await getApiKeyById(id);
   if (!key) notFound();
@@ -47,7 +53,7 @@ export default async function AdminApiKeyDetailPage({
     {
       key: 'time',
       header: t('auditColumns.when'),
-      render: (r) => r.createdAt.toISOString().replace('T', ' ').slice(0, 19),
+      render: (r) => formatDateTime(r.createdAt, userTz),
     },
     {
       key: 'action',
@@ -97,14 +103,14 @@ export default async function AdminApiKeyDetailPage({
           </div>
           <div className="ghc-admin-detail-row">
             <dt>{t('profile.created')}</dt>
-            <dd>{key.createdAt.toISOString().replace('T', ' ').slice(0, 19)}</dd>
+            <dd>{formatDateTime(key.createdAt, userTz)}</dd>
           </div>
           <div className="ghc-admin-detail-row">
             <dt>{t('profile.approved')}</dt>
             <dd>
               {key.approvedAt
                 ? t('profile.approvedAt', {
-                    datetime: key.approvedAt.toISOString().replace('T', ' ').slice(0, 19),
+                    datetime: formatDateTime(key.approvedAt, userTz),
                     approver: `#${key.approvedBy}`,
                   })
                 : t('common.dash')}
@@ -114,7 +120,7 @@ export default async function AdminApiKeyDetailPage({
             <dt>{t('profile.revoked')}</dt>
             <dd>
               {key.revokedAt
-                ? key.revokedAt.toISOString().replace('T', ' ').slice(0, 19)
+                ? formatDateTime(key.revokedAt, userTz)
                 : t('common.dash')}
             </dd>
           </div>
@@ -122,7 +128,7 @@ export default async function AdminApiKeyDetailPage({
             <dt>{t('profile.lastUsed')}</dt>
             <dd>
               {key.lastUsedAt
-                ? key.lastUsedAt.toISOString().replace('T', ' ').slice(0, 19)
+                ? formatDateTime(key.lastUsedAt, userTz)
                 : t('profile.never')}
             </dd>
           </div>

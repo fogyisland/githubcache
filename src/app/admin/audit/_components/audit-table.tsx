@@ -1,5 +1,7 @@
 import type { ReactElement } from 'react';
 import { getTranslations } from 'next-intl/server';
+import { formatDateTime } from '@/lib/format/datetime';
+import type { TimezoneId } from '@/lib/timezone/registry';
 
 interface Row {
   id: string;
@@ -18,6 +20,7 @@ interface Props {
   total: number;
   limit: number;
   offset: number;
+  tz: TimezoneId;
 }
 
 /**
@@ -28,7 +31,7 @@ interface Props {
  * reset on pagination. Future polish: preserve all filters in prev/next
  * href builders.
  */
-export async function AuditTable({ rows, total, limit, offset }: Props): Promise<ReactElement> {
+export async function AuditTable({ rows, total, limit, offset, tz }: Props): Promise<ReactElement> {
   const t = await getTranslations('admin.audit.table');
   const start = total === 0 ? 0 : offset + 1;
   const end = Math.min(offset + limit, total);
@@ -63,7 +66,7 @@ export async function AuditTable({ rows, total, limit, offset }: Props): Promise
               {rows.map((r) => (
                 <tr key={r.id} className="border-b border-gray-100 align-top">
                   <td className="py-2 font-mono text-xs whitespace-nowrap">
-                    {r.createdAt.toISOString()}
+                    {formatDateTime(r.createdAt, tz)}
                   </td>
                   <td className="py-2">
                     <span className="rounded bg-gray-100 px-2 py-1 font-mono text-xs">

@@ -9,6 +9,8 @@ import { AdminKpiCard } from '@/app/admin/_components/admin-kpi-card';
 import { AdminTable, type AdminColumn } from '@/app/admin/_components/admin-table';
 import { AdminPagination } from '@/app/admin/_components/admin-pagination';
 import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
+import { formatDate } from '@/lib/format/datetime';
+import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 
 const PAGE_SIZE_DEFAULT = 25;
 const PAGE_SIZE_MAX = 200;
@@ -51,6 +53,8 @@ export default async function AdminInsightsHealthPage({
     redirect('/admin');
   }
 
+  const userTz = resolveRequestTimezone({ dbValue: user.timezone });
+
   const rawLimit = Number(searchParams.limit ?? PAGE_SIZE_DEFAULT);
   const rawOffset = Number(searchParams.offset ?? 0);
   const limit = Number.isFinite(rawLimit)
@@ -88,7 +92,7 @@ export default async function AdminInsightsHealthPage({
     {
       key: 'lastFetchedAt',
       header: t('health.column.lastFetchedAt'),
-      render: (r) => r.lastFetchedAt.toISOString().slice(0, 10),
+      render: (r) => formatDate(r.lastFetchedAt, userTz),
     },
     {
       key: 'fetchStatus',

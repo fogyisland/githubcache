@@ -117,6 +117,10 @@ vi.mock('next-intl', () => ({
   },
 }));
 
+vi.mock('next/headers', () => ({
+  cookies: () => ({ getAll: () => [] }),
+}));
+
 vi.mock('@/lib/auth/session', () => ({
   validateSession: async () => ({
     id: 1n,

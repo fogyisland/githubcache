@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { formatDateTime } from '@/lib/format/datetime';
+import type { TimezoneId } from '@/lib/timezone/registry';
 
 interface Repo {
   id: string;
@@ -13,6 +15,7 @@ interface Repo {
 interface Props {
   isPaused: boolean;
   pausedAt: string | null;
+  tz: TimezoneId;
   repos: Repo[];
 }
 
@@ -31,7 +34,7 @@ interface Props {
  * On success, calls `router.refresh()` so the parent server component
  * re-renders with the updated scheduler state and pending-jobs list.
  */
-export function RefreshControls({ isPaused, pausedAt, repos }: Props) {
+export function RefreshControls({ isPaused, pausedAt, repos, tz }: Props) {
   const tTrigger = useTranslations('admin.refresh.trigger');
   const tSched = useTranslations('admin.refresh.scheduler');
   const router = useRouter();
@@ -152,7 +155,7 @@ export function RefreshControls({ isPaused, pausedAt, repos }: Props) {
             </div>
             {pausedAt && (
               <div className="text-xs text-gray-500">
-                {tSched('pausedAt', { timestamp: new Date(pausedAt).toISOString() })}
+                {tSched('pausedAt', { timestamp: formatDateTime(pausedAt, tz) })}
               </div>
             )}
             <div className="mt-1 text-xs text-gray-500">

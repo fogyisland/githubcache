@@ -10,6 +10,8 @@ import { AdminTable, type AdminColumn } from '@/app/admin/_components/admin-tabl
 import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
 import { AddWebhookForm } from './_components/add-webhook-form';
 import { WebhookActions } from './_components/webhook-actions';
+import { formatDateTime } from '@/lib/format/datetime';
+import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 
 type SubRow = Awaited<ReturnType<typeof listAllSubscriptions>>['rows'][number];
 
@@ -40,6 +42,8 @@ export default async function AdminWebhooksPage({
   if (!user || user.role !== 'admin') {
     redirect('/admin');
   }
+
+  const userTz = resolveRequestTimezone({ dbValue: user.timezone });
 
   const t = await getTranslations('admin.webhooks');
   const tPag = await getTranslations('admin.common.pagination');
@@ -86,7 +90,7 @@ export default async function AdminWebhooksPage({
       header: t('list.column.lastDelivery'),
       render: (s) => {
         if (!s.lastDeliveryAt) return t('list.never');
-        const date = s.lastDeliveryAt.toISOString().slice(0, 16).replace('T', ' ');
+        const date = formatDateTime(s.lastDeliveryAt, userTz).slice(0, 16);
         const status = s.lastDeliveryStatus ?? 'pending';
         const variant =
           status === 'delivered' ? 'ok' : status === 'failed' ? 'warn' : 'danger';

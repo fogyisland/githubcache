@@ -2,12 +2,15 @@ import type { ReactElement } from 'react';
 import { getTranslations } from 'next-intl/server';
 import type { RecentRequestRow } from '@/lib/reports/queries';
 import { AdminPagination } from '@/app/admin/_components/admin-pagination';
+import { formatDateTime } from '@/lib/format/datetime';
+import type { TimezoneId } from '@/lib/timezone/registry';
 
 interface Props {
   rows: RecentRequestRow[];
   total: number;
   limit: number;
   offset: number;
+  tz: TimezoneId;
 }
 
 /**
@@ -23,6 +26,7 @@ export async function RecentRequestsTable({
   total,
   limit,
   offset,
+  tz,
 }: Props): Promise<ReactElement> {
   const t = await getTranslations('admin.queries.recent');
   const tPag = await getTranslations('admin.common.pagination');
@@ -54,7 +58,7 @@ export async function RecentRequestsTable({
             {rows.map((r) => (
               <tr key={r.id.toString()} className="border-b border-gray-100">
                 <td className="py-2 font-mono text-xs text-gray-600">
-                  {r.createdAt.toISOString().replace('T', ' ').slice(0, 19)}
+                  {formatDateTime(r.createdAt, tz)}
                 </td>
                 <td className="py-2 font-mono text-xs">{r.endpoint}</td>
                 <td className="py-2">

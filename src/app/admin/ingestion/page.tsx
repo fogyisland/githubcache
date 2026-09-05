@@ -15,6 +15,7 @@ import { FetchStatusBreakdown } from './_components/fetch-status-breakdown';
 import { SchedulerStateCard } from './_components/scheduler-state-card';
 import { RecentJobsTable } from './_components/recent-jobs-table';
 import { RunViaProvider } from './_components/run-via-provider';
+import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 
 const PAGE_SIZE_DEFAULT = 50;
 const PAGE_SIZE_MAX = 200;
@@ -53,6 +54,8 @@ export default async function AdminIngestionPage({
     redirect('/admin');
   }
 
+  const userTz = resolveRequestTimezone({ dbValue: user.timezone });
+
   const limit = Math.min(PAGE_SIZE_MAX, Math.max(1, Number(searchParams.limit ?? PAGE_SIZE_DEFAULT)));
   const offset = Math.max(0, Number(searchParams.offset ?? 0));
 
@@ -77,7 +80,7 @@ export default async function AdminIngestionPage({
         title={t('title')}
         description={t('description')}
       />
-      <SchedulerStateCard isPaused={paused} pausedAt={pausedAt} />
+      <SchedulerStateCard isPaused={paused} pausedAt={pausedAt} tz={userTz} />
       <IngestionKpis
         pending={summary.pending}
         inProgress={summary.inProgress}
@@ -85,7 +88,7 @@ export default async function AdminIngestionPage({
         failed={summary.failed}
       />
       <FetchStatusBreakdown {...breakdown} />
-      <RecentJobsTable rows={jobs} limit={limit} offset={offset} />
+      <RecentJobsTable rows={jobs} limit={limit} offset={offset} tz={userTz} />
       <RunViaProvider />
     </div>
   );

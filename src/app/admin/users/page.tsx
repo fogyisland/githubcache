@@ -11,6 +11,8 @@ import { AdminPagination } from '@/app/admin/_components/admin-pagination';
 import { AdminTable, type AdminColumn } from '@/app/admin/_components/admin-table';
 import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
 import { InviteForm } from './_components/invite-form';
+import { formatDate } from '@/lib/format/datetime';
+import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 import type { User } from '@prisma/client';
 
 const PAGE_SIZE_DEFAULT = 25;
@@ -46,6 +48,8 @@ export default async function AdminUsersPage({
   if (!user || user.role !== 'admin') {
     redirect('/admin');
   }
+
+  const userTz = resolveRequestTimezone({ dbValue: user.timezone });
 
   const t = await getTranslations('admin.users');
   const tPag = await getTranslations('admin.common.pagination');
@@ -97,12 +101,12 @@ export default async function AdminUsersPage({
       key: 'lastLogin',
       header: t('list.column.lastLogin'),
       render: (u) =>
-        u.lastLoginAt ? u.lastLoginAt.toISOString().slice(0, 10) : t('list.never'),
+        u.lastLoginAt ? formatDate(u.lastLoginAt, userTz) : t('list.never'),
     },
     {
       key: 'created',
       header: t('list.column.created'),
-      render: (u) => u.createdAt.toISOString().slice(0, 10),
+      render: (u) => formatDate(u.createdAt, userTz),
     },
   ];
 
@@ -203,7 +207,7 @@ export default async function AdminUsersPage({
             {
               key: 'expires',
               header: t('list.column.expires'),
-              render: (i) => i.expiresAt.toISOString().slice(0, 10),
+              render: (i) => formatDate(i.expiresAt, userTz),
             },
             {
               key: 'link',

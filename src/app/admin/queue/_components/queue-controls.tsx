@@ -3,10 +3,13 @@
 import { useEffect, useState, type ReactElement } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { formatDateTime } from '@/lib/format/datetime';
+import type { TimezoneId } from '@/lib/timezone/registry';
 
 interface Props {
   isPaused: boolean;
   pausedAt: string | null;
+  tz: TimezoneId;
 }
 
 /**
@@ -21,7 +24,7 @@ interface Props {
  * CSRF: fetches /api/admin/auth/csrf and echoes the token in BOTH the
  * x-csrf-token header AND the body — same pattern as RefreshControls.
  */
-export function QueueControls({ isPaused, pausedAt }: Props): ReactElement {
+export function QueueControls({ isPaused, pausedAt, tz }: Props): ReactElement {
   const t = useTranslations('admin.queue.controls');
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -91,7 +94,7 @@ export function QueueControls({ isPaused, pausedAt }: Props): ReactElement {
             </span>
             {isPaused && pausedAt !== null ? (
               <span className="ml-2 text-xs text-gray-500">
-                {t('pausedAt', { when: pausedAt.replace('T', ' ').slice(0, 19) })}
+                {t('pausedAt', { when: formatDateTime(pausedAt, tz) })}
               </span>
             ) : null}
           </span>

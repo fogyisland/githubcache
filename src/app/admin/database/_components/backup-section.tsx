@@ -2,6 +2,8 @@
 
 import { useState, useTransition, type ReactElement } from 'react';
 import { useTranslations } from 'next-intl';
+import { formatDateTime } from '@/lib/format/datetime';
+import type { TimezoneId } from '@/lib/timezone/registry';
 
 interface BackupRow {
   filename: string;
@@ -12,6 +14,7 @@ interface BackupRow {
 interface Props {
   initialBackups: BackupRow[];
   keepN: number;
+  tz: TimezoneId;
 }
 
 function formatBytes(n: number): string {
@@ -26,15 +29,6 @@ function formatBytes(n: number): string {
   return `${v.toFixed(v >= 100 || u === 0 ? 0 : 1)} ${units[u]}`;
 }
 
-function formatMtime(iso: string): string {
-  try {
-    const d = new Date(iso);
-    return d.toLocaleString();
-  } catch {
-    return iso;
-  }
-}
-
 /**
  * M17 — Client component on /admin/database. Holds the backup list
  * (server-rendered initial state, mutated client-side after each
@@ -45,7 +39,7 @@ function formatMtime(iso: string): string {
  * CSRF: we read the token from the cookie set by /api/admin/auth/csrf
  * (same convention as the rest of the admin SPA).
  */
-export function BackupSection({ initialBackups, keepN }: Props): ReactElement {
+export function BackupSection({ initialBackups, keepN, tz }: Props): ReactElement {
   const t = useTranslations('admin.database.backup');
   const [rows, setRows] = useState<BackupRow[]>(initialBackups);
   const [isPending, startTransition] = useTransition();
@@ -197,7 +191,7 @@ export function BackupSection({ initialBackups, keepN }: Props): ReactElement {
                   </a>
                 </td>
                 <td>{formatBytes(r.size)}</td>
-                <td>{formatMtime(r.mtime)}</td>
+                <td>{formatDateTime(r.mtime, tz)}</td>
                 <td className="ghc-admin-table-actions">
                   <a
                     className="ghc-btn ghc-btn-small"

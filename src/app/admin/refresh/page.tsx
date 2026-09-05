@@ -8,6 +8,7 @@ import { isPaused, getPausedAt } from '@/lib/scheduler';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { RefreshControls } from './_components/refresh-controls';
 import { PendingJobsTable } from './_components/pending-jobs-table';
+import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 
 /**
  * Admin → Manual refresh + queue pause (M7.6).
@@ -42,6 +43,8 @@ export default async function AdminRefreshPage(): Promise<ReactElement> {
     redirect('/admin');
   }
 
+  const userTz = resolveRequestTimezone({ dbValue: user.timezone });
+
   const [pendingJobs, repos] = await Promise.all([
     listPendingJobs(20),
     listRepositoriesForPicker(100),
@@ -63,6 +66,7 @@ export default async function AdminRefreshPage(): Promise<ReactElement> {
       <RefreshControls
         isPaused={paused}
         pausedAt={pausedAt?.toISOString() ?? null}
+        tz={userTz}
         repos={repos.map((r) => ({ ...r, id: r.id.toString() }))}
       />
       <PendingJobsTable

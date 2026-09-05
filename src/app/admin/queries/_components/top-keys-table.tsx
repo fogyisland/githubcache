@@ -1,5 +1,7 @@
 import type { ReactElement } from 'react';
 import { getTranslations } from 'next-intl/server';
+import { formatDateTime } from '@/lib/format/datetime';
+import type { TimezoneId } from '@/lib/timezone/registry';
 
 /**
  * Compact top-keys table for the /admin/queries page. Mirrors the
@@ -8,6 +10,7 @@ import { getTranslations } from 'next-intl/server';
  */
 export async function TopKeysTable({
   rows,
+  tz,
 }: {
   rows: Array<{
     keyId: string;
@@ -15,6 +18,7 @@ export async function TopKeysTable({
     requestCount: number;
     lastUsed: Date | null;
   }>;
+  tz: TimezoneId;
 }): Promise<ReactElement> {
   const t = await getTranslations('admin.queries.topKeys');
   return (
@@ -44,7 +48,7 @@ export async function TopKeysTable({
                 </td>
                 <td className="py-2 text-right">{k.requestCount.toLocaleString()}</td>
                 <td className="py-2 text-right text-gray-500">
-                  {k.lastUsed ? k.lastUsed.toISOString() : t('dash')}
+                  {k.lastUsed ? formatDateTime(k.lastUsed, tz) : t('dash')}
                 </td>
               </tr>
             ))}

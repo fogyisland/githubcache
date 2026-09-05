@@ -8,6 +8,8 @@ import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { AdminTable, type AdminColumn } from '@/app/admin/_components/admin-table';
 import { AdminPagination } from '@/app/admin/_components/admin-pagination';
 import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
+import { formatDate } from '@/lib/format/datetime';
+import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 
 const PAGE_SIZE_DEFAULT = 25;
 const PAGE_SIZE_MAX = 200;
@@ -51,6 +53,8 @@ export default async function AdminInsightsStalePage({
     redirect('/admin');
   }
 
+  const userTz = resolveRequestTimezone({ dbValue: user.timezone });
+
   const rawThreshold = Number(searchParams.threshold ?? DEFAULT_THRESHOLD_DAYS);
   const thresholdDays = Number.isFinite(rawThreshold)
     ? Math.min(MAX_THRESHOLD_DAYS, Math.max(MIN_THRESHOLD_DAYS, Math.round(rawThreshold)))
@@ -84,7 +88,7 @@ export default async function AdminInsightsStalePage({
     {
       key: 'lastFetchedAt',
       header: t('stale.column.lastFetchedAt'),
-      render: (r) => r.lastFetchedAt.toISOString().slice(0, 10),
+      render: (r) => formatDate(r.lastFetchedAt, userTz),
     },
     {
       key: 'ageDays',

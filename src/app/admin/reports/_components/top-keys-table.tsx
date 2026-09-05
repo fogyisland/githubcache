@@ -1,5 +1,7 @@
 import type { ReactElement } from 'react';
 import { getTranslations } from 'next-intl/server';
+import { formatDateTime } from '@/lib/format/datetime';
+import type { TimezoneId } from '@/lib/timezone/registry';
 
 interface Row {
   keyId: string;
@@ -8,7 +10,13 @@ interface Row {
   lastUsed: Date | null;
 }
 
-export async function TopKeysTable({ rows }: { rows: Row[] }): Promise<ReactElement> {
+export async function TopKeysTable({
+  rows,
+  tz,
+}: {
+  rows: Row[];
+  tz: TimezoneId;
+}): Promise<ReactElement> {
   const t = await getTranslations('admin.reports.topKeys');
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
@@ -34,7 +42,7 @@ export async function TopKeysTable({ rows }: { rows: Row[] }): Promise<ReactElem
                 </td>
                 <td className="py-2 text-right">{k.requestCount.toLocaleString()}</td>
                 <td className="py-2 text-right text-gray-500">
-                  {k.lastUsed ? k.lastUsed.toISOString() : t('dash')}
+                  {k.lastUsed ? formatDateTime(k.lastUsed, tz) : t('dash')}
                 </td>
               </tr>
             ))}

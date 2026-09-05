@@ -11,6 +11,8 @@ import { AdminTable, type AdminColumn } from '@/app/admin/_components/admin-tabl
 import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
 import { AddTokenForm } from './_components/add-token-form';
 import { TokenActions } from './_components/token-actions';
+import { formatDate } from '@/lib/format/datetime';
+import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 
 type TokenRow = Awaited<ReturnType<typeof listAllTokens>>['rows'][number];
 
@@ -43,6 +45,8 @@ export default async function AdminGithubTokensPage({
   if (!user || user.role !== 'admin') {
     redirect('/admin');
   }
+
+  const userTz = resolveRequestTimezone({ dbValue: user.timezone });
 
   const t = await getTranslations('admin.githubTokens');
   const tPag = await getTranslations('admin.common.pagination');
@@ -116,7 +120,7 @@ export default async function AdminGithubTokensPage({
     {
       key: 'lastUsed',
       header: t('list.column.lastUsed'),
-      render: (tok) => (tok.lastUsedAt ? tok.lastUsedAt.toISOString().slice(0, 10) : t('list.never')),
+      render: (tok) => (tok.lastUsedAt ? formatDate(tok.lastUsedAt, userTz) : t('list.never')),
     },
     {
       key: 'actions',

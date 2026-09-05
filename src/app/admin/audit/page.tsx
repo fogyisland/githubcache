@@ -7,6 +7,7 @@ import { queryAuditLog, getActorEmails } from '@/lib/db/audit';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { AuditFilters } from './_components/audit-filters';
 import { AuditTable } from './_components/audit-table';
+import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 
 /**
  * Admin → Audit log search (M7.5).
@@ -47,6 +48,8 @@ export default async function AdminAuditPage({
   if (user.role !== 'admin') {
     redirect('/admin');
   }
+
+  const userTz = resolveRequestTimezone({ dbValue: user.timezone });
 
   const limit = Math.min(200, Math.max(1, Number(searchParams.limit ?? 50)));
   const offset = Math.max(0, Number(searchParams.offset ?? 0));
@@ -112,7 +115,7 @@ export default async function AdminAuditPage({
         description={t('description')}
       />
       <AuditFilters />
-      <AuditTable rows={tableRows} total={total} limit={limit} offset={offset} />
+      <AuditTable rows={tableRows} total={total} limit={limit} offset={offset} tz={userTz} />
     </div>
   );
 }

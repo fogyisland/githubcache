@@ -10,6 +10,8 @@ import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
 import { AdminTable, type AdminColumn } from '@/app/admin/_components/admin-table';
 import { TokenActions } from '../_components/token-actions';
 import { queryAuditLog } from '@/lib/db/audit';
+import { formatDateTime } from '@/lib/format/datetime';
+import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 
 interface AuditRow {
   id: bigint;
@@ -45,6 +47,8 @@ export default async function AdminGithubTokenDetailPage({
     redirect('/admin');
   }
 
+  const userTz = resolveRequestTimezone({ dbValue: session.timezone });
+
   const t = await getTranslations('admin.githubTokens.detail');
 
   let id: bigint;
@@ -73,7 +77,7 @@ export default async function AdminGithubTokenDetailPage({
     {
       key: 'time',
       header: t('auditColumns.when'),
-      render: (r) => r.createdAt.toISOString().replace('T', ' ').slice(0, 19),
+      render: (r) => formatDateTime(r.createdAt, userTz),
     },
     {
       key: 'action',
@@ -134,7 +138,7 @@ export default async function AdminGithubTokenDetailPage({
             <dt>{t('profile.lastUsed')}</dt>
             <dd>
               {token.lastUsedAt
-                ? token.lastUsedAt.toISOString().replace('T', ' ').slice(0, 19)
+                ? formatDateTime(token.lastUsedAt, userTz)
                 : t('profile.never')}
             </dd>
           </div>
@@ -142,13 +146,13 @@ export default async function AdminGithubTokenDetailPage({
             <dt>{t('profile.resetWindow')}</dt>
             <dd>
               {token.resetAt
-                ? token.resetAt.toISOString().replace('T', ' ').slice(0, 19)
+                ? formatDateTime(token.resetAt, userTz)
                 : t('profile.dash')}
             </dd>
           </div>
           <div className="ghc-admin-detail-row">
             <dt>{t('profile.created')}</dt>
-            <dd>{token.createdAt.toISOString().replace('T', ' ').slice(0, 19)}</dd>
+            <dd>{formatDateTime(token.createdAt, userTz)}</dd>
           </div>
         </dl>
       </section>

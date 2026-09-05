@@ -3,15 +3,18 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useTranslations } from 'next-intl';
 import type { RequestsOverTimeBucket } from '@/lib/reports/queries';
+import { formatTime } from '@/lib/format/datetime';
+import type { TimezoneId } from '@/lib/timezone/registry';
 
 interface Props {
   data: RequestsOverTimeBucket[];
+  tz: TimezoneId;
 }
 
-export function RequestsOverTimeChart({ data }: Props) {
+export function RequestsOverTimeChart({ data, tz }: Props) {
   const t = useTranslations('admin.reports.chart');
   const formatted = data.map((b) => ({
-    hour: b.hour.toISOString().slice(11, 16), // 'HH:MM'
+    hour: formatTime(b.hour, tz), // 'HH:MM'
     hits: b.cacheHits,
     misses: b.cacheMisses,
   }));

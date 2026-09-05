@@ -10,6 +10,7 @@ import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { QueueControls } from './_components/queue-controls';
 import { QueueKpis } from './_components/queue-kpis';
 import { QueueSections, type QueueJobRow } from './_components/queue-sections';
+import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 
 const PER_SECTION_LIMIT = 50;
 const WINDOW_24H_MS = 24 * 60 * 60 * 1000;
@@ -43,6 +44,8 @@ export default async function AdminQueuePage(_props: object = {}): Promise<React
     redirect('/admin');
   }
 
+  const userTz = resolveRequestTimezone({ dbValue: user.timezone });
+
   const t = await getTranslations('admin.queue');
 
   const now = new Date();
@@ -68,7 +71,7 @@ export default async function AdminQueuePage(_props: object = {}): Promise<React
         title={t('title')}
         description={t('description')}
       />
-      <QueueControls isPaused={paused} pausedAt={pausedAt?.toISOString() ?? null} />
+      <QueueControls isPaused={paused} pausedAt={pausedAt?.toISOString() ?? null} tz={userTz} />
       <QueueKpis
         pendingCount={pending.length}
         inProgressCount={inProgress.length}
@@ -81,6 +84,7 @@ export default async function AdminQueuePage(_props: object = {}): Promise<React
         inProgress={inProgress.map(serializeJob)}
         done24h={done.map(serializeJob)}
         failed24h={failed.map(serializeJob)}
+        tz={userTz}
       />
     </div>
   );

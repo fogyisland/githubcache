@@ -1,5 +1,7 @@
 import type { ReactElement } from 'react';
 import { getTranslations } from 'next-intl/server';
+import { formatDateTime } from '@/lib/format/datetime';
+import type { TimezoneId } from '@/lib/timezone/registry';
 
 interface Row {
   id: string;
@@ -10,7 +12,13 @@ interface Row {
   resetAt: Date | null;
 }
 
-export async function TokenQuotaTable({ rows }: { rows: Row[] }): Promise<ReactElement> {
+export async function TokenQuotaTable({
+  rows,
+  tz,
+}: {
+  rows: Row[];
+  tz: TimezoneId;
+}): Promise<ReactElement> {
   const t = await getTranslations('admin.reports.tokenQuota');
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
@@ -46,7 +54,7 @@ export async function TokenQuotaTable({ rows }: { rows: Row[] }): Promise<ReactE
                   <td className="py-2 text-right">{row.requestsLimit.toLocaleString()}</td>
                   <td className="py-2 text-right">{pct.toFixed(1)}%</td>
                   <td className="py-2 text-right text-gray-500">
-                    {row.resetAt ? row.resetAt.toISOString() : t('dash')}
+                    {row.resetAt ? formatDateTime(row.resetAt, tz) : t('dash')}
                   </td>
                 </tr>
               );

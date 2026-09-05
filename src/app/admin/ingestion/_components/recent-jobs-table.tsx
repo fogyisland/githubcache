@@ -3,11 +3,14 @@ import { getTranslations } from 'next-intl/server';
 import type { RecentRefreshJobRow } from '@/lib/reports/ingestion';
 import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
 import { AdminPagination } from '@/app/admin/_components/admin-pagination';
+import { formatDateTime } from '@/lib/format/datetime';
+import type { TimezoneId } from '@/lib/timezone/registry';
 
 interface Props {
   rows: Array<RecentRefreshJobRow & { total: number }>;
   limit: number;
   offset: number;
+  tz: TimezoneId;
 }
 
 const STATUS_VARIANT: Record<
@@ -30,6 +33,7 @@ export async function RecentJobsTable({
   rows,
   limit,
   offset,
+  tz,
 }: Props): Promise<ReactElement> {
   const t = await getTranslations('admin.ingestion.recent');
   const tPag = await getTranslations('admin.common.pagination');
@@ -63,7 +67,7 @@ export async function RecentJobsTable({
             {rows.map((r) => (
               <tr key={r.id.toString()} className="border-b border-gray-100">
                 <td className="py-2 font-mono text-xs text-gray-600">
-                  {r.updatedAt.toISOString().replace('T', ' ').slice(0, 19)}
+                  {formatDateTime(r.updatedAt, tz)}
                 </td>
                 <td className="py-2 font-mono text-xs">
                   {r.repositoryOwner}/{r.repositoryName}

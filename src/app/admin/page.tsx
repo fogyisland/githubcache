@@ -7,6 +7,8 @@ import { AdminKpiCard } from '@/app/admin/_components/admin-kpi-card';
 import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
 import { queryAuditLog, getActorEmails } from '@/lib/db/audit';
 import { loadDashboardBuckets } from '@/lib/admin/dashboard-buckets';
+import { formatTime } from '@/lib/format/datetime';
+import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 
 /**
  * Admin dashboard (M11.9 rewrite + M13.3 translation).
@@ -23,6 +25,10 @@ import { loadDashboardBuckets } from '@/lib/admin/dashboard-buckets';
  */
 export default async function AdminDashboardPage(): Promise<ReactElement> {
   const t = await getTranslations('admin.shell.dashboard');
+
+  // Dashboard doesn't validate its own session (layout.tsx gates auth),
+  // so we read timezone from cookie/default only — no DB roundtrip.
+  const userTz = resolveRequestTimezone({});
 
   const [repoCount, userCount, apiKeyCount, tokenCount, recentAudit] = await Promise.all([
     prisma.repository.count(),
@@ -125,7 +131,7 @@ export default async function AdminDashboardPage(): Promise<ReactElement> {
               {recentAudit.rows.map((row) => (
                 <li key={row.id.toString()} className="ghc-admin-dashboard-feed-item">
                   <span className="ghc-admin-dashboard-feed-time">
-                    {row.createdAt.toISOString().slice(11, 16)}
+                    {formatTime(row.createdAt, userTz)}
                   </span>
                   <AdminStatusChip variant="neutral">{row.action}</AdminStatusChip>
                   <span className="ghc-admin-dashboard-feed-actor">

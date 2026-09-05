@@ -1,5 +1,7 @@
 import type { ReactElement } from 'react';
 import { getTranslations } from 'next-intl/server';
+import { formatDateTime } from '@/lib/format/datetime';
+import type { TimezoneId } from '@/lib/timezone/registry';
 
 export interface QueueJobRow {
   id: string;
@@ -17,6 +19,7 @@ interface Props {
   inProgress: QueueJobRow[];
   done24h: QueueJobRow[];
   failed24h: QueueJobRow[];
+  tz: TimezoneId;
 }
 
 const STATUS_LABEL_KEY: Record<'pending' | 'inProgress' | 'done' | 'failed', string> = {
@@ -36,6 +39,7 @@ export async function QueueSections({
   inProgress,
   done24h,
   failed24h,
+  tz,
 }: Props): Promise<ReactElement> {
   const t = await getTranslations('admin.queue.sections');
 
@@ -58,6 +62,7 @@ export async function QueueSections({
           title={t(STATUS_LABEL_KEY[s.key])}
           rows={s.rows}
           when={s.when}
+          tz={tz}
           t={t}
         />
       ))}
@@ -69,6 +74,7 @@ interface SectionProps {
   title: string;
   rows: QueueJobRow[];
   when: 'scheduled' | 'updated';
+  tz: TimezoneId;
   t: Awaited<ReturnType<typeof getTranslations<'admin.queue.sections'>>>;
 }
 
@@ -76,6 +82,7 @@ async function QueueSection({
   title,
   rows,
   when,
+  tz,
   t,
 }: SectionProps): Promise<ReactElement> {
   const truncate = (s: string | null, n: number): string =>
@@ -84,7 +91,7 @@ async function QueueSection({
       : s.length > n
         ? `${s.slice(0, n)}…`
         : s;
-  const fmtTs = (iso: string): string => iso.replace('T', ' ').slice(0, 19);
+  const fmtTs = (iso: string): string => formatDateTime(iso, tz);
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">

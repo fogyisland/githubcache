@@ -7,6 +7,8 @@ import { AdminFilterBar } from '@/app/admin/_components/admin-filter-bar';
 import { AdminPagination } from '@/app/admin/_components/admin-pagination';
 import { AdminTable, type AdminColumn } from '@/app/admin/_components/admin-table';
 import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
+import { formatDate } from '@/lib/format/datetime';
+import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 
 type KeyRow = Awaited<ReturnType<typeof listApiKeys>>['rows'][number];
 
@@ -31,6 +33,10 @@ export default async function AdminApiKeysPage({
 }: {
   searchParams: { status?: string; limit?: string; offset?: string };
 }): Promise<ReactElement> {
+  // api-keys page doesn't validate its own session (layout.tsx gates auth);
+  // read timezone from cookie/default only — no DB roundtrip.
+  const userTz = resolveRequestTimezone({});
+
   const t = await getTranslations('admin.apiKeys');
   const tPag = await getTranslations('admin.common.pagination');
 
@@ -87,7 +93,7 @@ export default async function AdminApiKeysPage({
       key: 'lastUsed',
       header: t('list.column.lastUsed'),
       render: (k) =>
-        k.lastUsedAt ? k.lastUsedAt.toISOString().slice(0, 10) : t('list.never'),
+        k.lastUsedAt ? formatDate(k.lastUsedAt, userTz) : t('list.never'),
     },
   ];
 
