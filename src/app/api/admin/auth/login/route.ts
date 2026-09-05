@@ -9,6 +9,8 @@ import { writeAudit } from '@/lib/audit/writer';
 import { logger } from '@/lib/logger';
 import { readLangFromCookieHeader } from '@/lib/lang/cookie';
 import { isLocale } from '@/lib/lang/registry';
+import { readTimezoneFromCookieHeader } from '@/lib/timezone/cookie';
+import { isTimezone } from '@/lib/timezone/registry';
 import { apiError } from '@/lib/api/errors';
 
 const loginSchema = z.object({
@@ -132,10 +134,14 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   // 8. Success
-  // Read lang cookie so we can persist it on the user record (cross-device lang pref)
+  // Read lang + tz cookies so we can persist them on the user record
+  // (cross-device pref for both lang and timezone — M23 added timezone
+  // alongside the long-standing lang persistence).
   const cookieHeader = req.headers.get('cookie');
   const langFromCookie = readLangFromCookieHeader(cookieHeader);
   const langForUser = isLocale(langFromCookie ?? '') ? langFromCookie : null;
+  const tzFromCookie = readTimezoneFromCookieHeader(cookieHeader);
+  const tzForUser = isTimezone(tzFromCookie ?? '') ? tzFromCookie : null;
 
   await Promise.all([
     // Update lastLoginAt (awaited — useful for "recently active" admin queries)
@@ -144,6 +150,7 @@ export async function POST(req: Request): Promise<Response> {
       data: {
         lastLoginAt: new Date(),
         ...(langForUser ? { lang: langForUser } : {}),
+        ...(tzForUser ? { timezone: tzForUser } : {}),
       },
     }),
     // Audit success (awaited — we want this durable before responding)
@@ -151,7 +158,10 @@ export async function POST(req: Request): Promise<Response> {
       action: 'login_success',
       targetType: 'user',
       targetId: String(user.id),
-      metadata: langForUser ? { lang: langForUser } : undefined,
+      metadata: {
+        ...(langForUser ? { lang: langForUser } : {}),
+        ...(tzForUser ? { timezone: tzForUser } : {}),
+      },
       ip,
     }),
   ]);

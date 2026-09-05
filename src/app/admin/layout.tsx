@@ -7,6 +7,7 @@ import { LogoutButton } from '@/app/admin/logout-button';
 import { ThemeSwitcher } from '@/app/_components/theme-switcher';
 import { AdminVariantSwitcher } from '@/app/_components/admin-variant-switcher';
 import { LangSwitcher } from '@/app/_components/lang-switcher';
+import { TimezoneSwitcher } from '@/app/_components/timezone-switcher';
 import { LOCALES } from '@/i18n/config';
 import { LANG_COOKIE } from '@/lib/lang/cookie';
 import { resolveLocale } from '@/lib/lang/registry';
@@ -24,6 +25,7 @@ import {
   DEFAULT_ADMIN_VARIANT,
   type AdminVariantId,
 } from '@/lib/admin/variant';
+import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 import { AdminShell } from '@/app/admin/_components/admin-shell';
 import { CommandPalette } from '@/app/admin/_components/command-palette';
 import {
@@ -102,6 +104,13 @@ export default async function AdminLayout({
     dbValue: user.lang,
   });
 
+  // M23 — resolve the effective timezone for this render. The cookie wins
+  // over the DB value (most-recent user choice), DB wins over the default.
+  // Resolved here so the <TimezoneSwitcher> renders with the correct default
+  // and child pages can call `resolveRequestTimezone({ dbValue: user.timezone })`
+  // themselves if they need to format dates in user-local time.
+  const currentTz = resolveRequestTimezone({ dbValue: user.timezone });
+
   const tShell = await getTranslations('admin.shell');
 
   // Pathname header set by middleware (so the server component knows the
@@ -149,7 +158,7 @@ export default async function AdminLayout({
 
   return (
     <div>
-      {/* Top utility bar (lang switcher + theme switcher + variant switcher + logout)
+      {/* Top utility bar (lang switcher + theme switcher + variant switcher + tz switcher + logout)
           — kept outside AdminShell so it stays on top across all variants. */}
       <div className="ghc-admin-utility">
         <span className="text-sm">
@@ -157,6 +166,7 @@ export default async function AdminLayout({
         </span>
         <AdminVariantSwitcher current={currentAdminVariant} />
         <LangSwitcher current={currentLang} locales={LOCALES} />
+        <TimezoneSwitcher current={currentTz} />
         <ThemeSwitcher current={currentTheme} />
         <LogoutButton />
       </div>

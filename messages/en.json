@@ -14,6 +14,31 @@
       "ok": "Language is now {locale}"
     }
   },
+  "timezone": {
+    "aria": "Timezone",
+    "option": {
+      "UTC": "UTC (UTC+0)",
+      "Asia/Shanghai": "Shanghai (UTC+8)",
+      "Asia/Tokyo": "Tokyo (UTC+9)",
+      "Asia/Singapore": "Singapore (UTC+8)",
+      "Asia/Hong_Kong": "Hong Kong (UTC+8)",
+      "Asia/Kolkata": "Kolkata (UTC+5:30)",
+      "Europe/London": "London (UTC+0)",
+      "Europe/Paris": "Paris (UTC+1)",
+      "Europe/Berlin": "Berlin (UTC+1)",
+      "Europe/Moscow": "Moscow (UTC+3)",
+      "America/New_York": "New York (UTC-5)",
+      "America/Chicago": "Chicago (UTC-6)",
+      "America/Denver": "Denver (UTC-7)",
+      "America/Los_Angeles": "Los Angeles (UTC-8)",
+      "America/Sao_Paulo": "Sao Paulo (UTC-3)",
+      "Australia/Sydney": "Sydney (UTC+11)",
+      "Pacific/Auckland": "Auckland (UTC+13)"
+    },
+    "status": {
+      "ok": "Timezone is now {tz}"
+    }
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",
@@ -239,6 +264,8 @@
           "activeSessions": "Active sessions",
           "adminVariant": "Admin variant",
           "theme": "Theme",
+          "timezone": "Timezone",
+          "defaultTz": "default (Asia/Shanghai)",
           "never": "never"
         }
       }

@@ -566,6 +566,37 @@ a {
     color: var(--color-ink);
   }
 
+  /* M23 — timezone switcher. Compact <select> styled like the other
+     utility-row controls (lang / theme / admin-variant pills). */
+  .ghc-tz-form {
+    display: inline-flex;
+    align-items: center;
+  }
+  .ghc-tz-select {
+    appearance: none;
+    -webkit-appearance: none;
+    background: var(--color-surface);
+    border: var(--border-width-card) solid var(--color-rule);
+    border-radius: var(--radius-pill);
+    color: var(--color-ink);
+    font-family: var(--font-mono-active);
+    font-size: 0.75rem;
+    padding: 0.25rem 1.5rem 0.25rem 0.625rem;
+    cursor: pointer;
+    background-image: linear-gradient(45deg, transparent 50%, var(--color-ink-muted) 50%),
+                      linear-gradient(135deg, var(--color-ink-muted) 50%, transparent 50%);
+    background-position: calc(100% - 12px) 50%, calc(100% - 8px) 50%;
+    background-size: 4px 4px, 4px 4px;
+    background-repeat: no-repeat;
+  }
+  .ghc-tz-select:hover {
+    border-color: var(--color-ink-muted);
+  }
+  .ghc-tz-select:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
   /* Admin atom components (M11.3) — chip, empty, page-header, kpi-card.
      All read from theme tokens; per-variant chrome (mission_control / inspector
      / workbench) overrides land in M11.6. */
