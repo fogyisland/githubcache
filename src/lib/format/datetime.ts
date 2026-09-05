@@ -7,7 +7,6 @@
 // runtime locale. Falls back to `DEFAULT_TIMEZONE` (Asia/Shanghai) on
 // invalid TZ input — logs a warning so drift can be investigated.
 
-import { logger } from '@/lib/logger';
 import {
   DEFAULT_TIMEZONE,
   isTimezone,
@@ -83,7 +82,8 @@ function formatParts(
   try {
     fmt = new Intl.DateTimeFormat('en-CA', { ...opts, timeZone: safeTz });
   } catch (e: unknown) {
-    logger.warn({ err: e, tz: safeTz }, 'invalid timezone — falling back to default');
+    // eslint-disable-next-line no-console
+    console.warn('[datetime] invalid timezone, falling back to default:', safeTz, e);
     fmt = new Intl.DateTimeFormat('en-CA', { ...opts, timeZone: DEFAULT_TIMEZONE });
   }
   const parts = fmt.formatToParts(d);
