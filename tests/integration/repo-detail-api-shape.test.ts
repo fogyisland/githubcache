@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 // Stub next/navigation so notFound() doesn't throw inside render.
@@ -31,6 +32,15 @@ vi.mock('@/lib/cache/lookup', () => ({
     last_fetched_at: new Date('2026-08-27T00:00:00Z'),
     metadata: MOCK_METADATA,
   }),
+}));
+
+// M24 — stub the new sub-components. They call resolveRequestTimezone →
+// cookies(), which throws in the vitest render path (no request scope).
+vi.mock('@/app/repo/[owner]/[name]/_components/fetch-history', () => ({
+  FetchHistory: () => createElement('div', { 'data-testid': 'fetch-history-stub' }),
+}));
+vi.mock('@/app/repo/[owner]/[name]/_components/recent-queries', () => ({
+  RecentQueries: () => createElement('div', { 'data-testid': 'recent-queries-stub' }),
 }));
 
 // Mock next-intl/server — RepoDetailPage calls getTranslations inside

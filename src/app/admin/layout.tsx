@@ -8,6 +8,7 @@ import { ThemeSwitcher } from '@/app/_components/theme-switcher';
 import { AdminVariantSwitcher } from '@/app/_components/admin-variant-switcher';
 import { LangSwitcher } from '@/app/_components/lang-switcher';
 import { TimezoneSwitcher } from '@/app/_components/timezone-switcher';
+import { AdminClock } from '@/app/_components/admin-clock';
 import { LOCALES } from '@/i18n/config';
 import { LANG_COOKIE } from '@/lib/lang/cookie';
 import { resolveLocale } from '@/lib/lang/registry';
@@ -158,7 +159,7 @@ export default async function AdminLayout({
 
   return (
     <div>
-      {/* Top utility bar (lang switcher + theme switcher + variant switcher + tz switcher + logout)
+      {/* Top utility bar (lang switcher + theme switcher + variant switcher + tz switcher + clock + logout)
           — kept outside AdminShell so it stays on top across all variants. */}
       <div className="ghc-admin-utility">
         <span className="text-sm">
@@ -168,6 +169,7 @@ export default async function AdminLayout({
         <LangSwitcher current={currentLang} locales={LOCALES} />
         <TimezoneSwitcher current={currentTz} />
         <ThemeSwitcher current={currentTheme} />
+        <AdminClock />
         <LogoutButton />
       </div>
       <AdminShell

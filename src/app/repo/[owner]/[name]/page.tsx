@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { lookupRepo, type QueryResult } from '@/lib/cache/lookup';
+import { prisma } from '@/lib/db/client';
 import {
   formatCount,
   formatDate,
@@ -24,6 +25,8 @@ import {
   getWatchers,
 } from '@/lib/repo/metadata';
 import { ApiShape } from './_components/api-shape';
+import { FetchHistory } from './_components/fetch-history';
+import { RecentQueries } from './_components/recent-queries';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,10 +80,12 @@ async function RepoOkView({
   result,
   owner,
   name,
+  repositoryId,
 }: {
   result: Extract<QueryResult, { fetch_status: 'ok' }>;
   owner: string;
   name: string;
+  repositoryId: string;
 }): Promise<ReactElement> {
   const t = await getTranslations('repo');
   const tRepo = await getTranslations('repo.repositoryCard');
@@ -226,6 +231,16 @@ async function RepoOkView({
         {await ApiShape({ owner, name, metadata: meta })}
       </section>
 
+      {/* M24 — recent refresh history for this repo. */}
+      <section className="mx-auto max-w-4xl px-4 pb-12">
+        {await FetchHistory({ repositoryId })}
+      </section>
+
+      {/* M24 — recent queries (request_log) for this repo. */}
+      <section className="mx-auto max-w-4xl px-4 pb-12">
+        {await RecentQueries({ owner, name })}
+      </section>
+
       <footer className="border-t border-[color:var(--color-rule)]">
         <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2 px-4 py-4 text-xs text-[color:var(--color-ink-muted)]">
           <span>
@@ -315,9 +330,27 @@ export default async function RepoDetailPage({ params }: PageProps): Promise<Rea
       </main>
     );
   }
+  // Look up the repository row id so the fetch-history section can
+  // query refresh_jobs by FK. (lookupRepo doesn't surface the id.)
+  const repoRow = await prisma.repository.findUnique({
+    where: { owner_name: { owner, name } },
+    select: { id: true },
+  });
+  if (!repoRow) {
+    // Race: row vanished between lookupRepo and now. Render the page
+    // without history sections — they would just show empty states.
+    const okView = await RepoOkView({ result, owner, name, repositoryId: '' });
+    return <main>{okView}</main>;
+  }
+
   // Pre-await async server components so non-RSC renderers (vitest's
   // renderToStaticMarkup) can resolve them. Next.js handles this natively
   // in production; the explicit await is only needed for the test path.
-  const okView = await RepoOkView({ result, owner, name });
+  const okView = await RepoOkView({
+    result,
+    owner,
+    name,
+    repositoryId: repoRow.id.toString(),
+  });
   return <main>{okView}</main>;
 }

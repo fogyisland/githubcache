@@ -29,9 +29,10 @@ const PAGE_SIZE_MAX = 200;
  * + AdminTable + AdminPagination. Status filter is URL-synced so deep
  * links preserve selection (and pagination carries it forward).
  *
- * Each row's owner/name is a link to the public `/repo/[owner]/[name]`
- * detail page — that page renders the cached metadata (or the cache-miss
- * pending state, depending on fetchStatus).
+ * Each row's owner/name is a link to the admin-side detail page at
+ * `/admin/repositories/[owner]/[name]` — that page renders the cached
+ * row state, refresh history, and audit trail for that repo. The public
+ * `/repo/[owner]/[name]` page is still reachable via the footer link.
  */
 export default async function AdminRepositoriesPage({
   searchParams,
@@ -132,7 +133,7 @@ export default async function AdminRepositoriesPage({
       <AdminTable<RepoRow>
         columns={columns}
         rows={repos}
-        rowHref={(r) => `/repo/${r.owner}/${r.name}`}
+        rowHref={(r) => `/admin/repositories/${r.owner}/${r.name}`}
         emptyTitle={t('list.empty.title')}
         emptyDescription={t('list.empty.description')}
         ariaLabel={t('list.ariaLabel')}

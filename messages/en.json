@@ -391,6 +391,29 @@
           "title": "No repositories match this filter",
           "description": "Try clearing the filter or run an ingestion provider to bring new repos in."
         }
+      },
+      "detail": {
+        "breadcrumbAdmin": "Admin",
+        "breadcrumbRepositories": "Imported nodes",
+        "title": "{owner}/{name}",
+        "statusHeading": "Status",
+        "lastFetched": "Last fetched",
+        "createdAt": "First seen",
+        "refreshHeading": "Refresh history",
+        "refreshEmpty": "No refresh attempts yet",
+        "auditHeading": "Audit log",
+        "auditEmpty": "No audit entries for this repo",
+        "refreshNow": "Re-fetch now",
+        "column": {
+          "when": "When",
+          "status": "Status",
+          "priority": "Priority",
+          "attempts": "Attempts",
+          "error": "Error",
+          "action": "Action",
+          "actor": "Actor",
+          "ip": "IP"
+        }
       }
     },
     "githubTokens": {
@@ -1306,6 +1329,44 @@
       "hintPrefix": "GET ",
       "hintMiddle": " → see ",
       "hintSuffix": " for the full schema"
+    },
+    "fetchHistory": {
+      "heading": "Fetch history",
+      "empty": "No refresh attempts yet",
+      "column": {
+        "when": "When",
+        "status": "Status",
+        "outcome": "Outcome",
+        "duration": "Duration",
+        "priority": "Priority",
+        "attempts": "Attempts",
+        "error": "Error"
+      },
+      "status": {
+        "pending": "pending",
+        "in_progress": "in progress",
+        "done": "done",
+        "failed": "failed"
+      },
+      "outcome": {
+        "success": "success",
+        "failed": "failed",
+        "pending": "pending"
+      },
+      "durationMs": "{ms} ms",
+      "dash": "—"
+    },
+    "recentQueries": {
+      "heading": "Recent queries for this repo",
+      "empty": "No queries yet",
+      "anonymous": "anonymous",
+      "column": {
+        "when": "When",
+        "endpoint": "Endpoint",
+        "status": "Status",
+        "latency": "Latency",
+        "key": "Key"
+      }
     },
     "notFound": {
       "title": "Repository not found",
