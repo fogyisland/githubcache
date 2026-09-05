@@ -31,8 +31,19 @@ export async function SiteFooter(): Promise<ReactElement> {
               <code>{VERSION}</code>
             </li>
             <li>
-              <a href="https://github.com/anthropic-experimental/githubcache" className="ghc-link">
+              <a href="https://github.com/fogyisland/githubcache" className="ghc-link">
                 {tFoot('repoLink')}
+              </a>
+            </li>
+            <li>
+              <span className="ghc-site-footer-label">{tFoot('maintainer')}</span>{' '}
+              <a
+                href="https://github.com/fogyisland"
+                target="_blank"
+                rel="noreferrer noopener"
+                className="ghc-link"
+              >
+                @fogyisland
               </a>
             </li>
           </ul>

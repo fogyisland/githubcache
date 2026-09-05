@@ -42,6 +42,12 @@ vi.mock('@/app/repo/[owner]/[name]/_components/fetch-history', () => ({
 vi.mock('@/app/repo/[owner]/[name]/_components/recent-queries', () => ({
   RecentQueries: () => createElement('div', { 'data-testid': 'recent-queries-stub' }),
 }));
+vi.mock('@/app/repo/[owner]/[name]/_components/releases-list', () => ({
+  ReleasesList: () => createElement('div', { 'data-testid': 'releases-stub' }),
+}));
+vi.mock('@/app/repo/[owner]/[name]/_components/branches-list', () => ({
+  BranchesList: () => createElement('div', { 'data-testid': 'branches-stub' }),
+}));
 
 // Mock next-intl/server — RepoDetailPage calls getTranslations inside
 // the Vitest runtime, which lacks the Next.js server context next-intl

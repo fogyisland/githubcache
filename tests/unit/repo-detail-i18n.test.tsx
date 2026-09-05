@@ -32,6 +32,8 @@ const repoStatsDict = flattenDict({
   stars: 'Stars',
   forks: 'Forks',
   watchers: 'Watchers',
+  releases: 'Releases',
+  branches: 'Branches',
 });
 
 const repoRepositoryCardDict = flattenDict({
@@ -40,12 +42,22 @@ const repoRepositoryCardDict = flattenDict({
   githubUrl: 'GitHub URL',
   homepage: 'Homepage',
   path: 'Path',
+  owner: 'Owner',
+  ownerProfile: 'Owner profile',
+  visibility: 'Visibility',
+  visibilityPublic: 'Public',
+  visibilityPrivate: 'Private',
+  license: 'License',
+  language: 'Language',
+  topics: 'Topics',
   dash: '–',
 });
 
 const repoActivityCardDict = flattenDict({
   heading: 'Activity',
   created: 'Created',
+  createdAtFull: 'First seen on {date}',
+  createdRelative: 'Created {years, plural, one {# year} other {# years}} ago',
   updated: 'Updated',
   lastPush: 'Last push',
 });
@@ -187,6 +199,14 @@ vi.mock('@/lib/repo/metadata', () => ({
   getTopics: (m: { topics?: string[] }) => m.topics ?? [],
   getUpdatedAt: (m: { updated_at?: string }) => m.updated_at,
   getWatchers: (m: { subscribers_count?: number }) => m.subscribers_count ?? 0,
+  // M24 — release + branch projections; return empty/null in the test
+  // since the mock metadata doesn't carry them.
+  getPrivate: (m: { private?: boolean }) => m.private === true,
+  getReleaseCount: () => 0,
+  getLatestRelease: () => null,
+  getRecentReleases: () => [],
+  getBranches: () => [],
+  getRepoAgeYears: () => null,
 }));
 
 // Stub ApiShape as a sync element — the page uses it as a child component,
@@ -204,6 +224,12 @@ vi.mock('@/app/repo/[owner]/[name]/_components/fetch-history', () => ({
 }));
 vi.mock('@/app/repo/[owner]/[name]/_components/recent-queries', () => ({
   RecentQueries: () => createElement('div', { 'data-testid': 'recent-queries-stub' }),
+}));
+vi.mock('@/app/repo/[owner]/[name]/_components/releases-list', () => ({
+  ReleasesList: () => createElement('div', { 'data-testid': 'releases-stub' }),
+}));
+vi.mock('@/app/repo/[owner]/[name]/_components/branches-list', () => ({
+  BranchesList: () => createElement('div', { 'data-testid': 'branches-stub' }),
 }));
 
 vi.mock('next/navigation', () => ({

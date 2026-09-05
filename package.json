@@ -3,6 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "author": {
+    "name": "fogyisland",
+    "url": "https://github.com/fogyisland"
+  },
+  "homepage": "https://github.com/fogyisland/githubcache",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fogyisland/githubcache.git"
+  },
+  "bugs": {
+    "url": "https://github.com/fogyisland/githubcache/issues"
+  },
   "engines": {
     "node": ">=20"
   },

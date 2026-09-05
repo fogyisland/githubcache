@@ -30,6 +30,11 @@ export interface ParsedRepoMetadata {
   homepage?: unknown;
   archived?: unknown;
   disabled?: unknown;
+  // M24 — release + branch projections (cached by M20.8 parseRepoResponse).
+  releaseCount?: unknown;
+  latestRelease?: unknown;
+  recentReleases?: unknown;
+  branches?: unknown;
 }
 
 function isObject(v: unknown): v is Record<string, unknown> {
@@ -122,6 +127,134 @@ export function getArchived(meta: unknown): boolean {
 
 export function getDisabled(meta: unknown): boolean {
   return asParsed(meta).disabled === true;
+}
+
+/**
+ * Whether the GitHub repo is marked private. Public repos surface this
+ * as `false`; private repos as `true`. The cache stores private=true
+ * only when the upstream repo really is private (the fetch would have
+ * failed otherwise, so we can trust the flag).
+ */
+export function getPrivate(meta: unknown): boolean {
+  return asParsed(meta).private === true;
+}
+
+/**
+ * Total number of releases GitHub returned for this repo. May exceed
+ * recentReleases.length (we cap to 10). 0 when the repo has no releases
+ * or fetchVersionExtras failed.
+ */
+export function getReleaseCount(meta: unknown): number {
+  const n = asParsed(meta).releaseCount;
+  return typeof n === 'number' && Number.isFinite(n) ? n : 0;
+}
+
+export interface ReleaseSummary {
+  tag_name: string;
+  name: string | null;
+  published_at: string | null;
+  html_url: string;
+  prerelease: boolean;
+  draft: boolean;
+  assets_count: number;
+}
+
+function asRelease(raw: unknown): ReleaseSummary | null {
+  if (!isObject(raw)) return null;
+  const r = raw as Record<string, unknown>;
+  const tag = r.tag_name;
+  if (typeof tag !== 'string' || tag.length === 0) return null;
+  const html = r.html_url;
+  return {
+    tag_name: tag,
+    name: typeof r.name === 'string' ? r.name : null,
+    published_at: typeof r.published_at === 'string' ? r.published_at : null,
+    html_url: typeof html === 'string' ? html : '',
+    prerelease: r.prerelease === true,
+    draft: r.draft === true,
+    assets_count:
+      typeof r.assets_count === 'number' && Number.isFinite(r.assets_count)
+        ? r.assets_count
+        : 0,
+  };
+}
+
+/**
+ * Most recent *published* release (GitHub's `latest_release` projection).
+ * `null` when the repo has zero published releases — even if
+ * `recentReleases` contains drafts.
+ */
+export function getLatestRelease(meta: unknown): ReleaseSummary | null {
+  return asRelease(asParsed(meta).latestRelease);
+}
+
+/**
+ * Top-N recent releases (GitHub caps our fetch at 10). Empty when the
+ * repo has zero releases or fetchVersionExtras failed.
+ */
+export function getRecentReleases(meta: unknown): ReleaseSummary[] {
+  const list = asParsed(meta).recentReleases;
+  if (!Array.isArray(list)) return [];
+  const out: ReleaseSummary[] = [];
+  for (const r of list) {
+    const release = asRelease(r);
+    if (release) out.push(release);
+  }
+  return out;
+}
+
+export interface BranchSummary {
+  name: string;
+  protected: boolean;
+  commit_sha: string;
+}
+
+function asBranch(raw: unknown): BranchSummary | null {
+  if (!isObject(raw)) return null;
+  const r = raw as Record<string, unknown>;
+  const name = r.name;
+  if (typeof name !== 'string' || name.length === 0) return null;
+  const commit = isObject(r.commit_sha)
+    ? r.commit_sha
+    : { sha: typeof r.commit_sha === 'string' ? r.commit_sha : '' };
+  const sha = (commit as { sha?: unknown }).sha;
+  return {
+    name,
+    protected: r.protected === true,
+    commit_sha: typeof sha === 'string' ? sha : '',
+  };
+}
+
+/**
+ * Top-N branches (GitHub caps our fetch at 20). Empty when the repo
+ * has zero branches cached or fetchVersionExtras failed.
+ */
+export function getBranches(meta: unknown): BranchSummary[] {
+  const list = asParsed(meta).branches;
+  if (!Array.isArray(list)) return [];
+  const out: BranchSummary[] = [];
+  for (const r of list) {
+    const branch = asBranch(r);
+    if (branch) out.push(branch);
+  }
+  return out;
+}
+
+/**
+ * Integer years between `createdAt` and `now`. Returns `null` for missing
+ * / unparseable timestamps and for future dates (createdAt > now means
+ * the cache is stale and we shouldn't display "Created -1 years ago").
+ *
+ * Extracted to a non-component helper so `Date.now()` doesn't trip the
+ * react-hooks/purity lint rule inside server components.
+ */
+export function getRepoAgeYears(createdAt: string | null): number | null {
+  if (!createdAt) return null;
+  const t = Date.parse(createdAt);
+  if (Number.isNaN(t)) return null;
+  const diffMs = Date.now() - t;
+  if (diffMs < 0) return null;
+  return Math.floor(diffMs / (365.25 * 24 * 60 * 60 * 1000));
 }
 
 /**

@@ -9,6 +9,7 @@ import {
   formatCount,
   formatDate,
   getArchived,
+  getBranches,
   getCreatedAt,
   getDefaultBranch,
   getDescription,
@@ -17,8 +18,13 @@ import {
   getHomepage,
   getHtmlUrl,
   getLanguage,
+  getLatestRelease,
   getLicenseName,
+  getPrivate,
   getPushedAt,
+  getRecentReleases,
+  getReleaseCount,
+  getRepoAgeYears,
   getStars,
   getTopics,
   getUpdatedAt,
@@ -27,6 +33,8 @@ import {
 import { ApiShape } from './_components/api-shape';
 import { FetchHistory } from './_components/fetch-history';
 import { RecentQueries } from './_components/recent-queries';
+import { ReleasesList } from './_components/releases-list';
+import { BranchesList } from './_components/branches-list';
 
 export const dynamic = 'force-dynamic';
 
@@ -108,7 +116,17 @@ async function RepoOkView({
   const pushedAt = getPushedAt(meta);
   const archived = getArchived(meta);
   const disabled = getDisabled(meta);
+  const isPrivate = getPrivate(meta);
+  const releaseCount = getReleaseCount(meta);
+  const latestRelease = getLatestRelease(meta);
+  const recentReleases = getRecentReleases(meta);
+  const branches = getBranches(meta);
   const htmlUrl = getHtmlUrl(owner, name);
+  const ownerProfileUrl = `https://github.com/${encodeURIComponent(owner)}`;
+  // Repository age — integer years since createdAt (when known). Lives in
+  // a non-component helper so `Date.now()` doesn't trip the
+  // react-hooks/purity lint rule.
+  const repoAgeYears = getRepoAgeYears(createdAt);
 
   return (
     <article className="ghc-fade-up">
@@ -172,10 +190,12 @@ async function RepoOkView({
 
       {/* Stats grid */}
       <section className="mx-auto max-w-4xl px-4 py-8">
-        <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+        <dl className="grid grid-cols-2 gap-3 sm:grid-cols-5 sm:gap-4">
           <Stat label={tStat('stars')} value={formatCount(stars)} />
           <Stat label={tStat('forks')} value={formatCount(forks)} />
           <Stat label={tStat('watchers')} value={formatCount(watchers)} />
+          <Stat label={tStat('releases')} value={formatCount(releaseCount)} />
+          <Stat label={tStat('branches')} value={formatCount(branches.length)} />
         </dl>
       </section>
 
@@ -188,7 +208,46 @@ async function RepoOkView({
               {tRepo('heading')}
             </h2>
             <dl className="space-y-2.5 text-sm">
-              <Row label={tRepo('defaultBranch')} value={defaultBranch ?? tRepo('dash')} />
+              <Row
+                label={tRepo('owner')}
+                value={
+                  <a
+                    href={ownerProfileUrl}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="ghc-link"
+                  >
+                    @{owner} <span className="text-[color:var(--color-ink-muted)]">↗</span>
+                  </a>
+                }
+              />
+              <Row
+                label={tRepo('visibility')}
+                value={
+                  <span
+                    className={
+                      isPrivate
+                        ? 'font-medium text-[color:var(--color-warn)]'
+                        : 'font-medium text-[color:var(--color-accent)]'
+                    }
+                  >
+                    {tRepo(isPrivate ? 'visibilityPrivate' : 'visibilityPublic')}
+                  </span>
+                }
+              />
+              <Row
+                label={tRepo('license')}
+                value={licenseName ?? tRepo('dash')}
+              />
+              <Row
+                label={tRepo('language')}
+                value={language ?? tRepo('dash')}
+              />
+              <Row
+                label={tRepo('defaultBranch')}
+                value={defaultBranch ?? tRepo('dash')}
+                mono
+              />
               <Row label={tRepo('githubUrl')} value={htmlUrl} mono />
               {homepage && (
                 <Row
@@ -210,6 +269,23 @@ async function RepoOkView({
                 value={`/repo/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`}
                 mono
               />
+              {topics.length > 0 && (
+                <div>
+                  <dt className="text-[color:var(--color-ink-muted)]">
+                    {tRepo('topics')}
+                  </dt>
+                  <dd className="mt-1 flex flex-wrap gap-1">
+                    {topics.map((topic) => (
+                      <span
+                        key={topic}
+                        className="ghc-chip text-xs"
+                      >
+                        {topic}
+                      </span>
+                    ))}
+                  </dd>
+                </div>
+              )}
             </dl>
           </div>
           <div className="ghc-card p-5">
@@ -218,12 +294,62 @@ async function RepoOkView({
               {tAct('heading')}
             </h2>
             <dl className="space-y-2.5 text-sm">
-              <Row label={tAct('created')} value={formatDate(createdAt)} />
+              <Row
+                label={tAct('created')}
+                value={
+                  createdAt ? (
+                    <span>
+                      <span className="font-medium">
+                        {tAct('createdAtFull', {
+                          date: formatDate(createdAt),
+                        })}
+                      </span>
+                      {repoAgeYears !== null && repoAgeYears >= 1 && (
+                        <span className="ml-2 text-xs text-[color:var(--color-ink-muted)]">
+                          ({tAct('createdRelative', { years: repoAgeYears })})
+                        </span>
+                      )}
+                    </span>
+                  ) : (
+                    tRepo('dash')
+                  )
+                }
+              />
               <Row label={tAct('updated')} value={formatDate(updatedAt)} />
               <Row label={tAct('lastPush')} value={formatDate(pushedAt)} />
+              {latestRelease && (
+                <Row
+                  label={tAct('lastRelease')}
+                  value={
+                    <span>
+                      <a
+                        href={latestRelease.html_url || `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/releases/tag/${encodeURIComponent(latestRelease.tag_name)}`}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="ghc-link font-mono text-sm"
+                      >
+                        {latestRelease.tag_name}
+                      </a>
+                      <span className="ml-2 text-xs text-[color:var(--color-ink-muted)]">
+                        {formatDate(latestRelease.published_at)}
+                      </span>
+                    </span>
+                  }
+                />
+              )}
             </dl>
           </div>
         </div>
+      </section>
+
+      {/* M24 — recent releases (versions). */}
+      <section className="mx-auto max-w-4xl px-4 pb-12">
+        {await ReleasesList({ owner, name, releases: recentReleases, latestTag: latestRelease?.tag_name ?? null })}
+      </section>
+
+      {/* M24 — branches list. */}
+      <section className="mx-auto max-w-4xl px-4 pb-12">
+        {await BranchesList({ owner, name, branches })}
       </section>
 
       {/* Raw API shape — collapsible JSON dump of what /api/v1/repos/... returns. */}

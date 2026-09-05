@@ -81,6 +81,7 @@
     "version": "Version",
     "repoLink": "GitHub repo →",
     "operations": "Operations",
+    "maintainer": "Maintained by",
     "fine": "© {year} · Built with Next.js + Prisma + MySQL."
   },
   "admin": {
@@ -1303,7 +1304,9 @@
     "stats": {
       "stars": "Stars",
       "forks": "Forks",
-      "watchers": "Watchers"
+      "watchers": "Watchers",
+      "releases": "Releases",
+      "branches": "Branches"
     },
     "repositoryCard": {
       "heading": "Repository",
@@ -1311,13 +1314,52 @@
       "githubUrl": "GitHub URL",
       "homepage": "Homepage",
       "path": "Path",
+      "owner": "Owner",
+      "ownerProfile": "Owner profile",
+      "visibility": "Visibility",
+      "visibilityPublic": "Public",
+      "visibilityPrivate": "Private",
+      "license": "License",
+      "language": "Language",
+      "topics": "Topics",
       "dash": "–"
     },
     "activityCard": {
       "heading": "Activity",
       "created": "Created",
+      "createdAtFull": "First seen on {date}",
+      "createdRelative": "Created {years, plural, one {# year} other {# years}} ago",
       "updated": "Updated",
-      "lastPush": "Last push"
+      "lastPush": "Last push",
+      "lastRelease": "Latest release"
+    },
+    "releases": {
+      "heading": "Versions",
+      "empty": "This repository has no published releases yet.",
+      "latestBadge": "Latest",
+      "badge": {
+        "prerelease": "Pre-release",
+        "draft": "Draft"
+      },
+      "column": {
+        "tag": "Tag",
+        "name": "Name",
+        "date": "Published",
+        "assets": "Assets"
+      },
+      "noName": "(no release name)"
+    },
+    "branches": {
+      "heading": "Branches",
+      "empty": "Branch list unavailable.",
+      "column": {
+        "name": "Branch",
+        "protection": "Protection",
+        "sha": "Latest commit"
+      },
+      "protected": "Protected",
+      "unprotected": "Unprotected",
+      "noSha": "—"
     },
     "footer": {
       "lastFetched": "Last fetched:",

@@ -81,6 +81,7 @@
     "version": "版本",
     "repoLink": "GitHub 仓库 →",
     "operations": "运维",
+    "maintainer": "维护者",
     "fine": "© {year} · 基于 Next.js + Prisma + MySQL 构建。"
   },
   "admin": {
@@ -1303,7 +1304,9 @@
     "stats": {
       "stars": "Stars",
       "forks": "Forks",
-      "watchers": "Watchers"
+      "watchers": "Watchers",
+      "releases": "版本",
+      "branches": "分支"
     },
     "repositoryCard": {
       "heading": "仓库",
@@ -1311,13 +1314,52 @@
       "githubUrl": "GitHub URL",
       "homepage": "主页",
       "path": "路径",
+      "owner": "作者",
+      "ownerProfile": "作者主页",
+      "visibility": "可见性",
+      "visibilityPublic": "公开",
+      "visibilityPrivate": "私有",
+      "license": "许可证",
+      "language": "主语言",
+      "topics": "主题",
       "dash": "–"
     },
     "activityCard": {
       "heading": "活动",
       "created": "创建时间",
+      "createdAtFull": "首次开发于 {date}",
+      "createdRelative": "{years, plural, other{创建于 # 年前}}",
       "updated": "更新时间",
-      "lastPush": "最后推送"
+      "lastPush": "最后推送",
+      "lastRelease": "最新版本"
+    },
+    "releases": {
+      "heading": "版本发布",
+      "empty": "该仓库尚未发布任何版本。",
+      "latestBadge": "最新",
+      "badge": {
+        "prerelease": "预发布",
+        "draft": "草稿"
+      },
+      "column": {
+        "tag": "标签",
+        "name": "名称",
+        "date": "发布时间",
+        "assets": "资源数"
+      },
+      "noName": "（无版本名称）"
+    },
+    "branches": {
+      "heading": "分支列表",
+      "empty": "暂无可用的分支信息。",
+      "column": {
+        "name": "分支",
+        "protection": "保护状态",
+        "sha": "最新提交"
+      },
+      "protected": "已保护",
+      "unprotected": "未保护",
+      "noSha": "—"
     },
     "footer": {
       "lastFetched": "最后获取:",
