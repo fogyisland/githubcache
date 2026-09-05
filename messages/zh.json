@@ -80,6 +80,7 @@
         "queries": "查询",
         "ingestion": "入库",
         "providers": "数据源",
+        "repositories": "已入库节点",
         "audit": "审计",
         "refresh": "刷新",
         "queue": "队列",
@@ -332,6 +333,37 @@
         "save": "保存限额",
         "updatedOk": "限额已更新。",
         "failedWithError": "失败：{error}"
+      }
+    },
+    "repositories": {
+      "title": "已入库节点",
+      "description": "通过入库数据源或直接查询拉入缓存的仓库。按获取状态筛选可快速定位失败项。",
+      "breadcrumbAdmin": "管理",
+      "breadcrumbRepositories": "已入库节点",
+      "status": {
+        "ok": "成功",
+        "not_found": "未找到",
+        "forbidden": "已禁止",
+        "error": "错误"
+      },
+      "list": {
+        "ariaLabel": "已入库仓库",
+        "never": "从未",
+        "dash": "—",
+        "filter": {
+          "status": "获取状态"
+        },
+        "column": {
+          "owner": "所有者",
+          "name": "名称",
+          "status": "状态",
+          "lastFetched": "最后获取",
+          "error": "错误"
+        },
+        "empty": {
+          "title": "没有匹配的仓库",
+          "description": "尝试清除筛选条件或运行一个入库数据源。"
+        }
       }
     },
     "githubTokens": {

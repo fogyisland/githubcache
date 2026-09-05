@@ -11,6 +11,7 @@ export type AdminSectionSlug =
   | 'queries'
   | 'ingestion'
   | 'providers'
+  | 'repositories'
   | 'audit'
   | 'refresh'
   | 'queue'
@@ -35,6 +36,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { slug: 'queries', icon: '⊰', href: '/admin/queries', roles: ['admin', 'operator'] },
   { slug: 'ingestion', icon: '⊱', href: '/admin/ingestion', roles: ['admin'] },
   { slug: 'providers', icon: '⊡', href: '/admin/providers', roles: ['admin'] },
+  { slug: 'repositories', icon: '◰', href: '/admin/repositories', roles: ['admin', 'operator'] },
   { slug: 'audit', icon: '◭', href: '/admin/audit', roles: ['admin'] },
   { slug: 'refresh', icon: '↻', href: '/admin/refresh', roles: ['admin'] },
   { slug: 'queue', icon: '⊞', href: '/admin/queue', roles: ['admin'] },

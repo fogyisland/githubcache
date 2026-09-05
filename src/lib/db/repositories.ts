@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db/client';
-import type { Prisma, Repository } from '@prisma/client';
+import type { FetchStatus, Prisma, Repository } from '@prisma/client';
 
 export const findRepoByCanonical = (owner: string, name: string): Promise<Repository | null> =>
   prisma.repository.findUnique({ where: { owner_name: { owner, name } } });
@@ -29,4 +29,30 @@ export const recentLookups = (limit: number): Promise<Repository[]> =>
     orderBy: { lastFetchedAt: 'desc' },
     take: limit,
   });
+
+// -----------------------------------------------------------------------------
+// M23.x — admin SPA: paginated list of imported nodes with optional status
+// filter. Powers /admin/repositories (the "已入库节点" page). Newest-fetched
+// first; rows with `lastFetchedAt IS NULL` (never successfully fetched) sort
+// last via the { sort: 'desc', nulls: 'last' } ordering.
+// -----------------------------------------------------------------------------
+
+export async function listRepositories(opts: {
+  fetchStatus?: FetchStatus;
+  skip: number;
+  take: number;
+}): Promise<{ rows: Repository[]; total: number }> {
+  const where: Prisma.RepositoryWhereInput = {};
+  if (opts.fetchStatus) where.fetchStatus = opts.fetchStatus;
+  const [rows, total] = await Promise.all([
+    prisma.repository.findMany({
+      where,
+      orderBy: { lastFetchedAt: { sort: 'desc', nulls: 'last' } },
+      skip: opts.skip,
+      take: opts.take,
+    }),
+    prisma.repository.count({ where }),
+  ]);
+  return { rows, total };
+}
 

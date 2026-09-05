@@ -80,6 +80,7 @@
         "queries": "Queries",
         "ingestion": "Ingestion",
         "providers": "Providers",
+        "repositories": "Imported nodes",
         "audit": "Audit",
         "refresh": "Refresh",
         "queue": "Queue",
@@ -332,6 +333,37 @@
         "save": "Save limits",
         "updatedOk": "Limits updated.",
         "failedWithError": "Failed: {error}"
+      }
+    },
+    "repositories": {
+      "title": "Imported nodes",
+      "description": "Repositories pulled into the cache from ingestion providers or direct lookups. Filter by fetch status to find failures fast.",
+      "breadcrumbAdmin": "Admin",
+      "breadcrumbRepositories": "Imported nodes",
+      "status": {
+        "ok": "ok",
+        "not_found": "not found",
+        "forbidden": "forbidden",
+        "error": "error"
+      },
+      "list": {
+        "ariaLabel": "Imported repositories",
+        "never": "never",
+        "dash": "—",
+        "filter": {
+          "status": "Fetch status"
+        },
+        "column": {
+          "owner": "Owner",
+          "name": "Name",
+          "status": "Status",
+          "lastFetched": "Last fetched",
+          "error": "Error"
+        },
+        "empty": {
+          "title": "No repositories match this filter",
+          "description": "Try clearing the filter or run an ingestion provider to bring new repos in."
+        }
       }
     },
     "githubTokens": {
