@@ -1804,6 +1804,13 @@ a {
     --admin-rule: #1e3a5f;
     --admin-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
     --admin-display: ui-monospace, "SFMono-Regular", Menlo, monospace;
+    /* M24 patch: also override the global --color-bg/ink so admin elements
+       that reference var(--color-ink) directly (e.g. ghc-admin-page-title)
+       stay readable against the dark slate bg. */
+    --color-bg: #0f1e3a;
+    --color-ink: #e6edf7;
+    --color-ink-muted: #94a3b8;
+    --color-rule: #1e3a5f;
     background: var(--admin-bg);
     color: var(--admin-ink);
   }
@@ -1816,6 +1823,11 @@ a {
     --admin-rule: #dde4ec;
     --admin-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
     --admin-display: "Source Serif Pro", "Iowan Old Style", Georgia, serif;
+    /* M24 patch: mirror --color-* so admin elements reference the same ink */
+    --color-bg: #fafbfc;
+    --color-ink: #1a2b4a;
+    --color-ink-muted: #6b7b95;
+    --color-rule: #dde4ec;
     background: var(--admin-bg);
     color: var(--admin-ink);
   }
@@ -1828,6 +1840,11 @@ a {
     --admin-rule: #dde4ec;
     --admin-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
     --admin-display: "Space Grotesk", system-ui, -apple-system, sans-serif;
+    /* M24 patch: mirror --color-* so admin elements reference the same ink */
+    --color-bg: #ffffff;
+    --color-ink: #1a2b4a;
+    --color-ink-muted: #6b7b95;
+    --color-rule: #dde4ec;
     background: var(--admin-bg);
     color: var(--admin-ink);
   }
