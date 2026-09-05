@@ -1303,7 +1303,9 @@
     },
     "apiShape": {
       "eyebrow": "原始 API 结构",
-      "hint": "GET {path} → 查看 {link} 获取完整 schema"
+      "hintPrefix": "GET ",
+      "hintMiddle": " → 查看 ",
+      "hintSuffix": " 获取完整 schema"
     },
     "notFound": {
       "title": "仓库未找到",

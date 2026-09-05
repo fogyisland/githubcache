@@ -1303,7 +1303,9 @@
     },
     "apiShape": {
       "eyebrow": "Raw API shape",
-      "hint": "GET {path} → see {link} for full schema"
+      "hintPrefix": "GET ",
+      "hintMiddle": " → see ",
+      "hintSuffix": " for the full schema"
     },
     "notFound": {
       "title": "Repository not found",

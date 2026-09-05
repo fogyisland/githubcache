@@ -22,11 +22,17 @@ export async function ApiShape({ owner, name, metadata }: ApiShapeProps): Promis
       <details className="ghc-api-shape-details">
         <summary className="ghc-api-shape-summary">
           <span className="ghc-section-eyebrow">{t('eyebrow')}</span>
+          {/* Composed from 3 i18n fragments instead of t.rich: next-intl 4's
+              SSR path stringifies no-arg callbacks instead of invoking them,
+              which would render literal "function transformed" text. The
+              dynamic parts (apiPath + docs URL) are inline JSX; only the
+              connector words translate. See memory: feedback_next_intl_rich_callbacks. */}
           <a className="ghc-api-shape-hint" href={`/docs/api/v1-repos`}>
-            {t.rich('hint', {
-              path: () => <code>{apiPath}</code>,
-              link: () => <span className="ghc-api-shape-link">/docs/api/v1-repos</span>,
-            })}
+            {t('hintPrefix')}
+            <code>{apiPath}</code>
+            {t('hintMiddle')}
+            <span className="ghc-api-shape-link">/docs/api/v1-repos</span>
+            {t('hintSuffix')}
           </a>
         </summary>
         <pre className="ghc-code-block ghc-api-shape-pre">
