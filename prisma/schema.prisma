@@ -43,6 +43,12 @@ model User {
   theme        Theme        @default(terminal)
   adminVariant AdminVariant @default(mission_control) @map("admin_variant")
   lang         String       @default("zh") @db.VarChar(8)
+  // M23 — per-user timezone preference. Nullable so the resolver falls
+  // through to DEFAULT_TIMEZONE for newly-created users (no explicit
+  // value needed at user creation). Existing rows are backfilled via the
+  // migration's DEFAULT clause to 'Asia/Shanghai' — matches the original
+  // operator locale and means no operator sees a TZ jump after deploy.
+  timezone     String?      @db.VarChar(64) @map("timezone")
 
   apiKeys      ApiKey[]     @relation("owner")
   approvedKeys ApiKey[]     @relation("approver")
