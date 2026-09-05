@@ -44,6 +44,10 @@ export default async function DocsLanding(): Promise<ReactElement> {
             </li>
           ))}
         </ul>
+        <p>
+          <a href="/docs/development">{t('developmentLink')}</a>
+          {' — '}{t('developmentLinkBody')}
+        </p>
       </section>
 
       {downloadSpec}

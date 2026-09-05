@@ -1428,6 +1428,8 @@
       "endpoints": {
         "heading": "Endpoints"
       },
+      "developmentLink": "Development & contributing guide →",
+      "developmentLinkBody": "run it locally, fork it, or just use the API",
       "rateLimits": {
         "heading": "Rate limits",
         "intro": "The API uses a three-tier rate-limit model. All limits are enforced server-side; exceeding any tier returns HTTP 429 with the headers listed below.",
@@ -1518,7 +1520,76 @@
     "sidebar": {
       "heading": "API Reference",
       "overview": "Overview",
+      "development": "Development & contributing",
       "ariaLabel": "Documentation sections"
+    },
+    "development": {
+      "eyebrow": "Development",
+      "title": "Use the API, run it locally, or contribute",
+      "lede": "Three doors into this codebase: talk to a running instance, run your own copy, or send changes back upstream.",
+      "apiUsers": {
+        "heading": "1 · Using the public API",
+        "body": "Every public endpoint returns JSON and is documented below. Rate limits apply per API key (authenticated) or per IP (anonymous). All times are ISO 8601 UTC.",
+        "quickCheck": "Sanity-check a deployment",
+        "quickCheckBody": "No authentication required. Should always return 200 with ok: true if the service is up.",
+        "singleRepo": "Fetch one repo's cached metadata",
+        "singleRepoBody": "Same endpoint used by the public repo detail page. Falls through to GitHub on cache miss and enqueues a background refresh.",
+        "endpointsHeading": "Full endpoint reference",
+        "v1Status": "GET /api/v1/status",
+        "v1StatusBody": "system health snapshot (DB, token pool, queue, repo count, version)",
+        "v1Repos": "GET /api/v1/repos/{owner}/{name}",
+        "v1ReposBody": "one repo's cached record (cache miss → GitHub → 202 pending)",
+        "v1Query": "POST /api/query",
+        "v1QueryBody": "authenticated batch lookup up to 50 nodes per call (API key required)",
+        "machineReadable": "Download a machine-readable spec",
+        "machineReadableBody": "download /api-docs.json — every public endpoint summarized as JSON (path, method, auth, rate limit, cache semantics, response example, error codes). Consumer-side parsers don't need OpenAPI."
+      },
+      "localDev": {
+        "heading": "2 · Running it locally",
+        "body": "Prereqs: Node 20+, MySQL 5.7+, Git. The whole stack runs in one Node process — no Docker required.",
+        "step1Label": "Clone:",
+        "step2Label": "Configure:",
+        "step3Label": "Install:",
+        "step4Label": "Migrate:",
+        "step5Label": "Run:",
+        "step6Label": "Verify:",
+        "qualityGates": "Quality gates (run before pushing)",
+        "typecheck": "TypeScript strict mode (noUncheckedIndexedAccess, exactOptionalPropertyTypes)",
+        "lint": "ESLint — 0 errors required (warnings OK if pre-existing)",
+        "test": "Vitest unit + integration (~870 tests)",
+        "build": "Next.js production build",
+        "tokenHelp": "Need a GitHub token to query real repos? See the next section."
+      },
+      "contributing": {
+        "heading": "3 · Contributing changes",
+        "body": "Small, focused pull requests are easiest to review. Each milestone ships as its own commit on master with a one-line summary.",
+        "fork": "Fork → branch → push → PR",
+        "forkStep1": "Fork the repo:",
+        "forkStep3": "Make your change. Follow the conventions in CLAUDE.md (TypeScript strict, server actions in src/app/_actions/, i18n keys in both messages/en.json and messages/zh.json).",
+        "forkStep4": "Run the quality gates locally: npm run typecheck && npm run lint && npm test",
+        "forkStep5": "Open a PR against master at:",
+        "commitStyle": "Commit message style",
+        "scope": "Scope prefix",
+        "subject": "Imperative subject",
+        "subjectBody": "≤72 chars, no trailing period, lower-case after the colon",
+        "body": "Body",
+        "bodyBody": "explain WHY, not WHAT (the diff shows what). Wrap at 72 cols. Reference the milestone number if applicable.",
+        "coAuthoredBody": "if you used Claude or another AI to draft the change — keep it transparent",
+        "styleGuide": "Style guide (highlights)",
+        "style1": "Server actions live in src/app/_actions/ with 'use server' at the top",
+        "style2": "Per-user preferences mirror the lang/theme/timezone triad (cookie + DB + server action + switcher)",
+        "style3": "Never use d.toISOString().slice(...) for user-facing dates — use formatDate/formatDateTime/formatTime from @/lib/format/datetime",
+        "style4": "next-intl t.rich callbacks must accept the chunk argument or you'll ship \"function transformed\" to production",
+        "style5": "DB-direct GitHub token storage (M21) — never re-introduce GITHUB_TOKENS env vars",
+        "tokenHeading": "Adding a GitHub PAT for testing",
+        "tokenBody": "Do NOT commit tokens. For local testing, go to /admin/github-tokens after first login and paste a PAT there — M21 stores it in the database and the pool picks it up immediately. For production, rotate on GitHub after every leak rather than trying to scrub it from old backups."
+      },
+      "deeper": {
+        "heading": "Deeper references",
+        "claude": "AI-assistant primer (architecture, conventions, gotchas, memory index)",
+        "runbook": "operator runbook (deploy, alerts, incidents, M21 backfill)",
+        "readme": "project README (feature list, env vars, scripts, milestones)"
+      }
     },
     "endpointPage": {
       "eyebrow": "Endpoint",

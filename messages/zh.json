@@ -1428,6 +1428,8 @@
       "endpoints": {
         "heading": "端点列表"
       },
+      "developmentLink": "开发与贡献指南 →",
+      "developmentLinkBody": "本地运行、Fork 仓库、或单纯使用 API",
       "rateLimits": {
         "heading": "速率限制",
         "intro": "API 采用三层速率限制模型。所有限制都在服务端强制执行;超过任一层都会返回 HTTP 429 以及下方列出的响应头。",
@@ -1518,7 +1520,76 @@
     "sidebar": {
       "heading": "API 参考",
       "overview": "概览",
+      "development": "开发与贡献",
       "ariaLabel": "文档导航"
+    },
+    "development": {
+      "eyebrow": "开发",
+      "title": "调用 API、本地运行，或参与贡献",
+      "lede": "三条路径：调用正在运行的实例、跑一份你自己的副本，或把改动提交回上游。",
+      "apiUsers": {
+        "heading": "1 · 调用公开 API",
+        "body": "所有公开端点都返回 JSON，详细见下方。按 API key（认证）或按 IP（匿名）限流。所有时间戳为 ISO 8601 UTC。",
+        "quickCheck": "健康检查",
+        "quickCheckBody": "无需认证。服务正常时应返回 200 且 ok: true。",
+        "singleRepo": "获取单个仓库的缓存元数据",
+        "singleRepoBody": "与公开仓库详情页同源。缓存未命中时会回源 GitHub 并入队一个后台刷新任务。",
+        "endpointsHeading": "完整端点参考",
+        "v1Status": "GET /api/v1/status",
+        "v1StatusBody": "系统状态快照（数据库、令牌池、队列、仓库数、版本）",
+        "v1Repos": "GET /api/v1/repos/{owner}/{name}",
+        "v1ReposBody": "单个仓库的缓存记录（未命中则 → GitHub → 202 pending）",
+        "v1Query": "POST /api/query",
+        "v1QueryBody": "认证批量查询，单次最多 50 个节点（需 API key）",
+        "machineReadable": "下载机器可读规范",
+        "machineReadableBody": "下载 /api-docs.json — 每个公开端点的 JSON 摘要（路径、方法、认证、限流、缓存语义、响应示例、错误码）。消费方无需 OpenAPI。"
+      },
+      "localDev": {
+        "heading": "2 · 本地运行",
+        "body": "前置依赖：Node 20+、MySQL 5.7+、Git。整个栈跑在一个 Node 进程里 — 不需要 Docker。",
+        "step1Label": "克隆：",
+        "step2Label": "配置：",
+        "step3Label": "安装：",
+        "step4Label": "迁移：",
+        "step5Label": "运行：",
+        "step6Label": "验证：",
+        "qualityGates": "质量门禁（推送前必跑）",
+        "typecheck": "TypeScript 严格模式（noUncheckedIndexedAccess、exactOptionalPropertyTypes）",
+        "lint": "ESLint — 0 errors（pre-existing warnings 可忽略）",
+        "test": "Vitest 单元 + 集成测试（约 870 个）",
+        "build": "Next.js 生产构建",
+        "tokenHelp": "需要 GitHub token 查真实仓库？看下一节。"
+      },
+      "contributing": {
+        "heading": "3 · 贡献代码",
+        "body": "小而专注的 PR 最易 review。每个里程碑作为独立 commit 落在 master，配一行摘要。",
+        "fork": "Fork → 分支 → 推送 → PR",
+        "forkStep1": "Fork 仓库：",
+        "forkStep3": "做改动。遵循 CLAUDE.md 里的约定（TypeScript 严格、server action 放 src/app/_actions/、i18n keys 双语同步）。",
+        "forkStep4": "本地跑质量门禁：npm run typecheck && npm run lint && npm test",
+        "forkStep5": "向 master 提 PR：",
+        "commitStyle": "Commit 信息风格",
+        "scope": "范围前缀",
+        "subject": "祈使句主题",
+        "subjectBody": "≤72 字符，无句号，冒号后小写",
+        "body": "正文",
+        "bodyBody": "解释 WHY，不是 WHAT（diff 里看得到 WHAT）。72 列折行。涉及里程碑时附上编号。",
+        "coAuthoredBody": "如果用了 Claude 或其他 AI 起草 — 保持透明",
+        "styleGuide": "代码风格（要点）",
+        "style1": "Server action 放 src/app/_actions/，文件顶部 'use server'",
+        "style2": "新加 per-user 偏好请镜像 lang/theme/timezone 三件套（cookie + DB + server action + switcher）",
+        "style3": "用户可见日期永远不要用 d.toISOString().slice(...) — 用 @/lib/format/datetime 的 formatDate/formatDateTime/formatTime",
+        "style4": "next-intl t.rich 回调必须接 chunk 参数，否则生产环境会渲染 \"function transformed\"",
+        "style5": "GitHub token 直存 DB（M21）— 别重新引入 GITHUB_TOKENS 环境变量",
+        "tokenHeading": "测试用的 GitHub PAT",
+        "tokenBody": "不要把 token 提交进仓库。本地测试：第一次登录后访问 /admin/github-tokens 把 PAT 粘进去 — M21 把它存进数据库，池里立刻生效。生产环境：泄露后在 GitHub 上撤销 token，比试图从旧备份里清理更靠谱。"
+      },
+      "deeper": {
+        "heading": "深度参考",
+        "claude": "AI 助手入门（架构、约定、坑点、memory 索引）",
+        "runbook": "运维 runbook（部署、告警、应急、M21 回填）",
+        "readme": "项目 README（功能、env vars、脚本、里程碑）"
+      }
     },
     "endpointPage": {
       "eyebrow": "端点",

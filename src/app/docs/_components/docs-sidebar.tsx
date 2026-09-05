@@ -38,6 +38,22 @@ export function DocsSidebar(): ReactElement {
             </li>
           );
         })}
+        {/* Separator before the development section so users see it as
+            a different category (operator / contributor docs vs API ref). */}
+        <li className="ghc-doc-sidebar-separator" aria-hidden="true" />
+        <li>
+          <Link
+            href="/docs/development"
+            className={
+              pathname === '/docs/development' || pathname.startsWith('/docs/development/')
+                ? 'ghc-doc-sidebar-current'
+                : ''
+            }
+          >
+            <span className="ghc-doc-sidebar-icon" aria-hidden="true">⌘</span>
+            <span className="ghc-doc-sidebar-path">{t('development')}</span>
+          </Link>
+        </li>
       </ul>
     </nav>
   );
