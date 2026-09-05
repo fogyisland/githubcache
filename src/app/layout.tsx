@@ -7,6 +7,7 @@ import { SiteHeader } from '@/app/_components/site-header';
 import { readThemeFromCookieHeader } from '@/lib/theme/cookie';
 import { readLangFromCookieHeader } from '@/lib/lang/cookie';
 import { resolveLocale } from '@/lib/lang/registry';
+import { SITE_NAME } from '@/lib/config/site';
 
 /**
  * Four font stacks. Each one ships as a CSS variable so the three themes
@@ -48,7 +49,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: 'GitHub Metadata Cache',
+  title: SITE_NAME,
   description:
     'Submit a GitHub repo, get cached metadata (stars, forks, language, license, topics, dates). Per-IP rate limit, no GitHub token required.',
 };

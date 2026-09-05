@@ -2,6 +2,7 @@ import type { ReactElement } from 'react';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import packageJson from '../../../package.json';
+import { SITE_NAME } from '@/lib/config/site';
 
 const VERSION = packageJson.version;
 
@@ -20,7 +21,7 @@ export async function SiteFooter(): Promise<ReactElement> {
     <footer className="ghc-site-footer" data-testid="ghc-site-footer">
       <div className="ghc-site-footer-grid">
         <div className="ghc-site-footer-col">
-          <p className="ghc-site-footer-brand">GitHub Metadata Cache</p>
+          <p className="ghc-site-footer-brand">{SITE_NAME}</p>
           <p className="ghc-site-footer-tagline">{tFoot('tagline')}</p>
         </div>
         <div className="ghc-site-footer-col">
