@@ -126,7 +126,11 @@ export function LoginForm(): ReactElement {
       const body = (await res.json()) as LoginResponse;
       if (res.ok && body.ok === true) {
         // Full page navigation — picks up the new session cookie server-side.
-        window.location.href = '/admin';
+        // M26: default to the personal center (/account) for every
+        // signed-in user, including admins. Admins still have a
+        // visible "Admin center" link in the nav + /account sidebar.
+        const next = new URLSearchParams(window.location.search).get('next');
+        window.location.href = next && next.startsWith('/') ? next : '/account';
         return;
       }
       setError(
