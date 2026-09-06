@@ -361,3 +361,50 @@ model IngestionProvider {
 
   @@map("ingestion_providers")
 }
+
+// M25 — SMTP credentials + sender identity. Single-row table (id=1 only,
+// enforced by CHECK constraint). smtp_pass stored PLAINTEXT (same threat
+// model as M21's github_tokens.token — DB dump exposes the SMTP password
+// and lets the dump reader impersonate our sender. We need the raw bytes
+// for SMTP AUTH. Mitigation: DB ACLs + SQL backup encryption.)
+model EmailConfig {
+  id         Int      @id @default(1)
+  smtpHost   String   @map("smtp_host") @db.VarChar(255)
+  smtpPort   Int      @map("smtp_port")
+  smtpUser   String   @map("smtp_user") @db.VarChar(255)
+  smtpPass   String   @map("smtp_pass") @db.Text
+  smtpSecure Boolean  @default(false) @map("smtp_secure")
+  smtpFrom   String   @map("smtp_from") @db.VarChar(255)
+  replyTo    String?  @map("reply_to") @db.VarChar(255)
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  updatedBy  BigInt?  @map("updated_by")
+
+  @@map("email_config")
+}
+
+// M25 — append-only send log. status: queued (default at insert) →
+// sent (after nodemailer succeeds) or failed (after exception).
+// errorMessage truncated to 1000 chars at insert time.
+model EmailLog {
+  id                BigInt         @id @default(autoincrement())
+  recipient         String         @db.VarChar(255)
+  subject           String         @db.VarChar(500)
+  templateKey       String         @map("template_key") @db.VarChar(100)
+  status            EmailLogStatus @default(queued)
+  errorMessage      String?        @map("error_message") @db.Text
+  relatedEntityType String?        @map("related_entity_type") @db.VarChar(50)
+  relatedEntityId   String?        @map("related_entity_id") @db.VarChar(100)
+  sentAt            DateTime?      @map("sent_at")
+  createdAt         DateTime       @default(now()) @map("created_at")
+
+  @@index([status, createdAt])
+  @@index([recipient, createdAt])
+  @@index([relatedEntityType, relatedEntityId])
+  @@map("email_log")
+}
+
+enum EmailLogStatus {
+  queued
+  sent
+  failed
+}

@@ -38,6 +38,17 @@ const schema = z.object({
   // output is written. Created on first backup if absent. Path is
   // resolved relative to process.cwd() at bootServer() time.
   BACKUP_DIR: z.string().default('./backups'),
+  // M25 — Cron cadence for the daily report. The tick fires only when
+  // the current UTC time is 00:00..00:04, so picking a cadence that
+  // gives the scheduler exactly ONE chance inside that 5-minute window
+  // prevents duplicate sends. Default 5min = 1 hit/day; 30min also safe.
+  EMAIL_DAILY_REPORT_INTERVAL_MS: z.coerce.number().int().positive().default(5 * 60_000),
+  // M25 — Cron cadence for the weekly report. Fires on Monday
+  // 00:10..00:14 UTC. Default 60min = 1 hit/week inside the window.
+  EMAIL_WEEKLY_REPORT_INTERVAL_MS: z.coerce.number().int().positive().default(60 * 60_000),
+  // M25 — Optional override for the SMTP_FROM header. Used by the
+  // "send test" button so admins can verify a specific sender identity.
+  EMAIL_FROM_DEFAULT: z.string().email().optional(),
 });
 
 export const env = schema.parse(process.env);

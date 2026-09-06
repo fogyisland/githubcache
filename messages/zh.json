@@ -112,7 +112,9 @@
         "queue": "队列",
         "webhooks": "Webhook",
         "database": "数据库",
-        "insights": "内容洞察"
+        "insights": "内容洞察",
+        "email": "邮件",
+        "email-log": "邮件日志"
       },
       "statusbar": {
         "db": "数据库",
@@ -1069,6 +1071,78 @@
         "command": "npx prisma studio",
         "openDocs": "打开 Prisma Studio 文档 →"
       }
+    },
+    "email": {
+      "title": "邮件",
+      "description": "配置 SMTP 用于邀请、密码重置、API key 通知和定时报告。",
+      "breadcrumbAdmin": "管理",
+      "breadcrumbEmail": "邮件",
+      "form": {
+        "heading": "SMTP 设置",
+        "host": "SMTP 主机",
+        "hostPlaceholder": "smtp.example.com",
+        "port": "SMTP 端口",
+        "user": "SMTP 用户名",
+        "pass": "SMTP 密码",
+        "passShow": "显示",
+        "passHide": "隐藏",
+        "secure": "使用 TLS（465 端口）",
+        "secureHelp": "SMTPS 时勾选。STARTTLS（587 端口）请保持未勾选。",
+        "from": "发件人",
+        "fromPlaceholder": "no-reply@example.com",
+        "replyTo": "回复地址（可选）",
+        "replyToPlaceholder": "support@example.com",
+        "save": "保存",
+        "saving": "保存中…",
+        "savedOk": "已保存。",
+        "failedWithError": "失败：{error}"
+      },
+      "test": {
+        "heading": "发送测试邮件",
+        "toHelp": "发送到 {email}（当前登录的管理员）。",
+        "submit": "发送测试",
+        "submitting": "发送中…",
+        "ok": "已发送。",
+        "failedNotConfigured": "邮件未配置。请先保存 SMTP 凭据。",
+        "failedWithError": "失败：{error}"
+      },
+      "viewLog": "查看发送记录 →",
+      "notConfigured": "邮件未配置。保存后会激活邀请和报告。"
+    },
+    "emailLog": {
+      "title": "邮件日志",
+      "description": "每一次发送尝试 — 邀请、密码重置、API key 审批和定时报告。",
+      "breadcrumbAdmin": "管理",
+      "breadcrumbEmail": "邮件",
+      "breadcrumbLog": "日志",
+      "filter": {
+        "status": "状态",
+        "templateKey": "模板",
+        "anyOption": "（任意）"
+      },
+      "column": {
+        "when": "时间",
+        "recipient": "收件人",
+        "templateKey": "模板",
+        "subject": "主题",
+        "status": "状态",
+        "error": "错误"
+      },
+      "status": {
+        "queued": "排队中",
+        "sent": "已发送",
+        "failed": "失败"
+      },
+      "templateKey": {
+        "invite": "邀请",
+        "password-reset": "密码重置",
+        "api-key-approved": "API key 审批",
+        "daily-report": "每日报告",
+        "weekly-report": "每周报告",
+        "test": "测试发送"
+      },
+      "empty": "没有匹配筛选条件的邮件日志。",
+      "errorDash": "—"
     }
   },
   "insights": {

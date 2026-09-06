@@ -17,7 +17,9 @@ export type AdminSectionSlug =
   | 'queue'
   | 'webhooks'
   | 'database'
-  | 'insights';
+  | 'insights'
+  | 'email'
+  | 'email-log';
 
 /** Static metadata — `title` lives in messages, not here, so it can translate. */
 export interface AdminSection {
@@ -43,6 +45,10 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { slug: 'webhooks', icon: '⊜', href: '/admin/webhooks', roles: ['admin'] },
   { slug: 'database', icon: '◰', href: '/admin/database', roles: ['admin'] },
   { slug: 'insights', icon: '◬', href: '/admin/insights', roles: ['admin'] },
+  // M25 — SMTP config + send log. Admin only because misconfiguration
+  // can leak credentials to attackers who phish the form.
+  { slug: 'email', icon: '✉', href: '/admin/email', roles: ['admin'] },
+  { slug: 'email-log', icon: '✉', href: '/admin/email/log', roles: ['admin'] },
 ];
 
 interface Props {

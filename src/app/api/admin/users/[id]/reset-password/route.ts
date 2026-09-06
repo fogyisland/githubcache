@@ -8,6 +8,8 @@ import { getUserById } from '@/lib/db/users';
 import { changePassword } from '@/lib/auth/password-reset';
 import { writeAudit } from '@/lib/audit/writer';
 import { apiError } from '@/lib/api/errors';
+import { sendPasswordResetEmail } from '@/lib/email/triggers/password-reset';
+import { logger } from '@/lib/logger';
 
 const Body = z.object({ csrf: z.string().min(1) });
 
@@ -34,10 +36,15 @@ function generateTempPassword(): string {
  * user (in person, Slack, etc.) — this project has no email sender.
  *
  * Response codes:
- *   200 — { ok: true, tempPassword }
+ *   200 — { ok: true, tempPassword, emailSent }
  *   400 — invalid id or body
  *   403 — not admin / invalid CSRF
  *   404 — user not found
+ *
+ * M25: when SMTP is configured, the temp password is also emailed
+ * to the user. `emailSent` in the response reflects the outcome —
+ * the response body still includes `tempPassword` so the admin can
+ * always copy it out of band even if SMTP failed.
  */
 export async function POST(
   req: Request,
@@ -87,6 +94,22 @@ export async function POST(
     ...(fwdReset !== null && fwdReset !== '' ? { ip: fwdReset } : {}),
   });
 
+  // M25 — also email the temp password when SMTP is configured.
+  let emailSent = false;
+  try {
+    const origin = req.headers.get('origin') ?? new URL(req.url).origin;
+    const sendResult = await sendPasswordResetEmail(target, tempPassword, origin);
+    emailSent = sendResult.ok;
+    if (!sendResult.ok) {
+      logger.info(
+        { userId: String(id), error: sendResult.error },
+        'password-reset email not sent (likely not_configured)',
+      );
+    }
+  } catch (e: unknown) {
+    logger.error({ err: e, userId: String(id) }, 'password-reset email send threw');
+  }
+
   // Return temp password ONCE — admin must communicate it to the user.
-  return NextResponse.json({ ok: true, tempPassword });
+  return NextResponse.json({ ok: true, tempPassword, emailSent });
 }

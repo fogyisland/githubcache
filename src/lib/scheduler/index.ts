@@ -3,6 +3,8 @@ import { env } from '@/lib/config/env';
 import { runTick } from './tick';
 import { nightlySweep } from './sweep';
 import { runWorkerTick } from '@/lib/webhooks/worker';
+import { runDailyReportTick } from './cron-daily-report';
+import { runWeeklyReportTick } from './cron-weekly-report';
 import {
   pauseRefreshTick,
   resumeRefreshTick,
@@ -76,6 +78,24 @@ export function startScheduler(): SchedulerHandle {
     });
   }, env.WEBHOOK_WORKER_TICK_MS);
 
+  // M25 — daily report cron. The default 5-minute cadence ensures the
+  // 00:00–00:04 UTC window fires exactly once per day (in normal ops).
+  const dailyReportInterval = setInterval(() => {
+    runDailyReportTick().catch((e: unknown) => {
+      logger.error({ err: e }, 'daily report tick failed');
+    });
+  }, env.EMAIL_DAILY_REPORT_INTERVAL_MS);
+  dailyReportInterval.unref?.();
+
+  // M25 — weekly report cron (Monday 00:10 UTC). The default 60-min
+  // cadence still hits the 5-min window once per week.
+  const weeklyReportInterval = setInterval(() => {
+    runWeeklyReportTick().catch((e: unknown) => {
+      logger.error({ err: e }, 'weekly report tick failed');
+    });
+  }, env.EMAIL_WEEKLY_REPORT_INTERVAL_MS);
+  weeklyReportInterval.unref?.();
+
   // Don't keep the process alive solely for these timers (in case Next.js exits)
   sweepInterval.unref?.();
   webhookWorkerInterval.unref?.();
@@ -86,6 +106,8 @@ export function startScheduler(): SchedulerHandle {
       sweepMs: env.NIGHTLY_SWEEP_INTERVAL_MS,
       webhookWorkerMs: env.WEBHOOK_WORKER_TICK_MS,
       webhookWorkerBatch: env.WEBHOOK_WORKER_BATCH_SIZE,
+      dailyReportMs: env.EMAIL_DAILY_REPORT_INTERVAL_MS,
+      weeklyReportMs: env.EMAIL_WEEKLY_REPORT_INTERVAL_MS,
     },
     'scheduler started',
   );
@@ -95,6 +117,8 @@ export function startScheduler(): SchedulerHandle {
       pauseRefreshTick();
       clearInterval(sweepInterval);
       clearInterval(webhookWorkerInterval);
+      clearInterval(dailyReportInterval);
+      clearInterval(weeklyReportInterval);
       activeHandle = null;
       logger.info('scheduler stopped');
     },

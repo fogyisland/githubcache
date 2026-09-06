@@ -112,7 +112,9 @@
         "queue": "Queue",
         "webhooks": "Webhooks",
         "database": "Database",
-        "insights": "Insights"
+        "insights": "Insights",
+        "email": "Email",
+        "email-log": "Email log"
       },
       "statusbar": {
         "db": "DB",
@@ -1069,6 +1071,78 @@
         "command": "npx prisma studio",
         "openDocs": "Open Prisma Studio docs →"
       }
+    },
+    "email": {
+      "title": "Email",
+      "description": "Configure SMTP for invites, password resets, API-key notifications, and scheduled reports.",
+      "breadcrumbAdmin": "Admin",
+      "breadcrumbEmail": "Email",
+      "form": {
+        "heading": "SMTP settings",
+        "host": "SMTP host",
+        "hostPlaceholder": "smtp.example.com",
+        "port": "SMTP port",
+        "user": "SMTP username",
+        "pass": "SMTP password",
+        "passShow": "Show",
+        "passHide": "Hide",
+        "secure": "Use TLS (port 465)",
+        "secureHelp": "Enable for SMTPS. Leave off for STARTTLS on port 587.",
+        "from": "From address",
+        "fromPlaceholder": "no-reply@example.com",
+        "replyTo": "Reply-to (optional)",
+        "replyToPlaceholder": "support@example.com",
+        "save": "Save",
+        "saving": "Saving…",
+        "savedOk": "Saved.",
+        "failedWithError": "Failed: {error}"
+      },
+      "test": {
+        "heading": "Send test email",
+        "toHelp": "Sends to {email} (the logged-in admin).",
+        "submit": "Send test",
+        "submitting": "Sending…",
+        "ok": "Sent.",
+        "failedNotConfigured": "Email is not configured. Save SMTP credentials first.",
+        "failedWithError": "Failed: {error}"
+      },
+      "viewLog": "View recent sends →",
+      "notConfigured": "Email is not configured. Saving will activate invites + reports."
+    },
+    "emailLog": {
+      "title": "Email log",
+      "description": "Every send attempt — invites, password resets, API key approvals, and scheduled reports.",
+      "breadcrumbAdmin": "Admin",
+      "breadcrumbEmail": "Email",
+      "breadcrumbLog": "Log",
+      "filter": {
+        "status": "Status",
+        "templateKey": "Template",
+        "anyOption": "(any)"
+      },
+      "column": {
+        "when": "When",
+        "recipient": "Recipient",
+        "templateKey": "Template",
+        "subject": "Subject",
+        "status": "Status",
+        "error": "Error"
+      },
+      "status": {
+        "queued": "queued",
+        "sent": "sent",
+        "failed": "failed"
+      },
+      "templateKey": {
+        "invite": "Invite",
+        "password-reset": "Password reset",
+        "api-key-approved": "API key approved",
+        "daily-report": "Daily report",
+        "weekly-report": "Weekly report",
+        "test": "Test send"
+      },
+      "empty": "No email log entries match these filters.",
+      "errorDash": "—"
     }
   },
   "insights": {

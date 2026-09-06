@@ -7,6 +7,8 @@ import { createInvitation } from '@/lib/db/invitations';
 import { prisma } from '@/lib/db/client';
 import { writeAudit } from '@/lib/audit/writer';
 import { apiError } from '@/lib/api/errors';
+import { sendInviteEmail } from '@/lib/email/triggers/invite';
+import { logger } from '@/lib/logger';
 
 const Body = z.object({
   email: z.string().email(),
@@ -24,10 +26,16 @@ const Body = z.object({
  * defense in depth (mirrors M6.6 auth/login route).
  *
  * Response codes:
- *   200 — { inviteLink }
+ *   200 — { inviteLink, emailSent }
  *   400 — invalid body
  *   403 — not admin (or CSRF invalid)
  *   409 — email already has an active user OR a pending invitation
+ *
+ * M25: when SMTP is configured, an invitation email is sent in
+ * addition to returning the invite link. `emailSent` in the response
+ * reflects the send outcome — false if SMTP is unconfigured or the
+ * transport raised. The underlying invitation creation still
+ * succeeds either way.
  */
 export async function POST(req: Request): Promise<Response> {
   // Auth: admin only
@@ -84,7 +92,22 @@ export async function POST(req: Request): Promise<Response> {
   });
 
   const origin = req.headers.get('origin') ?? new URL(req.url).origin;
-  return NextResponse.json({
-    inviteLink: `${origin}/request-access?invitation=${invitation.id}`,
-  });
+  const inviteLink = `${origin}/request-access?invitation=${invitation.id}`;
+
+  // M25 — try to send the invite email; never block the response on it.
+  let emailSent = false;
+  try {
+    const sendResult = await sendInviteEmail(invitation, user, origin);
+    emailSent = sendResult.ok;
+    if (!sendResult.ok) {
+      logger.info(
+        { invitationId: invitation.id, error: sendResult.error },
+        'invite email not sent (likely not_configured)',
+      );
+    }
+  } catch (e: unknown) {
+    logger.error({ err: e, invitationId: invitation.id }, 'invite email send threw');
+  }
+
+  return NextResponse.json({ inviteLink, emailSent });
 }
