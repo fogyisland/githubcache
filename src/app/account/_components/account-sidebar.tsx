@@ -7,22 +7,22 @@ import type { ReactElement } from 'react';
 
 interface NavItem {
   href: string;
-  key: 'overview' | 'keys' | 'password' | 'preferences';
+  key: 'overview' | 'keys' | 'password' | 'preferences' | 'adminCenter';
 }
 
 /**
  * M26 — sidebar nav for the /account section.
  *
- * Highlights the current section via `usePathname()`. Items are
- * strictly inside /account/* — we don't expose admin links here
- * because the public account surface is a separate concern from
- * the admin shell.
+ * Highlights the current section via `usePathname()`. Admins get an
+ * extra "Admin center" link at the top — they have both a personal
+ * center AND an admin role, so both surfaces should be reachable.
  */
-export function AccountSidebar(): ReactElement {
+export function AccountSidebar({ isAdmin = false }: { isAdmin?: boolean }): ReactElement {
   const pathname = usePathname() ?? '/account';
   const t = useTranslations('account.sidebar');
 
   const items: NavItem[] = [
+    ...(isAdmin ? [{ href: '/admin', key: 'adminCenter' as const }] : []),
     { href: '/account', key: 'overview' },
     { href: '/account/keys', key: 'keys' },
     { href: '/account/password', key: 'password' },
@@ -31,6 +31,7 @@ export function AccountSidebar(): ReactElement {
 
   function isActive(href: string): boolean {
     if (href === '/account') return pathname === '/account';
+    if (href === '/admin') return pathname.startsWith('/admin');
     return pathname === href || pathname.startsWith(`${href}/`);
   }
 

@@ -1318,6 +1318,7 @@
     "sidebar": {
       "aria": "Account sections",
       "items": {
+        "adminCenter": "Admin center",
         "overview": "Overview",
         "keys": "API keys",
         "password": "Change password",

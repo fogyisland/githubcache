@@ -74,7 +74,7 @@ export default async function AccountLayout({
         }}
       >
         <aside>
-          <AccountSidebar />
+          <AccountSidebar isAdmin={user.role === 'admin'} />
         </aside>
         <main>{children}</main>
       </div>

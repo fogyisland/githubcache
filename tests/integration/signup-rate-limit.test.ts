@@ -33,7 +33,7 @@ vi.mock('@/lib/email/triggers/signup-welcome', () => ({
   sendSignupWelcomeEmail: () => sendWelcomeMock(),
 }));
 
-import { signupAction } from '@/app/signup/_actions/signup';
+import { signupAction, getSignupRateLimit } from '@/app/signup/_actions/signup';
 
 const TEST_EMAIL_PREFIX = 'signup-rl-int-';
 const idleState = { status: 'idle' as const };
@@ -68,16 +68,42 @@ beforeEach(async () => {
 });
 
 describe('signup rate limit', () => {
-  // Bcrypt cost 12 means each signup is ~250ms; 11 signups take ~3 seconds.
-  it(
-    'first 10 attempts succeed (or hit validation, but never rate_limited); 11th returns rate_limited',
-    async () => {
-      let rateLimitedCount = 0;
-      let otherCount = 0;
+  it('exposes the default 50000/hour ceiling', () => {
+    // No env override → default constant.
+    delete process.env['SIGNUP_RATE_PER_HOUR'];
+    expect(getSignupRateLimit()).toBe(50_000);
+  });
 
-      for (let i = 0; i < 11; i++) {
+  it('honours SIGNUP_RATE_PER_HOUR env override', () => {
+    process.env['SIGNUP_RATE_PER_HOUR'] = '5';
+    expect(getSignupRateLimit()).toBe(5);
+    delete process.env['SIGNUP_RATE_PER_HOUR'];
+  });
+
+  // Mechanism test: override the limit to 3, then verify that the 4th
+  // attempt (after the audit-log bucket already has 3 rows) returns
+  // rate_limited. Inserting 50000+1 audit rows for the default would
+  // be impractical; the env override is the production-tunable
+  // surface and the test exercises the same code path.
+  it(
+    'returns rate_limited when audit-log bucket reaches the configured ceiling',
+    async () => {
+      process.env['SIGNUP_RATE_PER_HOUR'] = '3';
+      try {
+        const ip = '198.51.100.42';
+        // Pre-seed 3 audit rows so the next call sees count === 3.
+        await prisma.auditLog.createMany({
+          data: Array.from({ length: 3 }, (_, i) => ({
+            action: 'user_signed_up',
+            targetType: 'user',
+            targetId: `seed-${i}`,
+            ip,
+            createdAt: new Date(),
+          })),
+        });
+
         const fd = new FormData();
-        fd.set('email', `${TEST_EMAIL_PREFIX}${i}-${Date.now()}@example.test`);
+        fd.set('email', `${TEST_EMAIL_PREFIX}over-${Date.now()}@example.test`);
         fd.set('password', 'supersecret1');
         fd.set('passwordConfirm', 'supersecret1');
         let state;
@@ -85,28 +111,14 @@ describe('signup rate limit', () => {
           state = await signupAction(idleState, fd);
         } catch (e) {
           const msg = e instanceof Error ? e.message : String(e);
-          if (msg.startsWith('__redirect:')) {
-            otherCount++;
-            continue;
-          }
-          throw e;
+          throw new Error(`unexpected redirect: ${msg}`);
         }
-        if (state.status === 'rate_limited') {
-          rateLimitedCount++;
-        } else {
-          // Successful signup — the action returned a state object
-          // before redirecting on a previous call? Actually the
-          // successful path throws NEXT_REDIRECT. If we got a state
-          // object back, it's an unexpected status.
-          otherCount++;
-        }
+        expect(state.status).toBe('rate_limited');
+        expect(state.message).toMatch(/too many/i);
+      } finally {
+        delete process.env['SIGNUP_RATE_PER_HOUR'];
       }
-
-      // Exactly 10 succeeded (threw redirect) and the 11th came back
-      // with rate_limited.
-      expect(rateLimitedCount).toBe(1);
-      expect(otherCount).toBe(10);
     },
-    30_000,
+    15_000,
   );
 });

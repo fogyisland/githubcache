@@ -17,11 +17,16 @@ import { validateSession } from '@/lib/auth/session';
  * current theme id down to the (client) ThemeSwitcher so it can render the
  * active pill, and the current locale to the (client) LangSwitcher.
  *
- * M26 — the rightmost nav link switches based on session: anon visitors
- * see "Log in" (linking to /login); signed-in users see "My account"
- * (linking to /account). The session check is a cookie-presence-only
- * lookup via validateSession — the DB hit is fine on a static-header
- * render and we avoid the complexity of a middleware-based redirect here.
+ * M26 — the rightmost nav area shows different links based on session:
+ *   - anon: a single "Log in" link → /login
+ *   - operator: a single "My account" link → /account
+ *   - admin: BOTH "Admin center" → /admin AND "My account" → /account
+ *     (admins also have a personal center — they're operators too, just
+ *     with extra privileges — so both links are surfaced).
+ *
+ * The session check is a cookie-presence-only lookup via validateSession
+ * — the DB hit is fine on a static-header render and we avoid the
+ * complexity of a middleware-based redirect here.
  */
 export async function SiteHeader() {
   const headerStore = headers();
@@ -33,9 +38,6 @@ export async function SiteHeader() {
   });
   const t = await getTranslations('nav');
 
-  // M26 — anon vs signed-in nav target. Cookie lookup is cheap; the DB
-  // roundtrip happens inside validateSession and is bounded by the
-  // Next.js per-request cache.
   const cookieStore = cookies();
   const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
   const session = await validateSession({
@@ -45,9 +47,8 @@ export async function SiteHeader() {
         cookieMap[name] !== undefined ? { value: cookieMap[name]! } : undefined,
     },
   });
-  const accountHref = session ? '/account' : '/login';
-  const accountLabel = session ? t('account') : t('login');
-  const accountAria = session ? t('accountAria') : t('adminAria');
+  const isAdmin = session?.role === 'admin';
+  const isLoggedIn = session !== null;
 
   return (
     <header className="ghc-site-header sticky top-0 z-40">
@@ -77,8 +78,17 @@ export async function SiteHeader() {
           <Link href="/api/v1/status" className="ghc-header-util-link" aria-label={t('statusAria')}>
             {t('status')}
           </Link>
-          <Link href={accountHref} className="ghc-header-util-link" aria-label={accountAria}>
-            {accountLabel}
+          {isAdmin && (
+            <Link href="/admin" className="ghc-header-util-link" aria-label={t('adminAria')}>
+              {t('admin')}
+            </Link>
+          )}
+          <Link
+            href={isLoggedIn ? '/account' : '/login'}
+            className="ghc-header-util-link"
+            aria-label={isLoggedIn ? t('accountAria') : t('adminAria')}
+          >
+            {isLoggedIn ? t('account') : t('login')}
           </Link>
         </nav>
       </div>

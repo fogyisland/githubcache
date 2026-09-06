@@ -1318,6 +1318,7 @@
     "sidebar": {
       "aria": "账号导航",
       "items": {
+        "adminCenter": "管理中心",
         "overview": "概览",
         "keys": "API key",
         "password": "修改密码",

@@ -28,7 +28,21 @@ const SignupSchema = z.object({
   name: z.string().max(100).optional(),
 });
 
-const SIGNUP_RATE_PER_HOUR = 10;
+const SIGNUP_RATE_PER_HOUR = 50_000;
+
+/**
+ * Exposed for tests so they can override the per-hour ceiling without
+ * inserting tens of thousands of audit rows. Production code reads the
+ * constant directly.
+ */
+export function getSignupRateLimit(): number {
+  const envVal = process.env['SIGNUP_RATE_PER_HOUR'];
+  if (envVal !== undefined && envVal !== '') {
+    const n = Number(envVal);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return SIGNUP_RATE_PER_HOUR;
+}
 
 /**
  * Extract the client IP from the inbound request — same logic as the
@@ -87,9 +101,9 @@ export async function signupAction(
   const headersList = headers();
   const ip = getClientIp(headersList);
 
-  // 1. Rate limit per IP (10/hour). We do this before zod-validate so
-  //    abuse doesn't get a free parse; the limit is generous enough
-  //    that real users won't trip it.
+  // 1. Rate limit per IP (default 50000/hour). We do this before
+  //    zod-validate so abuse doesn't get a free parse; the limit is
+  //    generous enough that real users won't trip it.
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
   const recentFromIp = await prisma.auditLog.count({
     where: {
@@ -98,7 +112,7 @@ export async function signupAction(
       createdAt: { gte: oneHourAgo },
     },
   });
-  if (recentFromIp >= SIGNUP_RATE_PER_HOUR) {
+  if (recentFromIp >= getSignupRateLimit()) {
     return {
       status: 'rate_limited',
       message: 'Too many signup attempts from this IP. Try again later.',

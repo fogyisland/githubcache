@@ -204,31 +204,35 @@ describe('signupAction', () => {
     }
   });
 
-  it('rate-limits 11th attempt from same IP within an hour', async () => {
-    // Insert 10 fake audit rows for this IP to simulate the quota.
+  it('rate-limits when audit-log bucket reaches the configured ceiling', async () => {
+    // Default ceiling is 50000/hour — impractical to insert that many
+    // rows in a unit test. Use the SIGNUP_RATE_PER_HOUR env override
+    // (consumed by `getSignupRateLimit`) to lower the threshold to 2,
+    // then seed 2 audit rows and verify the next call is blocked.
+    process.env['SIGNUP_RATE_PER_HOUR'] = '2';
     const ip = '198.51.100.99';
     headerState.xff = ip;
-    await prisma.auditLog.deleteMany({
-      where: { action: 'user_signed_up', ip },
-    });
-    const rows = Array.from({ length: 10 }, (_, i) => ({
-      action: 'user_signed_up',
-      targetType: 'user',
-      targetId: `fake-${i}`,
-      ip,
-      createdAt: new Date(),
-    }));
-    await prisma.auditLog.createMany({ data: rows });
+    try {
+      await prisma.auditLog.deleteMany({
+        where: { action: 'user_signed_up', ip },
+      });
+      await prisma.auditLog.createMany({
+        data: [
+          { action: 'user_signed_up', targetType: 'user', targetId: 'fake-0', ip, createdAt: new Date() },
+          { action: 'user_signed_up', targetType: 'user', targetId: 'fake-1', ip, createdAt: new Date() },
+        ],
+      });
 
-    const state = await signupAction(
-      idleState,
-      formDataFor({ email: `${TEST_EMAIL_PREFIX}rl-${Date.now()}@example.test` }),
-    );
-    expect(state.status).toBe('rate_limited');
-
-    // Cleanup
-    await prisma.auditLog.deleteMany({
-      where: { action: 'user_signed_up', ip },
-    });
+      const state = await signupAction(
+        idleState,
+        formDataFor({ email: `${TEST_EMAIL_PREFIX}rl-${Date.now()}@example.test` }),
+      );
+      expect(state.status).toBe('rate_limited');
+    } finally {
+      delete process.env['SIGNUP_RATE_PER_HOUR'];
+      await prisma.auditLog.deleteMany({
+        where: { action: 'user_signed_up', ip },
+      });
+    }
   });
 });
