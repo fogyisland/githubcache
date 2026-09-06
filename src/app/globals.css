@@ -2508,3 +2508,77 @@ a {
   text-align: center;
   color: var(--color-ink-muted, #555);
 }
+
+/* ─────────────────── /get-started on-ramp styles ───────────────────
+   Numbered step layout: big number on the left, body on the right.
+   Theme-aware (reads --color-accent / --color-ink-muted / --color-surface)
+   so it works across terminal / editorial / brutalist. */
+.ghc-getstarted {
+  max-width: 56rem;
+  margin: 0 auto;
+  padding: var(--space-6, 1.5rem) 0 var(--space-8, 2rem);
+}
+.ghc-getstarted-step {
+  display: grid;
+  grid-template-columns: 3.5rem 1fr;
+  gap: var(--space-4, 1rem);
+  align-items: start;
+  padding: var(--space-5, 1.25rem) 0;
+  border-top: 1px solid var(--color-rule, #e5e7eb);
+}
+.ghc-getstarted-step:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+.ghc-getstarted-step-number {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-accent, #2563eb);
+  border: 1px solid var(--color-accent, #2563eb);
+  border-radius: var(--radius-1, 2px);
+  padding: var(--space-2, 0.5rem);
+  text-align: center;
+  background: color-mix(in srgb, var(--color-accent, #2563eb) 8%, transparent);
+}
+.ghc-getstarted-step-body h2 { margin-top: 0; }
+.ghc-getstarted-sublist {
+  margin: var(--space-3, 0.75rem) 0 0;
+  padding-left: var(--space-5, 1.25rem);
+}
+.ghc-getstarted-sublist li { margin-bottom: var(--space-2, 0.5rem); }
+.ghc-getstarted-callout {
+  margin-top: var(--space-3, 0.75rem);
+  padding: var(--space-3, 0.75rem) var(--space-4, 1rem);
+  border-left: 3px solid var(--color-accent, #2563eb);
+  background: color-mix(in srgb, var(--color-accent, #2563eb) 6%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1, 0.25rem);
+}
+.ghc-getstarted-callout strong {
+  color: var(--color-ink, #111);
+  font-size: 0.9375rem;
+}
+.ghc-getstarted-callout span {
+  color: var(--color-ink-muted, #555);
+  font-size: 0.875rem;
+}
+.ghc-getstarted-error-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: var(--space-3, 0.75rem);
+  font-size: 0.875rem;
+}
+.ghc-getstarted-error-table th,
+.ghc-getstarted-error-table td {
+  text-align: left;
+  padding: var(--space-2, 0.5rem) var(--space-3, 0.75rem);
+  border-bottom: 1px solid var(--color-rule, #e5e7eb);
+}
+.ghc-getstarted-error-table th {
+  font-weight: 600;
+  color: var(--color-ink, #111);
+  background: color-mix(in srgb, var(--color-ink, #111) 4%, transparent);
+}
