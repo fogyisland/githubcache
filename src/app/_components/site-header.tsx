@@ -75,7 +75,7 @@ export async function SiteHeader() {
           <Link href="/get-started" className="ghc-header-util-link">
             {t('apiGuide')}
           </Link>
-          <Link href="/api/v1/status" className="ghc-header-util-link" aria-label={t('statusAria')}>
+          <Link href="/status" className="ghc-header-util-link" aria-label={t('statusAria')}>
             {t('status')}
           </Link>
           {isAdmin && (

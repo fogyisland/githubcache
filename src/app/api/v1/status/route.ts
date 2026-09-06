@@ -19,6 +19,7 @@ export async function GET(): Promise<Response> {
       tokens: { active: 0, exhausted: 0, total: 0, source: 'db' },
       queue: { pending: 0, in_progress: 0, done: 0, failed: 0 },
       repositories: { total: 0, ok: 0, not_found: 0, forbidden: 0, error: 0 },
+      scheduler: { paused: true },
       version: {
         commit: process.env.GIT_COMMIT ?? 'unknown',
         startedAt: new Date(0).toISOString(),

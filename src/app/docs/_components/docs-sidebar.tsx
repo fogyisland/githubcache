@@ -54,6 +54,19 @@ export function DocsSidebar(): ReactElement {
             <span className="ghc-doc-sidebar-path">{t('development')}</span>
           </Link>
         </li>
+        <li>
+          <Link
+            href="/docs/deployment"
+            className={
+              pathname === '/docs/deployment' || pathname.startsWith('/docs/deployment/')
+                ? 'ghc-doc-sidebar-current'
+                : ''
+            }
+          >
+            <span className="ghc-doc-sidebar-icon" aria-hidden="true">▲</span>
+            <span className="ghc-doc-sidebar-path">{t('deployment')}</span>
+          </Link>
+        </li>
       </ul>
     </nav>
   );

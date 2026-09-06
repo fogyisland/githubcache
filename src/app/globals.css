@@ -749,6 +749,55 @@ a {
     border-top-width: calc(var(--border-width-card) * 2);
   }
 
+  /* M26.x — /status page chrome. Banner + dot + small stat grid. Designed
+     to read at a glance: green dot + "All systems operational" is the
+     default; any degraded state flips the banner to amber. The dot uses
+     the same color tokens as ghc-chip-status so dark + light themes
+     stay in sync. */
+  .ghc-status-banner {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    border-radius: var(--radius-card);
+    border: 1px solid var(--color-rule);
+  }
+  .ghc-status-banner-ok {
+    background: color-mix(in srgb, var(--color-ok) 8%, var(--color-surface));
+    border-color: color-mix(in srgb, var(--color-ok) 30%, var(--color-rule));
+  }
+  .ghc-status-banner-degraded {
+    background: color-mix(in srgb, var(--color-warn) 10%, var(--color-surface));
+    border-color: color-mix(in srgb, var(--color-warn) 35%, var(--color-rule));
+  }
+  .ghc-status-banner-label {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--color-ink);
+    line-height: 1.2;
+  }
+  .ghc-status-banner-meta {
+    font-size: 0.75rem;
+    color: var(--color-ink-muted, color-mix(in srgb, var(--color-ink) 65%, transparent));
+    margin-top: 0.15rem;
+  }
+  .ghc-status-dot {
+    flex-shrink: 0;
+    width: 0.85rem;
+    height: 0.85rem;
+    border-radius: 999px;
+    background: var(--color-ok);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-ok) 25%, transparent);
+  }
+  .ghc-status-dot[data-variant="warn"] {
+    background: var(--color-warn);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-warn) 25%, transparent);
+  }
+  .ghc-status-dot[data-variant="danger"] {
+    background: var(--color-danger);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-danger) 25%, transparent);
+  }
+
   /* Brutalist oversized stat — big numerals for stats */
   .ghc-mega-stat {
     font-family: var(--font-mono-active);

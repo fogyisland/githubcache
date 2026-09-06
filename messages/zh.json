@@ -1792,6 +1792,7 @@
       "heading": "API 参考",
       "overview": "概览",
       "development": "开发与贡献",
+      "deployment": "部署与运维",
       "ariaLabel": "文档导航"
     },
     "development": {
@@ -1928,6 +1929,94 @@
       "copyCurl": "复制 curl",
       "copied": "已复制！"
     },
+    "deployment": {
+      "meta": {
+        "title": "部署与运维 · GitHub 元数据缓存",
+        "description": "生产部署指南:环境变量、首次启动、SMTP、GitHub 令牌、加固、发布、监控。"
+      },
+      "eyebrow": "运维",
+      "heading": "部署与运维",
+      "lede": "把 githubcache 从全新 checkout 带到反向代理后的生产实例,所需的全在这里。本地运行细节配合 /docs/development 看。",
+      "prereq": {
+        "heading": "前置条件",
+        "node": "Node.js 20+(与 package.json `engines` 一致)。",
+        "mysql": "MySQL 5.7+(或 8.x)。默认 DATABASE_URL 是本地地址,托管实例请覆盖。",
+        "reverseProxy": "前置反向代理(Caddy / nginx)做 HTTPS 终止。Node 服务本身是 PORT(默认 5002)的纯 HTTP。",
+        "smtp": "一个 SMTP 中继用于邀请、密码重置、注册欢迎、key 审批邮件。未配置 SMTP 时这些流程会跑但用户收不到邮件。"
+      },
+      "env": {
+        "heading": "环境变量",
+        "intro": "所有配置都是环境变量;没有管理界面改运行时配置。最少必填:DATABASE_URL 和 SESSION_SECRET。",
+        "col": {
+          "var": "变量",
+          "required": "必填",
+          "default": "默认值",
+          "notes": "说明"
+        },
+        "notes": {
+          "databaseUrl": "Prisma 格式 URL,例如 `mysql://user:pass@host:3306/githubcache?connection_limit=32`。",
+          "sessionSecret": "随机 ≥32 字符。轮换会让所有活跃 session 失效 —— 跨环境绝不复用。",
+          "port": "自定义服务器(Next + 调度器 + 池)监听此端口。默认 5002 与本地脚本一致。",
+          "nodeEnv": "`production` 启用 Next.js 生产构建并隐藏 /api 错误堆栈。生产环境务必设为 `production`。",
+          "logLevel": "pino 级别。生产用 `info`,本地用 `debug`。",
+          "schedulerTick": "刷新 worker 检查任务的间隔。开发 1s,生产 60s。生产设 1s 有热循环风险。",
+          "schedulerBatch": "每个 tick 最多认领的任务数。默认 5,GitHub 配额允许时可调高。",
+          "publicLookup": "已弃用 —— 保留仅为 env 向后兼容。/api/v1/repos 现在按 key 限流。",
+          "publicRepo": "/api/v1/repos 每 key 每小时上限。默认 50 000(≈14 req/sec 持续)。",
+          "signupRate": "/signup 每 IP 每小时上限。默认 50 000;实例暴露公网时可收紧。",
+          "gitCommit": "在 /api/v1/status 中显示。CI 应从 `$GITHUB_SHA` 设值,运维可据此确认部署的构建。"
+        }
+      },
+      "firstBoot": {
+        "heading": "首次启动",
+        "install": "仅安装生产依赖(镜像里不带 devDependencies)。",
+        "migrate": "无交互地应用 schema 迁移。在应用首次对外服务前运行。",
+        "build": "为生产编译 Next.js 应用(冷启动更快、镜像更小)。",
+        "start": "启动自定义服务器。调度器 + GitHub 令牌池在此初始化;查看 stdout 有无 `listening on port N`。",
+        "note": "迁移作为独立步骤运行(不在应用启动里),这样失败的迁移不会让健康实例挂掉。"
+      },
+      "smtp": {
+        "heading": "SMTP 配置(管理界面 /admin/email)",
+        "intro": "服务用一个 SMTP 凭据处理所有事务邮件(邀请、密码重置、注册欢迎、key 审批、key 申请)。不配置的话,注册和 key 审批流程会跑但用户收不到邮件。",
+        "step1": "用 admin 登录,打开 /admin/email。",
+        "step2": "填 host / port / user / password / from 地址。587 走 STARTTLS,465 走 SMTPS —— 表单可切换 TLS。",
+        "step3": "点「发送测试」确认中继能发出邮件。测试邮件收到后再保存。"
+      },
+      "tokens": {
+        "heading": "GitHub 令牌(管理界面 /admin/github-tokens)",
+        "intro": "至少加 2 个令牌,这样池子在一个撞到 5000 req/hr 上限后能轮换。所有值存 github_tokens 表(M21)—— 不需要 env 配置。",
+        "step1": "在 GitHub → Settings → Developer settings → Personal access tokens 生成细粒度 PAT。用 `public_repo` 权限(要缓存私有仓库用 `repo`)。",
+        "step2": "在 /admin/github-tokens 粘贴令牌、加标签、保存。池子立刻拾起 —— 无需重启。",
+        "step3": "再加一个令牌做冗余。/api/v1/status 端点显示 active + exhausted + total 数量。"
+      },
+      "prod": {
+        "heading": "生产加固",
+        "processManager": "在 systemd / pm2 / k8s pod 下运行。服务捕获 SIGTERM,在调度器排空后干净退出。",
+        "reverseProxy": "前置 Caddy 或 nginx。强制 HTTPS;Node 进程只服务纯 HTTP。",
+        "https": "必须 —— X-API-Key 头不能明文传输。Caddy 自动签发 Let's Encrypt 证书。",
+        "logs": "stdout 接到日志聚合(CloudWatch / Loki / Datadog)。Pino 在生产输出结构化 JSON。",
+        "backups": "MySQL 逻辑备份用 mysqldump(M17 在 /admin/database 提供了「立即备份」按钮)。保留 ≥7 天日备。",
+        "scaling": "目前单进程。Prisma 池已加到 32(src/lib/db/client.ts),100 并发测试可过。要更高并发,跑多个实例共用一个 MySQL。"
+      },
+      "rollout": {
+        "heading": "发布与回滚",
+        "intro": "githubcache 用 Prisma 的 forward-only 迁移。坏的迁移不能自动回滚 —— 先在演练环境跑。",
+        "step1": "打新镜像。GIT_COMMIT 设为新 SHA。",
+        "step2": "在新应用实例启动前,对生产 DB 跑 `npx prisma migrate deploy`。",
+        "step3": "逐个重启应用实例(滚动重启)。每次重启后用 GET /api/v1/status 探活。",
+        "rollback": "回滚 = 重新部署上一个镜像。DB 是 forward-only 的;如果迁移是破坏性的,写一个跟进迁移把 schema 还原。"
+      },
+      "monitor": {
+        "heading": "监控",
+        "intro": "五个面覆盖大部分需要:",
+        "publicStatus": "/status",
+        "publicStatusBody": "公开面板 —— 数据库、调度器、令牌、队列、仓库缓存。刷新页面即更新。",
+        "auditLog": "/admin/audit",
+        "auditBody": "所有特权操作:登录、key 审批、用户禁用等。按 actor / target / 日期过滤。",
+        "queries": "/admin/queries",
+        "queriesBody": "最近的 API 流量,带缓存命中/未命中 + 状态码。用于发现滥用的 key 或上游 GitHub 问题。"
+      }
+    },
     "endpoint": {
       "api-v1-status": {
         "summary": "系统状态 — 数据库、令牌池、队列、仓库数、版本。",
@@ -1975,6 +2064,65 @@
           "429-rate_limit_exceeded": "按密钥的速率桶已耗尽。"
         }
       }
+    }
+  },
+  "status": {
+    "meta": {
+      "title": "服务状态 · GitHub 元数据缓存",
+      "description": "githubcache 服务的实时健康快照:数据库、调度器、GitHub 令牌池、刷新队列、仓库缓存。"
+    },
+    "eyebrow": "服务状态",
+    "heading": "服务运行正常",
+    "subtitle": "githubcache 服务的实时快照,每次页面加载时更新。",
+    "rawJson": "查看原始 JSON",
+    "degraded": "服务降级 — 数据库不可达。",
+    "overallAria": "服务整体状态",
+    "cardsAria": "状态详情卡片",
+    "reposAria": "仓库缓存分布",
+    "overallOk": "所有系统正常",
+    "overallDegraded": "服务降级 — 查看下方卡片",
+    "checkedAt": "检查于 {time}",
+    "db": {
+      "heading": "数据库",
+      "body": "MySQL 连通性。缓存和队列都在这里。",
+      "up": "在线",
+      "down": "离线"
+    },
+    "scheduler": {
+      "heading": "刷新调度器",
+      "running": "运行中",
+      "runningBody": "正在清空刷新队列 — 每个 tick 处理新任务。",
+      "paused": "已暂停",
+      "pausedBody": "刷新任务不在处理。新 /api/v1/repos 调用仍会返回缓存数据,但缓存未命中会入队而不会被清空。"
+    },
+    "tokens": {
+      "heading": "GitHub 令牌",
+      "active": "{count} 个活跃",
+      "exhausted": "已耗尽",
+      "total": "总注册数",
+      "source": "从 github_tokens 表读取(M21)。当某个令牌达到 5000 req/hr 限制时,池会自动轮换。"
+    },
+    "queue": {
+      "heading": "刷新队列",
+      "pending": "{count} 待处理",
+      "inProgress": "处理中",
+      "failed": "失败(24h)",
+      "done24h": "完成(24h)",
+      "empty": "队列已清空"
+    },
+    "repos": {
+      "heading": "仓库缓存",
+      "total": "{count} 个已缓存",
+      "ok": "正常",
+      "notFound": "未找到",
+      "forbidden": "已禁止",
+      "error": "错误 · {pct}%"
+    },
+    "version": {
+      "commit": "构建: {commit}",
+      "startedAt": "进程启动: {time}",
+      "node": "Node: {node}",
+      "refresh": "页面在客户端每 {seconds} 秒自动刷新。"
     }
   },
   "getStarted": {

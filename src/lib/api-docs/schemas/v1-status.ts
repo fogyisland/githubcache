@@ -30,6 +30,11 @@ export const v1StatusSchema = z.object({
     forbidden: z.number().int().describe('Repos that returned 403 from GitHub (private/limited).'),
     error: z.number().int(),
   }),
+  // M26.x — surface the scheduler state so the public /status page can
+  // show whether the refresh worker is actively draining the queue.
+  scheduler: z.object({
+    paused: z.boolean().describe('True if the refresh scheduler is paused (manual or auto). When paused, no refresh jobs are processed.'),
+  }),
   version: z.object({
     commit: z.string().describe('Git SHA of the deployed build, or "unknown".'),
     startedAt: z.string().describe('ISO 8601 timestamp when this process started.'),
@@ -44,6 +49,7 @@ export const v1StatusSample: z.infer<typeof v1StatusSchema> = {
   tokens: { active: 3, exhausted: 0, total: 4, source: 'db' },
   queue: { pending: 0, in_progress: 0, done: 12, failed: 0 },
   repositories: { total: 46, ok: 42, not_found: 3, forbidden: 0, error: 1 },
+  scheduler: { paused: false },
   version: {
     commit: '83ea4cd',
     startedAt: '2026-08-27T12:00:00.000Z',

@@ -1792,6 +1792,7 @@
       "heading": "API Reference",
       "overview": "Overview",
       "development": "Development & contributing",
+      "deployment": "Deployment & operations",
       "ariaLabel": "Documentation sections"
     },
     "development": {
@@ -1928,6 +1929,94 @@
       "copyCurl": "Copy curl",
       "copied": "Copied!"
     },
+    "deployment": {
+      "meta": {
+        "title": "Deployment & operations · GitHub Metadata Cache",
+        "description": "Production deployment guide: env vars, first boot, SMTP, GitHub tokens, hardening, rollouts, monitoring."
+      },
+      "eyebrow": "Operations",
+      "heading": "Deployment & operations",
+      "lede": "Everything you need to take githubcache from a fresh checkout to a production instance behind a reverse proxy. Pair this with /docs/development for local-run details.",
+      "prereq": {
+        "heading": "Prerequisites",
+        "node": "Node.js 20+ (matches package.json `engines`).",
+        "mysql": "MySQL 5.7+ (or 8.x). The default DATABASE_URL is local; override for managed instances.",
+        "reverseProxy": "A reverse proxy in front (Caddy / nginx) for HTTPS termination. The Node server itself is plain HTTP on PORT (default 5002).",
+        "smtp": "An SMTP relay for invite + key approval + welcome emails. The service does NOT send mail in dev if SMTP is unconfigured."
+      },
+      "env": {
+        "heading": "Environment variables",
+        "intro": "All knobs are env vars; there is no admin UI for changing the runtime config. The minimum required are DATABASE_URL and SESSION_SECRET.",
+        "col": {
+          "var": "Variable",
+          "required": "Required",
+          "default": "Default",
+          "notes": "Notes"
+        },
+        "notes": {
+          "databaseUrl": "Prisma-style URL, e.g. `mysql://user:pass@host:3306/githubcache?connection_limit=32`.",
+          "sessionSecret": "Random ≥32 chars. Rotating it logs out every active session — never reuse across environments.",
+          "port": "The custom server (Next + scheduler + pool) listens on this port. Default 5002 to match the local dev scripts.",
+          "nodeEnv": "`production` enables Next.js prod build + drops stack traces from /api errors. Always set to `production` in deploy.",
+          "logLevel": "pino level. `info` for prod, `debug` for local.",
+          "schedulerTick": "How often the refresh worker checks for jobs. 1s in dev, 60s in prod. Lowering it to 1s in prod risks hot loops.",
+          "schedulerBatch": "Max jobs claimed per tick. Default 5; raise if GitHub rate budget allows.",
+          "publicLookup": "DEPRECATED — kept for env-var back-compat. /api/v1/repos is now per-key.",
+          "publicRepo": "Per-API-key hourly ceiling for /api/v1/repos. Default 50 000 (≈14 req/sec sustained).",
+          "signupRate": "Per-IP hourly ceiling for /signup. Default 50 000; tighten if the instance is exposed to the open internet.",
+          "gitCommit": "Surfaces in /api/v1/status. CI should set this from `$GITHUB_SHA` so operators can confirm the deployed build."
+        }
+      },
+      "firstBoot": {
+        "heading": "First boot",
+        "install": "install production dependencies only (no devDependencies in the image).",
+        "migrate": "apply schema migrations without prompts. Run before the app first starts serving.",
+        "build": "compile the Next.js app for prod (faster cold start, smaller images).",
+        "start": "launch the custom server. The scheduler + GitHub token pool initialize here; check stdout for `listening on port N`.",
+        "note": "Run migrations as a separate step (not inside the app's startup) so a crashed migration doesn't take down a healthy instance."
+      },
+      "smtp": {
+        "heading": "SMTP setup (admin UI at /admin/email)",
+        "intro": "The service uses one SMTP credential for all transactional mail (invite, password reset, signup welcome, key approval, key request). Without it, signup + key approval flows run but the user never gets the email.",
+        "step1": "Sign in as admin. Open /admin/email.",
+        "step2": "Enter host / port / user / password / from address. Use STARTTLS on 587 or SMTPS on 465 — the form toggles TLS.",
+        "step3": "Click \"Send test\" to confirm the relay accepts mail. Save only after the test arrives."
+      },
+      "tokens": {
+        "heading": "GitHub tokens (admin UI at /admin/github-tokens)",
+        "intro": "Add at least 2 tokens so the pool can rotate when one hits its 5000 req/hr cap. All values are stored in the github_tokens table (M21) — no env-var config required.",
+        "step1": "Generate a fine-scoped PAT in GitHub → Settings → Developer settings → Personal access tokens. Use the `public_repo` scope (or `repo` if you'll cache private repos).",
+        "step2": "In /admin/github-tokens, paste the token, add a label, save. The pool picks it up immediately — no restart.",
+        "step3": "Add a second token so the pool has redundancy. The /api/v1/status endpoint shows the active + exhausted + total counts."
+      },
+      "prod": {
+        "heading": "Production hardening",
+        "processManager": "Run under systemd / pm2 / a k8s pod. The server traps SIGTERM and exits cleanly after scheduler drains.",
+        "reverseProxy": "Caddy or nginx in front. Force HTTPS; the Node process serves plain HTTP only.",
+        "https": "Required — the X-API-Key header must not travel over cleartext. Caddy auto-issues Let's Encrypt certs.",
+        "logs": "Pipe stdout to your log aggregator (CloudWatch, Loki, Datadog). Pino emits structured JSON in prod.",
+        "backups": "MySQL logical backups via mysqldump (M17 ships the `Backup now` button at /admin/database). Keep ≥7 days of daily backups.",
+        "scaling": "Single-process today. The Prisma pool is bumped to 32 (src/lib/db/client.ts) so 100-concurrent tests pass. For higher concurrency, run multiple instances behind a shared MySQL."
+      },
+      "rollout": {
+        "heading": "Rollouts & rollbacks",
+        "intro": "githubcache uses forward-only Prisma migrations. A bad migration can't be auto-rolled-back — rehearse in staging.",
+        "step1": "Build a new image. Set GIT_COMMIT to the new SHA.",
+        "step2": "Run `npx prisma migrate deploy` against the production DB BEFORE starting new app instances.",
+        "step3": "Restart app instances one at a time (rolling restart). Health-check via GET /api/v1/status between restarts.",
+        "rollback": "Rollback = redeploy the previous image. The DB is forward-only; if a migration is destructive, write a follow-up migration that restores the schema."
+      },
+      "monitor": {
+        "heading": "Monitoring",
+        "intro": "Five surfaces cover most of what you need:",
+        "publicStatus": "/status",
+        "publicStatusBody": "public dashboard — DB, scheduler, tokens, queue, repo cache. Update the page to refresh.",
+        "auditLog": "/admin/audit",
+        "auditBody": "every privileged action: login, key approval, user disable, etc. Filter by actor / target / date.",
+        "queries": "/admin/queries",
+        "queriesBody": "recent API traffic with cache hit/miss + status code. Useful for spotting abusive keys or upstream GitHub issues."
+      }
+    },
     "endpoint": {
       "api-v1-status": {
         "summary": "System status — DB, token pool, queue, repository counts, version.",
@@ -1975,6 +2064,65 @@
           "429-rate_limit_exceeded": "Per-key bucket exhausted."
         }
       }
+    }
+  },
+  "status": {
+    "meta": {
+      "title": "Service status · GitHub Metadata Cache",
+      "description": "Live health snapshot of the githubcache service: DB, scheduler, GitHub token pool, refresh queue, and repository cache."
+    },
+    "eyebrow": "Service status",
+    "heading": "Service is running normally",
+    "subtitle": "Live snapshot of the githubcache service. Updated on every page load.",
+    "rawJson": "View raw JSON",
+    "degraded": "Service degraded — database is unreachable.",
+    "overallAria": "Overall service state",
+    "cardsAria": "Status detail cards",
+    "reposAria": "Repository cache breakdown",
+    "overallOk": "All systems operational",
+    "overallDegraded": "Service degraded — see cards below",
+    "checkedAt": "Checked {time}",
+    "db": {
+      "heading": "Database",
+      "body": "MySQL connectivity. The cache and queue live here.",
+      "up": "online",
+      "down": "offline"
+    },
+    "scheduler": {
+      "heading": "Refresh scheduler",
+      "running": "running",
+      "runningBody": "Draining the refresh queue — new jobs are picked up every tick.",
+      "paused": "paused",
+      "pausedBody": "Refresh jobs are NOT being processed. New /api/v1/repos calls will still return cached data, but cache misses queue without draining."
+    },
+    "tokens": {
+      "heading": "GitHub tokens",
+      "active": "{count, plural, one {# active} other {# active}}",
+      "exhausted": "exhausted",
+      "total": "total registered",
+      "source": "Read from the github_tokens table (M21). The pool rotates automatically when one hits its 5000 req/hr limit."
+    },
+    "queue": {
+      "heading": "Refresh queue",
+      "pending": "{count} pending",
+      "inProgress": "in progress",
+      "failed": "failed (24h)",
+      "done24h": "done (24h)",
+      "empty": "queue drained"
+    },
+    "repos": {
+      "heading": "Repository cache",
+      "total": "{count} total cached",
+      "ok": "ok",
+      "notFound": "not found",
+      "forbidden": "forbidden",
+      "error": "error · {pct}%"
+    },
+    "version": {
+      "commit": "Build: {commit}",
+      "startedAt": "Process started: {time}",
+      "node": "Node: {node}",
+      "refresh": "Page auto-refreshes every {seconds}s on the client."
     }
   },
   "getStarted": {

@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db/client';
 import { poolSize } from '@/lib/github/pool';
+import { isPaused } from '@/lib/scheduler/state';
 import type { z } from 'zod';
 import type { v1StatusSchema } from './schemas/v1-status';
 
@@ -72,6 +73,9 @@ export async function collectV1Status(): Promise<V1Status | null> {
       not_found: repoCount('not_found'),
       forbidden: repoCount('forbidden'),
       error: repoCount('error'),
+    },
+    scheduler: {
+      paused: isPaused(),
     },
     version: {
       commit: process.env.GIT_COMMIT ?? 'unknown',
