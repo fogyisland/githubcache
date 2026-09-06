@@ -1534,7 +1534,7 @@
       "steps": {
         "submit": {
           "title": "You submit owner/repo",
-          "body": "A simple form on the homepage, or a single GET to /api/v1/repos/{owner}/{name} from anywhere."
+          "body": "A simple form on the homepage, or a single GET to /api/v1/repos/:owner/:name from anywhere."
         },
         "cacheOrFetch": {
           "title": "Cache hit or live fetch",
@@ -1976,26 +1976,33 @@
   },
   "getStarted": {
     "eyebrow": "Quickstart",
-    "title": "Use the API in 4 steps",
-    "lede": "githubcache is a cache for GitHub repository metadata. This page walks you through getting an account, requesting an API key, and making your first call.",
+    "title": "From sign-up to your first API call in 4 steps",
+    "lede": "githubcache is a cache for GitHub repository metadata. Self-signup is open — you create your own account, request a key, and an admin reviews it. This page walks you through the whole path.",
+    "meta": {
+      "title": "Quickstart · GitHub Metadata Cache",
+      "description": "Sign up, request an API key, get approved, and make your first call in four steps."
+    },
     "step1": {
-      "heading": "Ask an admin for an account",
-      "body": "githubcache is admin-mediated — there is no public signup. Ask your admin to invite you at `/admin/users`. You'll receive an invitation link like `/request-access?invitation=xxx` to set your password.",
-      "calloutLabel": "note",
-      "calloutBody": "Already have an invite link? Open it, set a password, and you're in. If you don't know who the admin is, ask the person who told you about githubcache."
+      "heading": "Create an account at /signup",
+      "body": "Open /signup, enter an email + password (≥8 chars) and an optional display name. The account is created immediately — no email verification, no waiting on an admin. You land in /account as a signed-in operator.",
+      "action1": "Open /signup.",
+      "action2": "Fill in email, password, optional display name.",
+      "action3": "Submit. You're auto-logged-in and redirected to /account.",
+      "cta": "Create an account →"
     },
     "step2": {
-      "heading": "Request an API key",
-      "body": "Once logged in, request a key from the API keys page:",
-      "action1": "Log in at `/login`.",
-      "action2": "Open `/admin/api-keys` and click Request.",
-      "action3": "The key appears in your list with status `pending`."
+      "heading": "Request an API key from /account/keys/request",
+      "body": "From your account dashboard, open the API keys page and click \"Request a new key\". Give the key a short name (e.g. `ci-pipeline`) and an optional description of what you'll use it for. The request is created with status `pending` and a self-requested prefix (`ghc_usr_…`) so admins can spot user-initiated requests at a glance.",
+      "action1": "In /account, click \"Request a new API key\".",
+      "action2": "Enter a name + optional description and submit.",
+      "action3": "The new key appears in your list with status `pending`.",
+      "cta": "Request a key →"
     },
     "step3": {
-      "heading": "Wait for admin approval",
-      "body": "An admin reviews your request and approves it. They open `/admin/api-keys/[id]` and click Approve.",
+      "heading": "Wait for an admin to approve",
+      "body": "An admin receives a `key-requested` email (subject: `<your-email> requested an API key on <site>`) with a deep link straight to /admin/api-keys/[id]. They open the key detail page, click Approve, and the system generates the plaintext token.",
       "calloutLabel": "warning",
-      "calloutBody": "The plaintext token is shown ONCE — copy it the moment it appears. githubcache cannot recover it later. If SMTP is configured, it's also emailed to you."
+      "calloutBody": "The plaintext token is shown ONCE — copy it the moment it appears. githubcache cannot recover it later. If SMTP is configured, the same token is also emailed to you."
     },
     "step4": {
       "heading": "Make your first call",
@@ -2025,6 +2032,8 @@
       "apiRefBody": "every endpoint, every error code, sample responses",
       "devGuide": "Development & contributing guide",
       "devGuideBody": "run locally, fork, send a PR",
+      "yourKeys": "Your API keys",
+      "yourKeysBody": "the /account/keys list — revoke, inspect status, or copy the active key",
       "specBody": "machine-readable JSON spec for client codegen"
     }
   }

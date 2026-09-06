@@ -3045,6 +3045,18 @@ a {
 }
 .ghc-getstarted-callout p { margin: 0; color: var(--color-ink); }
 
+/* CTA row — wraps a single button (e.g. step 1's "Create account" link)
+   so it sits visually separate from the body copy + sublist above it. */
+.ghc-getstarted-cta-row {
+  margin-top: 1rem;
+  margin-bottom: 0;
+}
+.ghc-getstarted-cta-row .ghc-btn-primary,
+.ghc-getstarted-cta-row .ghc-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+}
+
 /* Example sub-heading inside step 4 ("no auth required" etc.) */
 .ghc-getstarted-example-heading {
   font-family: var(--font-mono);

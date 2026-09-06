@@ -24,32 +24,35 @@ const getStartedDict = flattenDict({
   title: 'Use the API in 4 steps',
   lede: 'githubcache is a cache for GitHub repository metadata.',
   step1: {
-    heading: 'Ask an admin for an account',
-    body: 'Self-signup is not available.',
-    calloutLabel: 'note',
-    calloutBody: 'Already have an invite link? Open it.',
+    heading: 'Create an account',
+    body: 'Public signup is open. Email + password.',
+    action1: 'Open /signup.',
+    action2: 'Enter email + password.',
+    action3: 'You are auto-logged in to /account.',
+    cta: 'Go to /signup →',
   },
   step2: {
     heading: 'Request an API key',
-    body: 'After logging in.',
-    action1: 'Log in at /login.',
-    action2: 'Open /admin/api-keys.',
-    action3: 'Click Request.',
+    body: 'Logged-in users request their own keys from /account.',
+    action1: 'Open /account/keys.',
+    action2: 'Click Request a key.',
+    action3: 'Wait for admin approval.',
+    cta: 'Go to /account/keys/request →',
   },
   step3: {
     heading: 'Wait for admin approval',
-    body: 'Admin reviews your request.',
+    body: 'Admin reviews your request and approves it.',
     calloutLabel: 'warning',
-    calloutBody: 'Token is shown once.',
+    calloutBody: 'The plaintext token is shown ONCE — copy it the moment it appears.',
   },
   step4: {
     heading: 'Make your first call',
     body: 'Three examples.',
-    example1Heading: 'no auth — sanity check',
+    example1Heading: 'no auth required — sanity check',
     example1Body: 'Status endpoint.',
-    example2Heading: 'no auth — single repo',
+    example2Heading: 'no auth required — single repo',
     example2Body: 'Public read.',
-    example3Heading: 'auth — batch',
+    example3Heading: 'auth required — batch',
     example3Body: 'Authenticated.',
     errorsHeading: 'common error codes',
     errorCol: { code: 'code', status: 'http', meaning: 'meaning' },
@@ -64,8 +67,10 @@ const getStartedDict = flattenDict({
     heading: 'Deeper reading',
     apiRef: 'API reference',
     apiRefBody: 'every endpoint',
-    devGuide: 'Dev guide',
+    devGuide: 'Development & contributing guide',
     devGuideBody: 'fork, run, PR',
+    yourKeys: 'Your API keys',
+    yourKeysBody: 'manage + revoke at /account/keys',
     specBody: 'machine-readable JSON',
   },
 });
@@ -119,7 +124,7 @@ describe('GetStartedPage — Wulan-aligned step cards', () => {
   it('renders all 4 step headings in order', async () => {
     const html = renderToStaticMarkup(await GetStartedPage());
     const headings = [
-      'Ask an admin for an account',
+      'Create an account',
       'Request an API key',
       'Wait for admin approval',
       'Make your first call',
@@ -136,18 +141,17 @@ describe('GetStartedPage — Wulan-aligned step cards', () => {
   it('renders step 2 sublist with counter-reset items', async () => {
     const html = renderToStaticMarkup(await GetStartedPage());
     expect(html).toContain('ghc-getstarted-sublist');
-    expect(html).toContain('Log in at /login');
-    expect(html).toContain('Open /admin/api-keys');
-    expect(html).toContain('Click Request');
+    expect(html).toContain('Open /account/keys');
+    expect(html).toContain('Click Request a key');
+    expect(html).toContain('Wait for admin approval');
   });
 
-  it('renders step 1 + step 3 callouts with mono uppercase labels', async () => {
+  it('renders step 3 callout with mono uppercase label', async () => {
     const html = renderToStaticMarkup(await GetStartedPage());
     expect(html).toContain('ghc-getstarted-callout');
-    // calloutLabel keys render uppercase via CSS (text-transform), but the
-    // mock just returns the literal — assert the literals are present.
+    // calloutLabel renders uppercase via CSS (text-transform); mock returns
+    // the literal — assert the label structure + content.
     expect(html).toContain('ghc-getstarted-callout-label');
-    expect(html).toContain('>note<');
     expect(html).toContain('>warning<');
   });
 

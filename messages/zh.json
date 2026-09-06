@@ -1534,7 +1534,7 @@
       "steps": {
         "submit": {
           "title": "提交 owner/repo",
-          "body": "首页表单,或任意位置对 /api/v1/repos/{owner}/{name} 发起一次 GET。"
+          "body": "首页表单,或任意位置对 /api/v1/repos/:owner/:name 发起一次 GET。"
         },
         "cacheOrFetch": {
           "title": "命中缓存或实时拉取",
@@ -1977,35 +1977,42 @@
   "getStarted": {
     "eyebrow": "快速开始",
     "title": "4 步开始使用 API",
-    "lede": "githubcache 是 GitHub 仓库元数据缓存服务。本页演示如何申请账号、获取 API key 并发起首次调用。",
+    "lede": "githubcache 是 GitHub 仓库元数据缓存服务。注册开放 — 你自助创建账号、申请 key，管理员审核后即可调用。本页演示完整路径。",
+    "meta": {
+      "title": "快速开始 · GitHub 元数据缓存",
+      "description": "四步搞定账号、API key 申请与首次调用。"
+    },
     "step1": {
-      "heading": "让管理员开账号",
-      "body": "githubcache 由管理员开通账号，没有公开注册。请管理员在 `/admin/users` 发邀请。收到形如 `/request-access?invitation=xxx` 的链接后设置密码。",
-      "calloutLabel": "提示",
-      "calloutBody": "已经有邀请链接？打开它、设置密码即可登录。如果不知道管理员是谁，去问那个告诉你 githubcache 的人。"
+      "heading": "在 /signup 创建账号",
+      "body": "打开 /signup，填入邮箱 + 密码（≥8 个字符）+ 可选的显示名。账号立即生效 — 无需邮件验证，无需等管理员。提交后自动登录并跳转到 /account。",
+      "action1": "打开 /signup。",
+      "action2": "填写邮箱、密码、可选显示名。",
+      "action3": "提交，自动登录并跳转到 /account。",
+      "cta": "去创建账号 →"
     },
     "step2": {
-      "heading": "申请 API key",
-      "body": "登录后到 API keys 页面申请：",
-      "action1": "在 `/login` 登录。",
-      "action2": "打开 `/admin/api-keys` 点击 Request。",
-      "action3": "key 出现在你的列表里，状态是 `pending`。"
+      "heading": "在 /account/keys/request 申请 API key",
+      "body": "在个人中心打开 API key 页面，点击「Request a new key」。给 key 起一个简短名字（如 `ci-pipeline`），可加一段说明描述用途。申请创建后状态为 `pending`，key 前缀为 `ghc_usr_…` 标识用户自助申请（管理员可一眼区分）。",
+      "action1": "在 /account 中点击「Request a new API key」。",
+      "action2": "填入名称 + 可选说明，提交。",
+      "action3": "新 key 出现在列表里，状态为 `pending`。",
+      "cta": "去申请 key →"
     },
     "step3": {
-      "heading": "等待管理员批准",
-      "body": "管理员审阅你的请求并批准。他们打开 `/admin/api-keys/[id]` 点 Approve。",
+      "heading": "等待管理员审批",
+      "body": "管理员会收到一封 `key-requested` 邮件（主题：`<你的邮箱> requested an API key on <站点名>`），里面带直接跳转到 /admin/api-keys/[id] 的链接。管理员打开详情页，点击 Approve，系统生成明文 token。",
       "calloutLabel": "警告",
-      "calloutBody": "明文 token 仅显示一次 —— 出现的瞬间请立即复制。githubcache 之后无法找回。如果配置了 SMTP，也会发邮件给你。"
+      "calloutBody": "明文 token 只显示一次 — 出现后立刻复制。系统无法恢复。如果配置了 SMTP，token 也会同时发到你的邮箱。"
     },
     "step4": {
       "heading": "发起首次调用",
-      "body": "三个示例，从无认证到批量认证。复制粘贴即可，把 `YOUR_KEY_HERE` 换成第 3 步拿到的 token。",
-      "example1Heading": "无需认证 —— 健康检查",
-      "example1Body": "状态端点确认服务在线，并报告缓存统计。",
-      "example2Heading": "无需认证 —— 获取单个仓库",
-      "example2Body": "公开读取单个仓库缓存。缓存未命中会排队 refresh 并同步等待。",
-      "example3Heading": "需要认证 —— 批量最多 50 个",
-      "example3Body": "认证批量查询。把 key 放在 `X-API-Key` 头里，body 里最多 50 个 owner/name 对。",
+      "body": "从无认证到认证批量的三个例子。复制粘贴，把 `YOUR_KEY_HERE` 替换为第 3 步拿到的 token。",
+      "example1Heading": "无需认证 — 健康检查",
+      "example1Body": "Status 接口确认服务在线，返回缓存统计。",
+      "example2Heading": "无需认证 — 拉取单个仓库",
+      "example2Body": "公开读取单个仓库的缓存。缓存未命中会排队刷新并同步等待。",
+      "example3Heading": "需认证 — 批量最多 50",
+      "example3Body": "认证批量查询。把 key 放在 `X-API-Key` 头，body 里传最多 50 个 owner/name 对。",
       "errorsHeading": "常见错误码",
       "errorCol": {
         "code": "code",
@@ -2015,7 +2022,7 @@
       "errors": {
         "unauthorized": "缺少 `X-API-Key` 头。",
         "forbidden": "key 无效、已撤销，或账号被禁用。",
-        "rate_limited": "按 key 或按 IP 的桶耗尽 —— 等 `Retry-After` 秒。",
+        "rate_limited": "按 key 或按 IP 的桶耗尽 — 等 `Retry-After` 秒。",
         "not_found": "GitHub 上仓库不存在（或私有）。"
       }
     },
@@ -2025,6 +2032,8 @@
       "apiRefBody": "每个端点、每个错误码、示例响应",
       "devGuide": "开发与贡献指南",
       "devGuideBody": "本地运行、fork、提 PR",
+      "yourKeys": "我的 API key",
+      "yourKeysBody": "/account/keys 列表 — 撤销、查看状态、复制当前 key",
       "specBody": "机器可读 JSON 规格，供客户端代码生成"
     }
   }
