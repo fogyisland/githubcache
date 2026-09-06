@@ -6,16 +6,21 @@ import { prisma } from '@/lib/db/client';
  * matching count so callers can render pagination controls. M14.2
  * replaced the unbounded `listUsers()` shape — callers that need the
  * full list (e.g. session-all enumeration) should set a high `take`.
+ *
+ * M26 — accepts an optional `signupSource` filter so /admin/users can
+ * split self-signups from admin-invites.
  */
 export async function listUsers(opts: {
   role?: 'admin' | 'operator';
   status?: 'active' | 'disabled';
+  signupSource?: 'invited' | 'self';
   skip: number;
   take: number;
 }): Promise<{ rows: User[]; total: number }> {
   const where: Prisma.UserWhereInput = {};
   if (opts.role) where.role = opts.role;
   if (opts.status) where.status = opts.status;
+  if (opts.signupSource) where.signupSource = opts.signupSource;
   const [rows, total] = await Promise.all([
     prisma.user.findMany({
       where,

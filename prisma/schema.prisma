@@ -48,7 +48,13 @@ model User {
   // value needed at user creation). Existing rows are backfilled via the
   // migration's DEFAULT clause to 'Asia/Shanghai' — matches the original
   // operator locale and means no operator sees a TZ jump after deploy.
-  timezone     String?      @db.VarChar(64) @map("timezone")
+  timezone       String?        @db.VarChar(64) @map("timezone")
+  // M26 — how the account was created. `self` = public /signup flow;
+  // `invited` = came in through /admin/users/invite and consumed the
+  // invite token. Defaults to `self` so the schema-level default matches
+  // the new public path; the invite-accept path writes `invited`
+  // explicitly. Used by the admin users page to surface the source.
+  signupSource   SignupSource   @default(self) @map("signup_source")
 
   apiKeys      ApiKey[]     @relation("owner")
   approvedKeys ApiKey[]     @relation("approver")
@@ -66,6 +72,15 @@ enum Role {
 enum UserStatus {
   active
   disabled
+}
+
+// M26 — tracks how a user account was created. `invited` users were
+// created by an admin via /admin/users/invite (and consumed the invite
+// token); `self` users created their own account via the public /signup
+// page. Admins can filter / see the source from /admin/users.
+enum SignupSource {
+  invited
+  self
 }
 
 // Visual theme preference for the public surface. Persisted on User; also

@@ -19,12 +19,13 @@ const PAGE_SIZE_DEFAULT = 25;
 const PAGE_SIZE_MAX = 200;
 
 /**
- * Admin → Users page (M7.1, M11.10 rewrite, M13.4 i18n, M14.2 pagination).
+ * Admin → Users page (M7.1, M11.10 rewrite, M13.4 i18n, M14.2 pagination, M26 signupSource).
  *
  * Three sections:
  *   1. Invite a user (client component)
- *   2. Existing users — AdminTable with role/status chips + filter bar +
- *      pagination (M14.2)
+ *   2. Existing users — AdminTable with role/status/source chips + filter bar +
+ *      pagination (M14.2). M26 adds the `signupSource` column + filter so
+ *      admins can split self-signups from invitees.
  *   3. Pending invitations — separate AdminTable with invite links (no
  *      pagination — typically <10 rows)
  *
@@ -34,7 +35,7 @@ const PAGE_SIZE_MAX = 200;
 export default async function AdminUsersPage({
   searchParams,
 }: {
-  searchParams: { role?: string; status?: string; limit?: string; offset?: string };
+  searchParams: { role?: string; status?: string; source?: string; limit?: string; offset?: string };
 }): Promise<ReactElement> {
   const cookieStore = cookies();
   const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
@@ -60,6 +61,9 @@ export default async function AdminUsersPage({
   const filterStatus = searchParams.status === 'active' || searchParams.status === 'disabled'
     ? searchParams.status
     : undefined;
+  const filterSource = searchParams.source === 'invited' || searchParams.source === 'self'
+    ? searchParams.source
+    : undefined;
 
   const rawLimit = Number(searchParams.limit ?? PAGE_SIZE_DEFAULT);
   const rawOffset = Number(searchParams.offset ?? 0);
@@ -71,6 +75,7 @@ export default async function AdminUsersPage({
   const { rows: filteredUsers, total: totalUsers } = await listUsers({
     ...(filterRole ? { role: filterRole } : {}),
     ...(filterStatus ? { status: filterStatus } : {}),
+    ...(filterSource ? { signupSource: filterSource } : {}),
     skip: offset,
     take: limit,
   });
@@ -94,6 +99,15 @@ export default async function AdminUsersPage({
       render: (u) => (
         <AdminStatusChip variant={u.status === 'active' ? 'ok' : 'warn'}>
           {t(`status.${u.status}` as 'status.active' | 'status.disabled')}
+        </AdminStatusChip>
+      ),
+    },
+    {
+      key: 'signupSource',
+      header: t('list.column.signupSource'),
+      render: (u) => (
+        <AdminStatusChip variant={u.signupSource === 'invited' ? 'info' : 'neutral'}>
+          {t(`signupSource.${u.signupSource}` as 'signupSource.invited' | 'signupSource.self')}
         </AdminStatusChip>
       ),
     },
@@ -149,11 +163,20 @@ export default async function AdminUsersPage({
                 { value: 'disabled', label: t('status.disabled') },
               ],
             },
+            {
+              name: 'source',
+              label: t('list.filter.source'),
+              options: [
+                { value: 'invited', label: t('signupSource.invited') },
+                { value: 'self', label: t('signupSource.self') },
+              ],
+            },
           ]}
           basePath="/admin/users"
           values={{
             ...(filterRole ? { role: filterRole } : {}),
             ...(filterStatus ? { status: filterStatus } : {}),
+            ...(filterSource ? { source: filterSource } : {}),
           }}
         />
         <AdminTable<User>
@@ -178,6 +201,7 @@ export default async function AdminUsersPage({
           extraSearch={{
             ...(filterRole ? { role: filterRole } : {}),
             ...(filterStatus ? { status: filterStatus } : {}),
+            ...(filterSource ? { source: filterSource } : {}),
           }}
         />
       </section>

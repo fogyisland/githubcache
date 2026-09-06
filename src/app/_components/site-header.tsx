@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { getTranslations } from 'next-intl/server';
 import { ThemeSwitcher } from '@/app/_components/theme-switcher';
 import { LangSwitcher } from '@/app/_components/lang-switcher';
@@ -7,6 +7,7 @@ import { readThemeFromCookieHeader } from '@/lib/theme/cookie';
 import { readLangFromCookieHeader } from '@/lib/lang/cookie';
 import { resolveLocale, LOCALES } from '@/lib/lang/registry';
 import { SITE_NAME } from '@/lib/config/site';
+import { validateSession } from '@/lib/auth/session';
 
 /**
  * Top navigation bar. Sticky, theme-aware, with brand logo on the left,
@@ -15,6 +16,12 @@ import { SITE_NAME } from '@/lib/config/site';
  * Pure server component: reads the cookie via next/headers and passes the
  * current theme id down to the (client) ThemeSwitcher so it can render the
  * active pill, and the current locale to the (client) LangSwitcher.
+ *
+ * M26 — the rightmost nav link switches based on session: anon visitors
+ * see "Log in" (linking to /login); signed-in users see "My account"
+ * (linking to /account). The session check is a cookie-presence-only
+ * lookup via validateSession — the DB hit is fine on a static-header
+ * render and we avoid the complexity of a middleware-based redirect here.
  */
 export async function SiteHeader() {
   const headerStore = headers();
@@ -25,6 +32,22 @@ export async function SiteHeader() {
     acceptLanguage: headerStore.get('accept-language'),
   });
   const t = await getTranslations('nav');
+
+  // M26 — anon vs signed-in nav target. Cookie lookup is cheap; the DB
+  // roundtrip happens inside validateSession and is bounded by the
+  // Next.js per-request cache.
+  const cookieStore = cookies();
+  const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
+  const session = await validateSession({
+    headers: new Headers(),
+    cookies: {
+      get: (name: string) =>
+        cookieMap[name] !== undefined ? { value: cookieMap[name]! } : undefined,
+    },
+  });
+  const accountHref = session ? '/account' : '/login';
+  const accountLabel = session ? t('account') : t('login');
+  const accountAria = session ? t('accountAria') : t('adminAria');
 
   return (
     <header className="ghc-site-header sticky top-0 z-40">
@@ -54,8 +77,8 @@ export async function SiteHeader() {
           <Link href="/api/v1/status" className="ghc-header-util-link" aria-label={t('statusAria')}>
             {t('status')}
           </Link>
-          <Link href="/login" className="ghc-header-util-link" aria-label={t('adminAria')}>
-            {t('admin')}
+          <Link href={accountHref} className="ghc-header-util-link" aria-label={accountAria}>
+            {accountLabel}
           </Link>
         </nav>
       </div>

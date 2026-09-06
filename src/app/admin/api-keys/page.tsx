@@ -65,7 +65,27 @@ export default async function AdminApiKeysPage({
     {
       key: 'prefix',
       header: t('list.column.prefix'),
-      render: (k) => <code className="ghc-admin-mono">{k.keyPrefix}…</code>,
+      render: (k) => (
+        <span style={{ display: 'inline-flex', gap: '0.4rem', alignItems: 'center' }}>
+          <code className="ghc-admin-mono">{k.keyPrefix}…</code>
+          {k.keyPrefix.startsWith('ghc_usr_') && (
+            <span
+              className="ghc-admin-chip"
+              style={{
+                fontSize: '0.65rem',
+                padding: '0.1rem 0.4rem',
+                borderRadius: '999px',
+                background: 'var(--color-info-soft)',
+                color: 'var(--color-info)',
+                fontWeight: 600,
+              }}
+              title="Requested by the operator from /account/keys/request"
+            >
+              {t('list.userRequested')}
+            </span>
+          )}
+        </span>
+      ),
     },
     { key: 'owner', header: t('list.column.owner'), render: (k) => k.user.email },
     {

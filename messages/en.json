@@ -59,8 +59,10 @@
     "apiGuide": "API Guide",
     "login": "Log in",
     "logout": "Log out",
+    "account": "My account",
     "statusAria": "System status JSON",
-    "adminAria": "Admin login"
+    "adminAria": "Admin login",
+    "accountAria": "My account"
   },
   "theme": {
     "aria": "Theme",
@@ -171,6 +173,10 @@
         "disabled": "disabled",
         "pending": "pending"
       },
+      "signupSource": {
+        "invited": "invited",
+        "self": "self-signup"
+      },
       "list": {
         "inviteHeading": "Invite a user",
         "existingHeading": "Existing users",
@@ -180,12 +186,14 @@
         "pendingAriaLabel": "Pending invitations",
         "filter": {
           "role": "Role",
-          "status": "Status"
+          "status": "Status",
+          "source": "Signed up via"
         },
         "column": {
           "email": "Email",
           "role": "Role",
           "status": "Status",
+          "signupSource": "Signed up via",
           "lastLogin": "Last login",
           "created": "Created",
           "invitedBy": "Invited by",
@@ -294,6 +302,7 @@
       "list": {
         "ariaLabel": "API keys",
         "never": "never",
+        "userRequested": "user-requested",
         "filter": {
           "status": "Status"
         },
@@ -1253,6 +1262,176 @@
         "too_many_attempts": "Too many login attempts. Try again in {seconds} seconds.",
         "invalid_credentials": "Email or password is incorrect.",
         "account_disabled": "Your account has been disabled. Contact an administrator."
+      }
+    }
+  },
+  "signup": {
+    "eyebrow": "github metadata cache",
+    "title": "Create an account",
+    "subtitle": "Self-signup is open. Sign up to request API keys.",
+    "backToHome": "← Back to home",
+    "haveAccount": "Already have an account? Sign in →",
+    "email": {
+      "label": "Email",
+      "placeholder": "you@example.com",
+      "error": {
+        "invalid": "Enter a valid email address."
+      }
+    },
+    "password": {
+      "label": "Password",
+      "help": "≥8 chars",
+      "error": {
+        "tooShort": "Password must be at least 8 characters."
+      }
+    },
+    "passwordConfirm": {
+      "label": "Confirm password",
+      "error": {
+        "mismatch": "Passwords do not match."
+      }
+    },
+    "name": {
+      "label": "Display name (optional)",
+      "placeholder": "Jane Operator",
+      "help": "Optional, shown in audit logs."
+    },
+    "submit": "Create account",
+    "submitting": "Creating account…",
+    "success": "Welcome — redirecting to your account…",
+    "error": {
+      "duplicate": "An account with that email already exists.",
+      "rateLimited": "Too many signup attempts from your IP. Try again later.",
+      "generic": "Something went wrong. Please try again."
+    }
+  },
+  "account": {
+    "layout": {
+      "eyebrow": "your account",
+      "title": "Account"
+    },
+    "logout": {
+      "label": "Log out",
+      "loggingOut": "Logging out…",
+      "error": "Could not log out. Please try again."
+    },
+    "sidebar": {
+      "aria": "Account sections",
+      "items": {
+        "overview": "Overview",
+        "keys": "API keys",
+        "password": "Change password",
+        "preferences": "Preferences"
+      }
+    },
+    "overview": {
+      "welcome": "Welcome, {email}",
+      "subtitle": "Manage your API keys and account preferences from here.",
+      "profileHeading": "Account profile",
+      "role": {
+        "admin": "admin",
+        "operator": "operator"
+      },
+      "status": {
+        "active": "active",
+        "disabled": "disabled"
+      },
+      "tiles": {
+        "role": "Role",
+        "status": "Status",
+        "memberSince": "Member since",
+        "apiKeys": "API keys",
+        "lang": "Language",
+        "theme": "Theme",
+        "timezone": "Timezone",
+        "defaultTz": "default (Asia/Shanghai)"
+      },
+      "cta": {
+        "title": "Need API access?",
+        "body": "Request a new API key — an administrator will review it.",
+        "button": "Request a new API key"
+      }
+    },
+    "keys": {
+      "heading": "Your API keys",
+      "requestButton": "Request a new key",
+      "empty": "No API keys yet. Request one →",
+      "filterAria": "Filter by status",
+      "dash": "—",
+      "never": "never",
+      "columns": {
+        "name": "Name",
+        "prefix": "Prefix",
+        "status": "Status",
+        "created": "Created",
+        "approved": "Approved",
+        "lastUsed": "Last used",
+        "error": "Error"
+      },
+      "status": {
+        "all": "all",
+        "pending": "pending",
+        "active": "active",
+        "revoked": "revoked"
+      },
+      "request": {
+        "title": "Request an API key",
+        "body": "Tell us what you'll use this key for. An administrator will review your request.",
+        "nameLabel": "Key name",
+        "namePlaceholder": "e.g. my-ml-pipeline",
+        "descriptionLabel": "Description (optional)",
+        "descriptionPlaceholder": "What will this key be used for?",
+        "submit": "Submit request",
+        "submitting": "Submitting…",
+        "cancel": "Cancel"
+      },
+      "detail": {
+        "eyebrow": "API key",
+        "subtitle": "Full key, limits, and recent activity for this API key.",
+        "prefix": "Prefix",
+        "status": "Status",
+        "created": "Created",
+        "approved": "Approved",
+        "lastUsed": "Last used",
+        "rateLimit": "Rate / quota",
+        "dash": "—",
+        "never": "never",
+        "actions": {
+          "heading": "Actions",
+          "body": "Revoke this key to stop it from working immediately. The plaintext key is never shown again — request a new one if you lose it.",
+          "revoke": "Revoke key",
+          "alreadyRevoked": "This key has already been revoked."
+        },
+        "history": {
+          "heading": "Recent activity",
+          "empty": "No audit entries for this key yet."
+        }
+      }
+    },
+    "password": {
+      "title": "Change password",
+      "subtitle": "Choose a new password — at least 8 characters.",
+      "currentLabel": "Current password",
+      "nextLabel": "New password",
+      "confirmLabel": "Confirm new password",
+      "submit": "Change password",
+      "submitting": "Changing…",
+      "success": "Password updated."
+    },
+    "preferences": {
+      "title": "Preferences",
+      "subtitle": "Customize language, theme, and timezone. Changes apply immediately.",
+      "lang": {
+        "label": "Language",
+        "body": "Switches the UI between English and Chinese."
+      },
+      "theme": {
+        "label": "Theme",
+        "body": "Pick the visual style for the public surface."
+      },
+      "timezone": {
+        "label": "Timezone",
+        "body": "All times are displayed in your selected timezone."
       }
     }
   },

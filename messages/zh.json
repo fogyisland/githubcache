@@ -59,8 +59,10 @@
     "apiGuide": "API 用法",
     "login": "登录",
     "logout": "退出",
+    "account": "我的账号",
     "statusAria": "系统状态 JSON",
-    "adminAria": "管理员登录"
+    "adminAria": "管理员登录",
+    "accountAria": "我的账号"
   },
   "theme": {
     "aria": "主题",
@@ -171,6 +173,10 @@
         "disabled": "已禁用",
         "pending": "待处理"
       },
+      "signupSource": {
+        "invited": "邀请",
+        "self": "自助注册"
+      },
       "list": {
         "inviteHeading": "邀请用户",
         "existingHeading": "现有用户",
@@ -180,12 +186,14 @@
         "pendingAriaLabel": "待处理邀请",
         "filter": {
           "role": "角色",
-          "status": "状态"
+          "status": "状态",
+          "source": "注册来源"
         },
         "column": {
           "email": "邮箱",
           "role": "角色",
           "status": "状态",
+          "signupSource": "注册来源",
           "lastLogin": "最后登录",
           "created": "创建时间",
           "invitedBy": "邀请人",
@@ -294,6 +302,7 @@
       "list": {
         "ariaLabel": "API 密钥",
         "never": "从未",
+        "userRequested": "用户申请",
         "filter": {
           "status": "状态"
         },
@@ -1253,6 +1262,176 @@
         "too_many_attempts": "登录尝试次数过多，请在 {seconds} 秒后重试。",
         "invalid_credentials": "邮箱或密码错误。",
         "account_disabled": "您的账号已被禁用，请联系管理员。"
+      }
+    }
+  },
+  "signup": {
+    "eyebrow": "github metadata 缓存",
+    "title": "创建账号",
+    "subtitle": "注册开放。注册后可申请 API key。",
+    "backToHome": "← 返回首页",
+    "haveAccount": "已有账号？登录 →",
+    "email": {
+      "label": "邮箱",
+      "placeholder": "you@example.com",
+      "error": {
+        "invalid": "请输入有效的邮箱地址。"
+      }
+    },
+    "password": {
+      "label": "密码",
+      "help": "≥8 个字符",
+      "error": {
+        "tooShort": "密码至少需要 8 个字符。"
+      }
+    },
+    "passwordConfirm": {
+      "label": "确认密码",
+      "error": {
+        "mismatch": "两次输入的密码不一致。"
+      }
+    },
+    "name": {
+      "label": "显示名称（可选）",
+      "placeholder": "操作员小张",
+      "help": "可选,用于审计日志。"
+    },
+    "submit": "创建账号",
+    "submitting": "创建中…",
+    "success": "欢迎 — 正在跳转到您的账号…",
+    "error": {
+      "duplicate": "该邮箱已注册。",
+      "rateLimited": "当前 IP 注册过于频繁,请稍后再试。",
+      "generic": "出错了,请重试。"
+    }
+  },
+  "account": {
+    "layout": {
+      "eyebrow": "你的账号",
+      "title": "账号"
+    },
+    "logout": {
+      "label": "退出登录",
+      "loggingOut": "正在退出…",
+      "error": "退出失败,请重试。"
+    },
+    "sidebar": {
+      "aria": "账号导航",
+      "items": {
+        "overview": "概览",
+        "keys": "API key",
+        "password": "修改密码",
+        "preferences": "偏好设置"
+      }
+    },
+    "overview": {
+      "welcome": "欢迎,{email}",
+      "subtitle": "在此管理你的 API key 和账号偏好。",
+      "profileHeading": "账号资料",
+      "role": {
+        "admin": "管理员",
+        "operator": "操作员"
+      },
+      "status": {
+        "active": "已激活",
+        "disabled": "已停用"
+      },
+      "tiles": {
+        "role": "角色",
+        "status": "状态",
+        "memberSince": "注册时间",
+        "apiKeys": "API key 数",
+        "lang": "语言",
+        "theme": "主题",
+        "timezone": "时区",
+        "defaultTz": "默认(Asia/Shanghai)"
+      },
+      "cta": {
+        "title": "需要 API 访问?",
+        "body": "申请一个新的 API key — 管理员会审核。",
+        "button": "申请新的 API key"
+      }
+    },
+    "keys": {
+      "heading": "我的 API key",
+      "requestButton": "申请新 key",
+      "empty": "还没有 API key。点此申请 →",
+      "filterAria": "按状态筛选",
+      "dash": "—",
+      "never": "从未",
+      "columns": {
+        "name": "名称",
+        "prefix": "前缀",
+        "status": "状态",
+        "created": "创建时间",
+        "approved": "审批时间",
+        "lastUsed": "最近使用",
+        "error": "错误"
+      },
+      "status": {
+        "all": "全部",
+        "pending": "待审批",
+        "active": "已激活",
+        "revoked": "已撤销"
+      },
+      "request": {
+        "title": "申请 API key",
+        "body": "简单描述你的用途,管理员会审核。",
+        "nameLabel": "Key 名称",
+        "namePlaceholder": "例如 my-ml-pipeline",
+        "descriptionLabel": "描述(可选)",
+        "descriptionPlaceholder": "这个 key 用来做什么?",
+        "submit": "提交申请",
+        "submitting": "提交中…",
+        "cancel": "取消"
+      },
+      "detail": {
+        "eyebrow": "API key",
+        "subtitle": "完整 key、限额与最近活动。",
+        "prefix": "前缀",
+        "status": "状态",
+        "created": "创建时间",
+        "approved": "审批时间",
+        "lastUsed": "最近使用",
+        "rateLimit": "速率 / 配额",
+        "dash": "—",
+        "never": "从未",
+        "actions": {
+          "heading": "操作",
+          "body": "撤销后该 key 立刻失效。明文 key 不会再显示 — 丢失请重新申请。",
+          "revoke": "撤销 key",
+          "alreadyRevoked": "该 key 已被撤销。"
+        },
+        "history": {
+          "heading": "最近活动",
+          "empty": "该 key 暂无审计记录。"
+        }
+      }
+    },
+    "password": {
+      "title": "修改密码",
+      "subtitle": "设置新密码,至少 8 个字符。",
+      "currentLabel": "当前密码",
+      "nextLabel": "新密码",
+      "confirmLabel": "确认新密码",
+      "submit": "修改密码",
+      "submitting": "修改中…",
+      "success": "密码已更新。"
+    },
+    "preferences": {
+      "title": "偏好设置",
+      "subtitle": "自定义语言、主题与时区,变更立即生效。",
+      "lang": {
+        "label": "语言",
+        "body": "在中英文之间切换界面。"
+      },
+      "theme": {
+        "label": "主题",
+        "body": "选择公开页面的视觉风格。"
+      },
+      "timezone": {
+        "label": "时区",
+        "body": "所有时间都会按你选择的时区显示。"
       }
     }
   },
