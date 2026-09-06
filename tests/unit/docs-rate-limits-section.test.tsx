@@ -24,11 +24,11 @@ const landingDict = flattenDict({
       per: 'No rate limit',
       body: 'Service-wide observability endpoint.',
     },
-    public: {
-      title: 'Public lookup',
+    authRepo: {
+      title: 'Authenticated single-repo lookup',
       endpoint: 'GET /api/v1/repos/{owner}/{name}',
-      per: '{limit} requests / minute / IP',
-      body: 'Anonymous browsing uses PUBLIC_LOOKUP_RATE_PER_MIN (default {limit}).',
+      per: '{limit} requests / hour / API key',
+      body: 'Requires X-API-Key. Per-key hourly limit via PUBLIC_REPO_RATE_PER_HOUR (default {limit}).',
       headers: 'On 429: Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining.',
     },
     auth: {
@@ -67,18 +67,18 @@ describe('RateLimitsSection (M14.3)', () => {
     const html = renderToStaticMarkup(await RateLimitsSection());
     expect(html).toContain('Rate limits');
     expect(html).toContain('Public status');
-    expect(html).toContain('Public lookup');
+    expect(html).toContain('Authenticated single-repo lookup');
     expect(html).toContain('Authenticated batch');
     expect(html).toContain('GET /api/v1/status');
     expect(html).toContain('GET /api/v1/repos/{owner}/{name}');
     expect(html).toContain('POST /api/query');
   });
 
-  it('interpolates env.PUBLIC_LOOKUP_RATE_PER_MIN into per + body for the public tier', async () => {
+  it('interpolates env.PUBLIC_REPO_RATE_PER_HOUR into per + body for the authRepo tier', async () => {
     const html = renderToStaticMarkup(await RateLimitsSection());
-    // env.PUBLIC_LOOKUP_RATE_PER_MIN defaults to 30 (verified in lib/config/env.ts)
-    expect(html).toContain('30 requests / minute / IP');
-    expect(html).toContain('PUBLIC_LOOKUP_RATE_PER_MIN (default 30)');
+    // env.PUBLIC_REPO_RATE_PER_HOUR defaults to 50_000 (verified in lib/config/env.ts)
+    expect(html).toContain('50000 requests / hour / API key');
+    expect(html).toContain('PUBLIC_REPO_RATE_PER_HOUR (default 50000)');
   });
 
   it('interpolates the apiKey.rateLimitPerMin default (60) into per + body for the auth tier', async () => {
@@ -87,7 +87,7 @@ describe('RateLimitsSection (M14.3)', () => {
     expect(html).toContain('Per-key via apiKey.rateLimitPerMin (Prisma default 60)');
   });
 
-  it('lists 429 response headers in public + auth cards (status card has no limit, no headers)', async () => {
+  it('lists 429 response headers in authRepo + auth cards (status card has no limit, no headers)', async () => {
     const html = renderToStaticMarkup(await RateLimitsSection());
     const headerOccurrences = html.match(
       /On 429: Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining\./g,

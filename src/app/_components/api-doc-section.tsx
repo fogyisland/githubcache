@@ -1,6 +1,11 @@
 import type { ReactElement } from 'react';
 
-const CURL_EXAMPLE = `curl https://your-host/api/v1/repos/torvalds/linux`;
+// M26.x — /api/v1/repos now requires X-API-Key. Get a key from
+// /account/keys, then send it as a header. Status endpoint at
+// /api/v1/status is still the only public endpoint.
+const CURL_EXAMPLE = `curl \\
+  -H "X-API-Key: YOUR_KEY_HERE" \\
+  https://your-host/api/v1/repos/torvalds/linux`;
 
 const RESPONSE_SHAPE = `{
   "id": 2325298,

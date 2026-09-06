@@ -1711,11 +1711,11 @@
             "per": "No rate limit",
             "body": "Service-wide observability endpoint. Always public, no per-IP or per-key bucket."
           },
-          "public": {
-            "title": "Public lookup",
-            "endpoint": "GET /api/v1/repos/{owner}/{name} · homepage lookup form",
-            "per": "{limit} requests / minute / IP",
-            "body": "Anonymous browsing uses PUBLIC_LOOKUP_RATE_PER_MIN (default {limit}). The window resets every minute on a fixed clock boundary. When the bucket is exhausted, the response is 429 with the headers below.",
+          "authRepo": {
+            "title": "Authenticated single-repo lookup",
+            "endpoint": "GET /api/v1/repos/{owner}/{name}",
+            "per": "{limit} requests / hour / API key",
+            "body": "Requires the X-API-Key header (find or create one from /account/keys). Limited to {limit} requests per hour per key via the durable rate_limit_buckets table. The window aligns to wall-clock hour boundaries. When the bucket is exhausted, the response is 429 with the headers below. Configurable via PUBLIC_REPO_RATE_PER_HOUR env var.",
             "headers": "On 429: Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining."
           },
           "auth": {
@@ -1939,15 +1939,18 @@
       },
       "api-v1-repos": {
         "summary": "Fetch a single repository metadata record from the cache.",
-        "description": "Public read of the cache for a single repo. Returns the same shape as the repo detail page at /repo/[owner]/[name]. If the cache is empty, falls through to a fresh GitHub fetch.",
-        "rateLimit": "PUBLIC_LOOKUP_RATE_PER_MIN (default 30) per IP",
+        "description": "Authenticated read of the cache for a single repo. Returns the same shape as the repo detail page at /repo/[owner]/[name]. If the cache is empty, falls through to a fresh GitHub fetch. M26.x: now requires the X-API-Key header (was anonymous per-IP before).",
+        "auth": "Requires the X-API-Key header with an active API key.",
+        "rateLimit": "PUBLIC_REPO_RATE_PER_HOUR (default 50 000) per API key",
         "request": {
           "owner-description": "GitHub username or org.",
           "name-description": "GitHub repo name."
         },
         "errors": {
+          "401-missing_api_key": "X-API-Key header is absent.",
+          "403-invalid_api_key": "Key not found, revoked, or attached to a disabled account.",
           "404-not_found": "fetch_status=not_found (GitHub returned 404 or owner/name is invalid).",
-          "429-rate_limit_exceeded": "Per-IP bucket exhausted.",
+          "429-rate_limit_exceeded": "Per-key hourly bucket exhausted (default 50 000/hour).",
           "503-service_unavailable": "fetch_status=error or no GitHub tokens configured."
         }
       },
@@ -2006,11 +2009,11 @@
     },
     "step4": {
       "heading": "Make your first call",
-      "body": "Three examples from no-auth to authenticated batch. Copy and paste; replace `YOUR_KEY_HERE` with the token from step 3.",
-      "example1Heading": "no auth required — sanity check",
-      "example1Body": "Status endpoint confirms the service is up and reports cache stats.",
-      "example2Heading": "no auth required — fetch one repo",
-      "example2Body": "Public read of the cache for a single repo. Cache miss queues a refresh and waits synchronously.",
+      "body": "All three calls require your `X-API-Key` header. The status endpoint is the only exception — it's a public health check. Copy and paste; replace `YOUR_KEY_HERE` with the token from step 3.",
+      "example1Heading": "public — sanity check",
+      "example1Body": "Status endpoint confirms the service is up and reports cache stats. No auth required.",
+      "example2Heading": "auth required — fetch one repo",
+      "example2Body": "Authenticated read of the cache for a single repo. Send your key as the `X-API-Key` header. Cache miss queues a refresh and waits synchronously. Rate limit: 50 000 / hour / key.",
       "example3Heading": "auth required — batch up to 50",
       "example3Body": "Authenticated batch lookup. Send your key as the `X-API-Key` header; pass up to 50 owner/name pairs in the body.",
       "errorsHeading": "common error codes",

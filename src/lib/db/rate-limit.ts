@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/db/client';
 
-const WINDOW_MS = 60_000;
+const DEFAULT_WINDOW_MS = 60_000;
 
 /** Detect MySQL Error 1213 (deadlock) on a thrown error. */
 function isDeadlock(e: unknown): boolean {
@@ -70,7 +70,12 @@ async function withDeadlockRetry<T>(
 export async function incrementBucket(
   apiKeyId: bigint,
   windowStart: Date,
+  windowMs: number = DEFAULT_WINDOW_MS,
 ): Promise<number> {
+  void windowMs; // windowMs only affects the pre-computed windowStart passed in;
+  // the SQL itself is window-agnostic (it just stores whatever the caller
+  // computed). Documented here so the next reader doesn't try to thread
+  // it through the raw query.
   return withDeadlockRetry(() =>
     prisma.$transaction(
       async (tx) => {
@@ -107,20 +112,26 @@ export async function incrementBucket(
 }
 
 /**
- * Truncate a Date to the start of its wall-clock minute. Used for window
- * alignment. Returns a new Date.
+ * Truncate a Date to the start of its window. Default window is 60 seconds
+ * (aligned to wall-clock minute boundaries); pass a custom `windowMs` to
+ * use a longer window — the bucket table is window-agnostic, so the same
+ * `rate_limit_buckets` row is reused for the full window duration.
  */
-export function windowStartFor(now: Date): Date {
+export function windowStartFor(now: Date, windowMs: number = DEFAULT_WINDOW_MS): Date {
   const ms = now.getTime();
-  return new Date(Math.floor(ms / WINDOW_MS) * WINDOW_MS);
+  return new Date(Math.floor(ms / windowMs) * windowMs);
 }
 
 /**
  * Seconds remaining until the current window ends (caller uses this for
  * Retry-After header on 429). Returns 0 if window has already passed.
  */
-export function retryAfterSeconds(now: Date, windowStart: Date): number {
-  const endsAt = windowStart.getTime() + WINDOW_MS;
+export function retryAfterSeconds(
+  now: Date,
+  windowStart: Date,
+  windowMs: number = DEFAULT_WINDOW_MS,
+): number {
+  const endsAt = windowStart.getTime() + windowMs;
   const ms = endsAt - now.getTime();
   return Math.max(0, Math.ceil(ms / 1000));
 }

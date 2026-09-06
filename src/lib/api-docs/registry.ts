@@ -32,9 +32,9 @@ export const ENDPOINT_DOCS: EndpointDoc[] = [
     method: 'GET',
     summary: 'Fetch a single repository metadata record from the cache.',
     description:
-      'Public read of the cache for a single repo. Returns the same shape as the repo detail page at /repo/[owner]/[name]. If the cache is empty, queues a refresh job and waits synchronously for the first GitHub response.',
-    auth: 'none',
-    rateLimit: 'PUBLIC_LOOKUP_RATE_PER_MIN (default 30) per IP',
+      'Authenticated read of the cache for a single repo. Returns the same shape as the repo detail page at /repo/[owner]/[name]. If the cache is empty, queues a refresh job and waits synchronously for the first GitHub response. M26.x: now requires the X-API-Key header (was anonymous per-IP before).',
+    auth: 'X-API-Key',
+    rateLimit: 'PUBLIC_REPO_RATE_PER_HOUR (default 50 000) per API key',
     cache: {
       mode: 'cache-first',
       freshness_window_seconds: 24 * 60 * 60,

@@ -3,19 +3,24 @@ import { getTranslations } from 'next-intl/server';
 import { env } from '@/lib/config/env';
 
 /**
- * Three-tier rate-limit explainer rendered on the docs landing page (M14.3).
+ * Three-tier rate-limit explainer rendered on the docs landing page.
  *
  * Source of truth for the displayed numbers:
- *   - PUBLIC_LOOKUP_RATE_PER_MIN — env default 30 (per IP)
- *   - apiKey.rateLimitPerMin     — Prisma @default(60)
- *   - apiKey.dailyQuota          — Prisma @default(10000)
+ *   - PUBLIC_REPO_RATE_PER_HOUR  — env default 50_000 (per API key, hourly window)
+ *   - apiKey.rateLimitPerMin      — Prisma @default(60)  (per API key, per minute)
+ *   - apiKey.dailyQuota           — Prisma @default(10000) (per API key, per day)
  *
- * We intentionally surface the *defaults* from both config layers so
- * operators can see what the public contract is without reading the schema.
+ * The previous M14.3 layout had a "public lookup" tier for /api/v1/repos
+ * (30/min per IP, no auth). M26.x changed that endpoint to require X-API-Key
+ * and bumped the limit to 50_000/hour per key. The new layout has:
+ *
+ *   Tier 1 — status      : public, no limit
+ *   Tier 2 — single repo : authenticated (X-API-Key), 50 000 / hour / key
+ *   Tier 3 — batch       : authenticated (X-API-Key), 60 / min / key + 10 000 / day / key
  */
 export async function RateLimitsSection(): Promise<ReactElement> {
   const t = await getTranslations('docs.landing.rateLimits');
-  const publicPerMin = env.PUBLIC_LOOKUP_RATE_PER_MIN;
+  const authRepoPerHour = env.PUBLIC_REPO_RATE_PER_HOUR;
   const apiKeyPerMin = 60; // mirrors apiKey.rateLimitPerMin @default
   return (
     <section className="ghc-doc-section" aria-labelledby="ghc-doc-rate-limits-heading">
@@ -34,22 +39,22 @@ export async function RateLimitsSection(): Promise<ReactElement> {
           <p className="ghc-doc-ratelimit-card-body">{t('tier.status.body')}</p>
         </article>
 
-        {/* Tier 2: Public lookup — per-IP */}
+        {/* Tier 2: Authenticated single-repo — per-key, per-hour. */}
         <article className="ghc-doc-ratelimit-card">
-          <h3 className="ghc-doc-ratelimit-card-title">{t('tier.public.title')}</h3>
+          <h3 className="ghc-doc-ratelimit-card-title">{t('tier.authRepo.title')}</h3>
           <p className="ghc-doc-ratelimit-card-endpoint">
-            <code>{t('tier.public.endpoint')}</code>
+            <code>{t('tier.authRepo.endpoint')}</code>
           </p>
           <p className="ghc-doc-ratelimit-card-per">
-            {t('tier.public.per', { limit: publicPerMin })}
+            {t('tier.authRepo.per', { limit: authRepoPerHour })}
           </p>
           <p className="ghc-doc-ratelimit-card-body">
-            {t('tier.public.body', { limit: publicPerMin })}
+            {t('tier.authRepo.body', { limit: authRepoPerHour })}
           </p>
-          <p className="ghc-doc-ratelimit-card-headers">{t('tier.public.headers')}</p>
+          <p className="ghc-doc-ratelimit-card-headers">{t('tier.authRepo.headers')}</p>
         </article>
 
-        {/* Tier 3: Authenticated batch — per-API-key */}
+        {/* Tier 3: Authenticated batch — per-key per-minute + daily quota. */}
         <article className="ghc-doc-ratelimit-card">
           <h3 className="ghc-doc-ratelimit-card-title">{t('tier.auth.title')}</h3>
           <p className="ghc-doc-ratelimit-card-endpoint">

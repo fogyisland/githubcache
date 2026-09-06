@@ -1711,11 +1711,11 @@
             "per": "无限速",
             "body": "服务级可观测端点。始终公开,无 IP 或 key 维度桶。"
           },
-          "public": {
-            "title": "公开查询",
-            "endpoint": "GET /api/v1/repos/{owner}/{name} · 首页查询表单",
-            "per": "每分钟 {limit} 次 / IP",
-            "body": "匿名浏览使用 PUBLIC_LOOKUP_RATE_PER_MIN(默认 {limit})。窗口在固定时钟边界每分钟重置。桶耗尽时返回 429 以及下方响应头。",
+          "authRepo": {
+            "title": "认证单仓库查询",
+            "endpoint": "GET /api/v1/repos/{owner}/{name}",
+            "per": "每小时 {limit} 次 / API key",
+            "body": "需要 X-API-Key 头(在 /account/keys 申请)。每个 key 每小时限 {limit} 次,通过 rate_limit_buckets 表做持久化限流,窗口对齐整点小时边界。桶耗尽返回 429。可通过 PUBLIC_REPO_RATE_PER_HOUR 环境变量调整。",
             "headers": "429 时返回: Retry-After、X-RateLimit-Limit、X-RateLimit-Remaining。"
           },
           "auth": {
@@ -1939,15 +1939,18 @@
       },
       "api-v1-repos": {
         "summary": "从缓存中获取单个仓库的元数据记录。",
-        "description": "针对单个仓库的公开缓存读取。返回结构与 /repo/[owner]/[name] 详情页一致。若缓存为空,则回源至 GitHub 拉取。",
-        "rateLimit": "PUBLIC_LOOKUP_RATE_PER_MIN（默认 30）·按 IP",
+        "description": "针对单个仓库的认证缓存读取。返回结构与 /repo/[owner]/[name] 详情页一致。若缓存为空，则回源至 GitHub 拉取。M26.x：现在需要 X-API-Key 头（之前是匿名按 IP）。",
+        "auth": "需要带 X-API-Key 头（key 状态为 active）。",
+        "rateLimit": "PUBLIC_REPO_RATE_PER_HOUR（默认 50 000）·按 API key",
         "request": {
           "owner-description": "GitHub 用户名或组织。",
           "name-description": "GitHub 仓库名。"
         },
         "errors": {
+          "401-missing_api_key": "缺少 X-API-Key 头。",
+          "403-invalid_api_key": "key 不存在、已撤销，或所属账号被禁用。",
           "404-not_found": "fetch_status=not_found（GitHub 返回 404 或 owner/name 无效）。",
-          "429-rate_limit_exceeded": "按 IP 的速率桶已耗尽。",
+          "429-rate_limit_exceeded": "按 key 的每小时速率桶已耗尽（默认 50 000/小时）。",
           "503-service_unavailable": "fetch_status=error 或未配置 GitHub 令牌。"
         }
       },
@@ -2006,11 +2009,11 @@
     },
     "step4": {
       "heading": "发起首次调用",
-      "body": "从无认证到认证批量的三个例子。复制粘贴，把 `YOUR_KEY_HERE` 替换为第 3 步拿到的 token。",
-      "example1Heading": "无需认证 — 健康检查",
-      "example1Body": "Status 接口确认服务在线，返回缓存统计。",
-      "example2Heading": "无需认证 — 拉取单个仓库",
-      "example2Body": "公开读取单个仓库的缓存。缓存未命中会排队刷新并同步等待。",
+      "body": "下面三个调用都需要带 `X-API-Key` 头（status 端点除外 —— 它是公开的健康检查）。复制粘贴，把 `YOUR_KEY_HERE` 替换为第 3 步拿到的 token。",
+      "example1Heading": "公开 — 健康检查",
+      "example1Body": "Status 接口确认服务在线，返回缓存统计。无需认证。",
+      "example2Heading": "需认证 — 拉取单个仓库",
+      "example2Body": "认证读取单个仓库的缓存。把 key 放在 `X-API-Key` 头。缓存未命中会排队刷新并同步等待。限流：每 key 50 000 / 小时。",
       "example3Heading": "需认证 — 批量最多 50",
       "example3Body": "认证批量查询。把 key 放在 `X-API-Key` 头，body 里传最多 50 个 owner/name 对。",
       "errorsHeading": "常见错误码",

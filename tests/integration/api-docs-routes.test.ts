@@ -144,7 +144,9 @@ describe('/docs routes render without error', () => {
     expect(html).toContain('/api/v1/repos/{owner}/{name}');
     expect(html).toContain('owner');
     expect(html).toContain('name');
-    expect(html).toContain('No authentication required');
+    // M26.x — v1-repos now requires X-API-Key (was anonymous per-IP).
+    expect(html).toContain('X-API-Key');
+    expect(html).not.toContain('No authentication required');
   });
 
   it('/docs/api/query renders the POST endpoint with X-API-Key auth and Retry-After header', async () => {

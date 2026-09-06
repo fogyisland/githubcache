@@ -71,7 +71,11 @@ describe('public home page surface', () => {
     const el = await HomePage();
     const html = renderToStaticMarkup(el);
     expect(html).toContain('ghc-api-doc-section');
-    expect(html).toContain('curl https://your-host/api/v1/repos/torvalds/linux');
+    // M26.x — /api/v1/repos is now authenticated; the curl example
+    // includes the X-API-Key header placeholder.
+    expect(html).toContain('https://your-host/api/v1/repos/torvalds/linux');
+    expect(html).toContain('X-API-Key');
+    expect(html).toContain('YOUR_KEY_HERE');
     expect(html).toContain('torvalds/linux');
   });
 

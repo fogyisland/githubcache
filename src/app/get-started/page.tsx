@@ -43,6 +43,7 @@ export default async function GetStartedPage(): Promise<ReactElement> {
   const repoCurl = await CurlExample({
     method: 'GET',
     url: 'https://githubcache.example.com/api/v1/repos/facebook/react',
+    headers: { 'X-API-Key': 'YOUR_KEY_HERE' },
   });
   const batchCurl = await CurlExample({
     method: 'POST',

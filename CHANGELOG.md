@@ -8,6 +8,44 @@ once a stable release is cut. Until then, milestone tags serve as the version an
 
 ---
 
+## [m26x-auth-repo] — 2026-09-06
+
+**`/api/v1/repos/[owner]/[name]` is now authenticated.**
+
+The single-repo public lookup used to be anonymous with a per-IP
+rate limit (`PUBLIC_LOOKUP_RATE_PER_MIN`, default 30/min). M26.x
+tightens this:
+
+- `X-API-Key` header is required. Missing → `401 unauthorized`.
+  Invalid / revoked / disabled → `403 forbidden`.
+- Rate limit is now per-key per-hour: `PUBLIC_REPO_RATE_PER_HOUR`,
+  default 50 000. Hourly window aligned to wall-clock hours via the
+  existing durable `rate_limit_buckets` table — no new schema, no
+  new helper. The `checkRateLimit` helper now takes an explicit
+  `windowMs` so the same code path serves both the per-minute
+  `/api/query` and the new per-hour `/api/v1/repos` limits.
+- `recordRequest` rows now carry `apiKeyId` so `/admin/queries`
+  can attribute single-repo traffic to its owner.
+- The 4xx error table on `/docs/api/v1-repos` gains
+  `401-missing_api_key` and `403-invalid_api_key`. The
+  `429-rate_limit_exceeded` entry now points at the per-key
+  hourly bucket instead of the per-IP minute bucket.
+- The docs landing rate-limits grid changes from
+  "Public lookup (per-IP)" → "Authenticated single-repo lookup
+  (per-key, per-hour)" so the three-tier model still maps cleanly
+  to the public contract.
+- `/get-started` step 4 example 2 (single-repo curl) now shows
+  the `X-API-Key` header. Example 1 (status) stays public. The
+  homepage `api-doc-section` curl example also gains the
+  `X-API-Key` header.
+
+The 50 000/hour ceiling matches the M26 signup rate limit, so the
+two user-facing caps in the service share the same order of
+magnitude (~14 req/sec sustained) and an operator reading the
+docs sees consistent numbers.
+
+---
+
 ## [m19-providers] — 2026-08-31
 
 **`/admin/providers` — JSON-driven ingestion sources.**

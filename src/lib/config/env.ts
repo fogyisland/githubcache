@@ -18,6 +18,11 @@ const schema = z.object({
   // Per-IP rate limit for the public lookup form (no X-API-Key required).
   // Protects the GitHub token pool from anonymous abuse.
   PUBLIC_LOOKUP_RATE_PER_MIN: z.coerce.number().int().positive().default(30),
+  // M26.x — /api/v1/repos/[owner]/[name] now requires an API key; this
+  // is the per-key hourly ceiling. 50_000 is generous (≈14 req/sec)
+  // and matches the M26 signup rate limit so all limits across the
+  // service share the same order of magnitude.
+  PUBLIC_REPO_RATE_PER_HOUR: z.coerce.number().int().positive().default(50_000),
   // Consecutive-429 auto-disable threshold for pool tokens (M14.4).
   // When a token returns 429 this many times in a row (with no intervening
   // success), the pool automatically marks it 'disabled' and drops it.
