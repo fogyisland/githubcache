@@ -7,56 +7,16 @@ import { CurlExample } from '@/app/docs/_components/curl-example';
  * `/get-started` — public-facing walkthrough that takes a brand-new user
  * from "what is this" to "I just got a 200 response".
  *
- * Visual direction: Repository Tree (paper surface). The page reads as a
- * `git log` of the four steps you take to become a githubcache API user.
+ * Visual direction: Wulan-aligned step cards (light surface + sky-blue accent +
+ * 6px radius + sans body). Mirrors the look of /docs and /docs/development.
  *
- *   - Wrapper `.ghc-paper` opts the page into the paper tokens (warm
- *     off-white + sienna accent + zero radius).
- *   - `.ghc-getstarted-treeheader` shows the file path being read.
- *   - `.ghc-getstarted-log` draws a vertical connector line down the left;
- *     each step is a commit node on that line.
- *   - Step body uses Fraunces serif (titles) + IBM Plex Sans (prose) +
- *     JetBrains Mono (SHA / data / code).
- *
- * Reuses the existing `CurlExample` component (restyled under `.ghc-paper`)
- * so copy-to-clipboard stays consistent with /docs.
+ *   - `.ghc-getstarted-step` wraps each step in a Wulan `.ghc-card`-style panel
+ *   - `.ghc-getstarted-step-num` is a sky-blue pill showing the step number
+ *   - `.ghc-getstarted-callout` is a left-bordered accent box for important
+ *     callouts (the "token shown ONCE" warning, etc.)
+ *   - Curl examples reuse the existing `CurlExample` component so copy-to-
+ *     clipboard stays consistent with /docs
  */
-
-const STEPS = [
-  {
-    sha: 'a3f7c1d',
-    author: 'admin',
-    kind: 'feat' as const,
-    titleKey: 'step1.heading',
-    bodyKey: 'step1.body',
-    noteLabelKey: 'step1.calloutHeading',
-    noteBodyKey: 'step1.calloutBody',
-  },
-  {
-    sha: 'b1d49ee',
-    author: 'you',
-    kind: 'feat' as const,
-    titleKey: 'step2.heading',
-    bodyKey: 'step2.body',
-    actionsKey: ['step2.action1', 'step2.action2', 'step2.action3'] as const,
-  },
-  {
-    sha: '7c8a02f',
-    author: 'admin',
-    kind: 'chore' as const,
-    titleKey: 'step3.heading',
-    bodyKey: 'step3.body',
-    noteLabelKey: 'step3.calloutHeading',
-    noteBodyKey: 'step3.calloutBody',
-  },
-  {
-    sha: 'e02a519',
-    author: 'you',
-    kind: 'docs' as const,
-    titleKey: 'step4.heading',
-    bodyKey: 'step4.body',
-  },
-] as const;
 
 const ERROR_ROWS = [
   { code: 'unauthorized', http: '401', meaningKey: 'step4.errors.unauthorized' },
@@ -89,102 +49,99 @@ export default async function GetStartedPage(): Promise<ReactElement> {
   });
 
   return (
-    <article className="ghc-paper ghc-getstarted">
-      {/* File-tree header — reads as "you're viewing docs/get-started.md in
-          the githubcache repo". */}
-      <div className="ghc-getstarted-treeheader">
-        <div className="ghc-path">
-          githubcache
-          <span className="ghc-path-sep">/</span>
-          docs
-          <span className="ghc-path-sep">/</span>
-          <span className="ghc-path-leaf">get-started.md</span>
-        </div>
-        <div className="ghc-path">
-          main <span className="ghc-path-sep">·</span> {t('treeheader.branch')}
-        </div>
-      </div>
-
+    <article className="ghc-getstarted">
+      <span className="ghc-getstarted-eyebrow">{t('eyebrow')}</span>
       <h1 className="ghc-getstarted-h1">{t('title')}</h1>
       <p className="ghc-getstarted-lede">{t('lede')}</p>
 
-      {/* Commit log — four steps as commits on a shared branch. */}
-      <ol className="ghc-getstarted-log">
-        {STEPS.map((step, i) => {
-          const stepNum = i + 1;
-          return (
-            <li
-              key={step.sha}
-              className="ghc-getstarted-commit"
-              data-commit-kind={step.kind}
-              data-step={stepNum}
-            >
-              <div className="ghc-getstarted-sha">
-                <span className="sha">{step.sha}</span>
-                <span className="author">{step.author}</span>
-                <span>
-                  <span className="meta-sep">·</span> {t('treeheader.commitStep', { n: stepNum })}
-                </span>
-                <span className="meta-sep">·</span>
-                <span>{step.kind}</span>
-              </div>
-              <h2>{t(step.titleKey)}</h2>
-              <p>{t(step.bodyKey)}</p>
+      {/* Step 1 — Ask an admin for an account */}
+      <section className="ghc-getstarted-step">
+        <div className="ghc-getstarted-step-header">
+          <span className="ghc-getstarted-step-num">1</span>
+          <h2>{t('step1.heading')}</h2>
+        </div>
+        <p>{t('step1.body')}</p>
+        <div className="ghc-getstarted-callout">
+          <span className="ghc-getstarted-callout-label">{t('step1.calloutLabel')}</span>
+          <p>{t('step1.calloutBody')}</p>
+        </div>
+      </section>
 
-              {'actionsKey' in step && step.actionsKey ? (
-                <ol className="ghc-getstarted-sublist">
-                  {step.actionsKey.map((k) => (
-                    <li key={k}>{t(k)}</li>
-                  ))}
-                </ol>
-              ) : null}
+      {/* Step 2 — Request an API key */}
+      <section className="ghc-getstarted-step">
+        <div className="ghc-getstarted-step-header">
+          <span className="ghc-getstarted-step-num">2</span>
+          <h2>{t('step2.heading')}</h2>
+        </div>
+        <p>{t('step2.body')}</p>
+        <ol className="ghc-getstarted-sublist">
+          <li>{t('step2.action1')}</li>
+          <li>{t('step2.action2')}</li>
+          <li>{t('step2.action3')}</li>
+        </ol>
+      </section>
 
-              {'noteLabelKey' in step && step.noteLabelKey && 'noteBodyKey' in step && step.noteBodyKey ? (
-                <div className="ghc-getstarted-note">
-                  <span className="ghc-getstarted-note-label">{t(step.noteLabelKey)}</span>
-                  <p>{t(step.noteBodyKey)}</p>
-                </div>
-              ) : null}
+      {/* Step 3 — Wait for admin approval */}
+      <section className="ghc-getstarted-step">
+        <div className="ghc-getstarted-step-header">
+          <span className="ghc-getstarted-step-num">3</span>
+          <h2>{t('step3.heading')}</h2>
+        </div>
+        <p>{t('step3.body')}</p>
+        <div className="ghc-getstarted-callout">
+          <span className="ghc-getstarted-callout-label">{t('step3.calloutLabel')}</span>
+          <p>{t('step3.calloutBody')}</p>
+        </div>
+      </section>
 
-              {stepNum === 4 ? (
-                <>
-                  <h3 className="ghc-getstarted-h3">{t('step4.example1Heading')}</h3>
-                  <p>{t('step4.example1Body')}</p>
-                  {statusCurl}
+      {/* Step 4 — Make your first call */}
+      <section className="ghc-getstarted-step">
+        <div className="ghc-getstarted-step-header">
+          <span className="ghc-getstarted-step-num">4</span>
+          <h2>{t('step4.heading')}</h2>
+        </div>
+        <p>{t('step4.body')}</p>
 
-                  <h3 className="ghc-getstarted-h3">{t('step4.example2Heading')}</h3>
-                  <p>{t('step4.example2Body')}</p>
-                  {repoCurl}
+        <h3 className="ghc-getstarted-example-heading">
+          {t('step4.example1Heading')}
+        </h3>
+        <p>{t('step4.example1Body')}</p>
+        {statusCurl}
 
-                  <h3 className="ghc-getstarted-h3">{t('step4.example3Heading')}</h3>
-                  <p>{t('step4.example3Body')}</p>
-                  {batchCurl}
+        <h3 className="ghc-getstarted-example-heading">
+          {t('step4.example2Heading')}
+        </h3>
+        <p>{t('step4.example2Body')}</p>
+        {repoCurl}
 
-                  <h3 className="ghc-getstarted-h3">{t('step4.errorsHeading')}</h3>
-                  <table className="ghc-getstarted-errortable">
-                    <thead>
-                      <tr>
-                        <th scope="col">{t('step4.errorCol.code')}</th>
-                        <th scope="col">{t('step4.errorCol.status')}</th>
-                        <th scope="col">{t('step4.errorCol.meaning')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {ERROR_ROWS.map((row) => (
-                        <tr key={row.code}>
-                          <td><code>{row.code}</code></td>
-                          <td>{row.http}</td>
-                          <td>{t(row.meaningKey)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </>
-              ) : null}
-            </li>
-          );
-        })}
-      </ol>
+        <h3 className="ghc-getstarted-example-heading">
+          {t('step4.example3Heading')}
+        </h3>
+        <p>{t('step4.example3Body')}</p>
+        {batchCurl}
+
+        <h3 className="ghc-getstarted-example-heading">
+          {t('step4.errorsHeading')}
+        </h3>
+        <table className="ghc-getstarted-error-table">
+          <thead>
+            <tr>
+              <th scope="col">{t('step4.errorCol.code')}</th>
+              <th scope="col">{t('step4.errorCol.status')}</th>
+              <th scope="col">{t('step4.errorCol.meaning')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ERROR_ROWS.map((row) => (
+              <tr key={row.code}>
+                <td><code>{row.code}</code></td>
+                <td>{row.http}</td>
+                <td>{t(row.meaningKey)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
 
       {/* Deeper reading */}
       <section className="ghc-getstarted-deeper">
@@ -206,15 +163,6 @@ export default async function GetStartedPage(): Promise<ReactElement> {
           </li>
         </ul>
       </section>
-
-      {/* Blame row — file metadata footer. */}
-      <div className="ghc-getstarted-blame">
-        <span>{t('blame.lastTouched')}</span>
-        <span className="blame-sep">·</span>
-        <span>{t('blame.author')}</span>
-        <span className="blame-sep">·</span>
-        <span>{t('blame.version')}</span>
-      </div>
     </article>
   );
 }

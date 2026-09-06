@@ -1782,14 +1782,10 @@
     "eyebrow": "Quickstart",
     "title": "Use the API in 4 steps",
     "lede": "githubcache is a cache for GitHub repository metadata. This page walks you through getting an account, requesting an API key, and making your first call.",
-    "treeheader": {
-      "branch": "4-step on-ramp",
-      "commitStep": "step {n} of 4"
-    },
     "step1": {
       "heading": "Ask an admin for an account",
       "body": "githubcache is admin-mediated — there is no public signup. Ask your admin to invite you at `/admin/users`. You'll receive an invitation link like `/request-access?invitation=xxx` to set your password.",
-      "calloutHeading": "note",
+      "calloutLabel": "note",
       "calloutBody": "Already have an invite link? Open it, set a password, and you're in. If you don't know who the admin is, ask the person who told you about githubcache."
     },
     "step2": {
@@ -1802,7 +1798,7 @@
     "step3": {
       "heading": "Wait for admin approval",
       "body": "An admin reviews your request and approves it. They open `/admin/api-keys/[id]` and click Approve.",
-      "calloutHeading": "warning",
+      "calloutLabel": "warning",
       "calloutBody": "The plaintext token is shown ONCE — copy it the moment it appears. githubcache cannot recover it later. If SMTP is configured, it's also emailed to you."
     },
     "step4": {
@@ -1834,11 +1830,6 @@
       "devGuide": "Development & contributing guide",
       "devGuideBody": "run locally, fork, send a PR",
       "specBody": "machine-readable JSON spec for client codegen"
-    },
-    "blame": {
-      "lastTouched": "last touched 2026-09-06",
-      "author": "githubcache team",
-      "version": "v1.0"
     }
   }
 }

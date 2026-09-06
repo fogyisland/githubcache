@@ -23,14 +23,10 @@ const getStartedDict = flattenDict({
   eyebrow: 'Quickstart',
   title: 'Use the API in 4 steps',
   lede: 'githubcache is a cache for GitHub repository metadata.',
-  treeheader: {
-    branch: '4-step on-ramp',
-    commitStep: 'step {n} of 4',
-  },
   step1: {
     heading: 'Ask an admin for an account',
     body: 'Self-signup is not available.',
-    calloutHeading: 'note',
+    calloutLabel: 'note',
     calloutBody: 'Already have an invite link? Open it.',
   },
   step2: {
@@ -43,7 +39,7 @@ const getStartedDict = flattenDict({
   step3: {
     heading: 'Wait for admin approval',
     body: 'Admin reviews your request.',
-    calloutHeading: 'warning',
+    calloutLabel: 'warning',
     calloutBody: 'Token is shown once.',
   },
   step4: {
@@ -72,11 +68,6 @@ const getStartedDict = flattenDict({
     devGuideBody: 'fork, run, PR',
     specBody: 'machine-readable JSON',
   },
-  blame: {
-    lastTouched: 'last touched 2026-09-06',
-    author: 'githubcache team',
-    version: 'v1.0',
-  },
 });
 
 vi.mock('next-intl/server', () => ({
@@ -100,61 +91,32 @@ vi.mock('@/app/docs/_components/curl-example', () => ({
 
 import GetStartedPage from '@/app/get-started/page';
 
-describe('GetStartedPage — Repository Tree layout', () => {
-  it('renders the paper surface wrapper', async () => {
+describe('GetStartedPage — Wulan-aligned step cards', () => {
+  it('renders the page wrapper with Wulan eyebrow + h1 + lede', async () => {
     const html = renderToStaticMarkup(await GetStartedPage());
-    expect(html).toContain('ghc-paper');
     expect(html).toContain('ghc-getstarted');
-  });
-
-  it('renders the file-tree header (path + branch)', async () => {
-    const html = renderToStaticMarkup(await GetStartedPage());
-    expect(html).toContain('ghc-getstarted-treeheader');
-    expect(html).toContain('githubcache');
-    expect(html).toContain('docs');
-    expect(html).toContain('get-started.md');
-    expect(html).toContain('ghc-path-leaf');
-    expect(html).toContain('4-step on-ramp');
-  });
-
-  it('renders the H1 + lede (serif-styled, no eyebrow tag)', async () => {
-    const html = renderToStaticMarkup(await GetStartedPage());
+    expect(html).toContain('ghc-getstarted-eyebrow');
+    expect(html).toContain('Quickstart');
     expect(html).toContain('ghc-getstarted-h1');
     expect(html).toContain('Use the API in 4 steps');
     expect(html).toContain('ghc-getstarted-lede');
-    // No "Quickstart" eyebrow tag — we removed it
-    expect(html).not.toContain('Quickstart');
   });
 
-  it('renders 4 commits on the git-graph log in order', async () => {
+  it('renders 4 step cards in order with sky-blue number pills', async () => {
     const html = renderToStaticMarkup(await GetStartedPage());
+    const cards = html.match(/ghc-getstarted-step\b/g) ?? [];
+    expect(cards.length).toBeGreaterThanOrEqual(4);
 
-    // Log wrapper + connector
-    expect(html).toContain('ghc-getstarted-log');
-
-    // 4 commit nodes in correct order
-    const shas = ['a3f7c1d', 'b1d49ee', '7c8a02f', 'e02a519'];
-    let lastIdx = -1;
-    for (const sha of shas) {
-      const idx = html.indexOf(sha);
-      expect(idx).toBeGreaterThan(-1);
-      expect(idx).toBeGreaterThan(lastIdx);
-      lastIdx = idx;
-    }
-
-    // SHA + author + commit-step meta all rendered
-    expect(html).toContain('sha');
-    expect(html).toContain('author');
-    expect(html).toContain('step 1 of 4');
-    expect(html).toContain('step 4 of 4');
-
-    // Commit kind annotations
-    expect(html).toContain('data-commit-kind="feat"');
-    expect(html).toContain('data-commit-kind="chore"');
-    expect(html).toContain('data-commit-kind="docs"');
+    const nums = html.match(/ghc-getstarted-step-num">\d+</g) ?? [];
+    expect(nums).toEqual([
+      'ghc-getstarted-step-num">1<',
+      'ghc-getstarted-step-num">2<',
+      'ghc-getstarted-step-num">3<',
+      'ghc-getstarted-step-num">4<',
+    ]);
   });
 
-  it('renders all 4 step headings in order on the commit bodies', async () => {
+  it('renders all 4 step headings in order', async () => {
     const html = renderToStaticMarkup(await GetStartedPage());
     const headings = [
       'Ask an admin for an account',
@@ -171,7 +133,7 @@ describe('GetStartedPage — Repository Tree layout', () => {
     }
   });
 
-  it('renders step 2 sublist (numbered, mono-prefixed)', async () => {
+  it('renders step 2 sublist with counter-reset items', async () => {
     const html = renderToStaticMarkup(await GetStartedPage());
     expect(html).toContain('ghc-getstarted-sublist');
     expect(html).toContain('Log in at /login');
@@ -179,13 +141,14 @@ describe('GetStartedPage — Repository Tree layout', () => {
     expect(html).toContain('Click Request');
   });
 
-  it('renders step 1 and step 3 callout notes (mono labels)', async () => {
+  it('renders step 1 + step 3 callouts with mono uppercase labels', async () => {
     const html = renderToStaticMarkup(await GetStartedPage());
-    expect(html).toContain('ghc-getstarted-note');
+    expect(html).toContain('ghc-getstarted-callout');
+    // calloutLabel keys render uppercase via CSS (text-transform), but the
+    // mock just returns the literal — assert the literals are present.
+    expect(html).toContain('ghc-getstarted-callout-label');
     expect(html).toContain('>note<');
     expect(html).toContain('>warning<');
-    // Note labels are lowercase mono per design
-    expect(html).toContain('ghc-getstarted-note-label');
   });
 
   it('renders 3 curl examples inside step 4 (GET GET POST)', async () => {
@@ -198,25 +161,16 @@ describe('GetStartedPage — Repository Tree layout', () => {
 
   it('renders the error code table with all 4 rows', async () => {
     const html = renderToStaticMarkup(await GetStartedPage());
-    expect(html).toContain('ghc-getstarted-errortable');
+    expect(html).toContain('ghc-getstarted-error-table');
     expect(html).toContain('unauthorized');
     expect(html).toContain('forbidden');
     expect(html).toContain('rate_limited');
     expect(html).toContain('not_found');
-    // HTTP status column rendered
     expect(html).toContain('>401<');
     expect(html).toContain('>429<');
   });
 
-  it('renders the blame row at the bottom', async () => {
-    const html = renderToStaticMarkup(await GetStartedPage());
-    expect(html).toContain('ghc-getstarted-blame');
-    expect(html).toContain('last touched 2026-09-06');
-    expect(html).toContain('githubcache team');
-    expect(html).toContain('v1.0');
-  });
-
-  it('renders the deeper-reading section', async () => {
+  it('renders the deeper-reading section with 3 links', async () => {
     const html = renderToStaticMarkup(await GetStartedPage());
     expect(html).toContain('ghc-getstarted-deeper');
     expect(html).toContain('/docs');
