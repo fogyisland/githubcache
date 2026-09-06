@@ -8,7 +8,7 @@ vi.mock('next-intl/server', () => ({
     const dicts: Record<string, Record<string, string>> = {
       login: {
         eyebrow: 'github metadata cache',
-        title: 'Sign in to admin',
+        title: 'Sign in',
         tagline: 'Manage tokens, schedule refreshes, audit requests.',
         backToHome: '← Back to home',
       },
@@ -62,7 +62,7 @@ describe('LoginPage i18n', () => {
   it('renders translated page chrome (eyebrow, title, tagline, backToHome)', async () => {
     const html = renderToStaticMarkup(await LoginPage());
     expect(html).toContain('github metadata cache');
-    expect(html).toContain('Sign in to admin');
+    expect(html).toContain('Sign in');
     expect(html).toContain('Manage tokens, schedule refreshes, audit requests.');
     expect(html).toContain('← Back to home');
   });
@@ -86,30 +86,30 @@ describe('translateError helper', () => {
     const tForm = vi.fn((k: string) => `[form:${k}]`);
 
     // csrf
-    expect(translateError('csrf', null, tErr, tForm)).toBe('[error.csrf]');
+    expect(translateError('csrf', null, tErr, tForm)).toBe('[csrf]');
     // invalid_body
     expect(translateError('invalid_body', null, tErr, tForm)).toBe(
-      '[error.invalid_body]',
+      '[invalid_body]',
     );
     // too_many_attempts with explicit retry-after
     expect(translateError('too_many_attempts', '120', tErr, tForm)).toBe(
-      '[error.too_many_attempts{"seconds":120}]',
+      '[too_many_attempts{"seconds":120}]',
     );
     // too_many_attempts without retry-after (defaults to 60)
     expect(translateError('too_many_attempts', null, tErr, tForm)).toBe(
-      '[error.too_many_attempts{"seconds":60}]',
+      '[too_many_attempts{"seconds":60}]',
     );
     // too_many_attempts with invalid retry-after (NaN — falls back to 60)
     expect(translateError('too_many_attempts', 'abc', tErr, tForm)).toBe(
-      '[error.too_many_attempts{"seconds":60}]',
+      '[too_many_attempts{"seconds":60}]',
     );
     // invalid_credentials
     expect(translateError('invalid_credentials', null, tErr, tForm)).toBe(
-      '[error.invalid_credentials]',
+      '[invalid_credentials]',
     );
     // account_disabled
     expect(translateError('account_disabled', null, tErr, tForm)).toBe(
-      '[error.account_disabled]',
+      '[account_disabled]',
     );
   });
 
@@ -141,15 +141,15 @@ describe('translateError helper', () => {
 
     // negative value should fall back to 60
     expect(translateError('too_many_attempts', '-5', tErr, tForm)).toBe(
-      '[error.too_many_attempts{"seconds":60}]',
+      '[too_many_attempts{"seconds":60}]',
     );
     // zero should fall back to 60
     expect(translateError('too_many_attempts', '0', tErr, tForm)).toBe(
-      '[error.too_many_attempts{"seconds":60}]',
+      '[too_many_attempts{"seconds":60}]',
     );
     // 30 → 30
     expect(translateError('too_many_attempts', '30', tErr, tForm)).toBe(
-      '[error.too_many_attempts{"seconds":30}]',
+      '[too_many_attempts{"seconds":30}]',
     );
   });
 });

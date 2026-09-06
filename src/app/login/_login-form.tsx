@@ -51,11 +51,11 @@ export function translateError(
   if (known.includes(code as ServerErrorCode)) {
     if (code === 'too_many_attempts') {
       const seconds = retryAfter ? Number(retryAfter) : 60;
-      return tErr(`error.${code}`, {
+      return tErr(code, {
         seconds: Number.isFinite(seconds) && seconds > 0 ? seconds : 60,
       });
     }
-    return tErr(`error.${code}`);
+    return tErr(code);
   }
   return tForm('loginFailed');
 }
