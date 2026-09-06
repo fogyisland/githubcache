@@ -1,8 +1,13 @@
-import type { RefreshJob, Repository } from '@prisma/client';
+import type { RefreshJob, Repository, RefreshJobKind } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
-import { fetchRepoCore } from '@/lib/github/client';
+import { env } from '@/lib/config/env';
+import {
+  fetchRepoCore,
+  fetchReleasesOnly,
+  fetchBranchesOnly,
+} from '@/lib/github/client';
 import { parseRepoResponse } from '@/lib/github/fields';
-import { storeRepoMetadata } from '@/lib/cache';
+import { storeRepoMetadata, storeRepoReleases, storeRepoBranches } from '@/lib/cache';
 import { nextDelay } from '@/lib/scheduler/aging';
 import { writeAudit } from '@/lib/audit/writer';
 import {
@@ -42,6 +47,17 @@ const ESCALATION_AUDIT_ACTION = 'refresh.failed_review';
  * Process a single claimed refresh job: fetch from GitHub, upsert cache,
  * reschedule based on the aging policy, and return a status for the scheduler.
  *
+ * M27.4 — branches on `job.kind` when M27_REFRESH_BY_KIND=true:
+ *   - `core`     : full re-fetch (today's behavior, renamed `refreshCore`)
+ *   - `releases` : just `/releases` (ETag-aware)
+ *   - `branches` : just `/branches` (ETag-aware)
+ *
+ * The 304-handling, retry, error-mapping, and `nextDelay` reschedule
+ * stay shared across all three paths.
+ *
+ * When M27_REFRESH_BY_KIND=false (default), the legacy single-path
+ * behavior is preserved (always does a full re-fetch).
+ *
  * Branching rules (spec §6.5):
  *   200 OK  → parse+upsert, status='done', schedule next via successDelay
  *   304     → skip parse/upsert, status='done', schedule next via successDelay
@@ -53,6 +69,88 @@ const ESCALATION_AUDIT_ACTION = 'refresh.failed_review';
  *   Other   → increment attempts, failureDelay; if attempts >= 5 → failed + audit
  */
 export async function refreshOne(
+  job: RefreshJob & { repository: Repository },
+): Promise<RefreshJobResult> {
+  // M27.4 — feature-flagged dispatch by job kind.
+  if (env.M27_REFRESH_BY_KIND) {
+    switch (job.kind) {
+      case 'releases':
+        return refreshReleases(job);
+      case 'branches':
+        return refreshBranches(job);
+      case 'core':
+      default:
+        return refreshCore(job);
+    }
+  }
+  // Legacy path (flag off): always full re-fetch. Today the bulk of
+  // production traffic runs through here.
+  return refreshCore(job);
+}
+
+/**
+ * Per-facet refresh: hits only the /releases endpoint. Updates the
+ * repo_releases table + releasesFetchedAt + releasesEtag. Does NOT
+ * touch core metadata or repo_branches.
+ */
+async function refreshReleases(
+  job: RefreshJob & { repository: Repository },
+): Promise<RefreshJobResult> {
+  const repo = job.repository;
+  try {
+    const result = await fetchReleasesOnly(
+      repo.owner,
+      repo.name,
+      repo.releasesEtag ?? undefined,
+    );
+    if (!result.notModified) {
+      await storeRepoReleases(repo.owner, repo.name, result.releases, result.etag);
+    } else {
+      // 304 — just bump the freshness timestamp; data unchanged.
+      await prisma.repository.update({
+        where: { id: repo.id },
+        data: { releasesFetchedAt: new Date() },
+      });
+    }
+    return finishJob(job, 'refresh.releases.200', 'releases: 200 ok');
+  } catch (e: unknown) {
+    return handleReleasesError(e, job, repo);
+  }
+}
+
+/**
+ * Per-facet refresh: hits only the /branches endpoint. Updates
+ * repo_branches + branchesFetchedAt + branchesEtag.
+ */
+async function refreshBranches(
+  job: RefreshJob & { repository: Repository },
+): Promise<RefreshJobResult> {
+  const repo = job.repository;
+  try {
+    const result = await fetchBranchesOnly(
+      repo.owner,
+      repo.name,
+      repo.branchesEtag ?? undefined,
+    );
+    if (!result.notModified) {
+      await storeRepoBranches(repo.owner, repo.name, result.branches, result.etag);
+    } else {
+      await prisma.repository.update({
+        where: { id: repo.id },
+        data: { branchesFetchedAt: new Date() },
+      });
+    }
+    return finishJob(job, 'refresh.branches.200', 'branches: 200 ok');
+  } catch (e: unknown) {
+    return handleBranchesError(e, job, repo);
+  }
+}
+
+/**
+ * Original full-refresh path, unchanged. Hits /repos/{o}/{n} +
+ * /releases + /branches in one call chain.
+ */
+async function refreshCore(
   job: RefreshJob & { repository: Repository },
 ): Promise<RefreshJobResult> {
   const repo = job.repository;
@@ -134,6 +232,146 @@ export async function refreshOne(
   } catch (e: unknown) {
     return handleError(e, job, repo);
   }
+}
+
+/**
+ * Shared post-success bookkeeping. Reschedules the job using the
+ * standard aging policy and marks it done. Used by the per-facet paths
+ * which don't compute the refreshCount / hot-bump on their own
+ * (those are core-only heuristics).
+ */
+async function finishJob(
+  job: RefreshJob & { repository: Repository },
+  auditAction: string,
+  logMsg: string,
+): Promise<RefreshJobResult> {
+  await prisma.refreshJob.update({
+    where: { id: job.id },
+    data: {
+      status: 'done',
+      lockedUntil: null,
+      scheduledFor: new Date(Date.now() + 60_000), // per-facet jobs reschedule at 1m baseline
+      lastError: null,
+    },
+  });
+  void writeAudit({
+    action: auditAction,
+    targetType: 'refresh_job',
+    targetId: job.id.toString(),
+    metadata: { kind: job.kind, repositoryId: job.repositoryId.toString() },
+  });
+  logger.info(
+    { jobId: job.id.toString(), owner: job.repository.owner, name: job.repository.name, kind: job.kind },
+    logMsg,
+  );
+  return { status: 'done' };
+}
+
+/**
+ * Per-facet error path. Most logic mirrors handleError but the
+ * terminal-failure semantics are deliberately different: a 404 on
+ * /releases (e.g. GitHub changed the API) just disables the per-facet
+ * job (we keep core running) rather than poisoning the whole repo.
+ */
+async function handleReleasesError(
+  e: unknown,
+  job: RefreshJob & { repository: Repository },
+  repo: Repository,
+): Promise<RefreshJobResult> {
+  return handlePerFacetError(e, job, repo, 'releases');
+}
+
+async function handleBranchesError(
+  e: unknown,
+  job: RefreshJob & { repository: Repository },
+  repo: Repository,
+): Promise<RefreshJobResult> {
+  return handlePerFacetError(e, job, repo, 'branches');
+}
+
+async function handlePerFacetError(
+  e: unknown,
+  job: RefreshJob & { repository: Repository },
+  repo: Repository,
+  facet: 'releases' | 'branches',
+): Promise<RefreshJobResult> {
+  // Transient 5xx / 429 / pool exhausted — retry on the standard
+  // 30s window without incrementing attempts (we don't want a
+  // transient GitHub outage to count toward the 5-strike terminal
+  // threshold for releases/branches).
+  if (e instanceof GitHubError && e.httpStatus === 429) {
+    await prisma.refreshJob.update({
+      where: { id: job.id },
+      data: {
+        status: 'pending',
+        lockedUntil: null,
+        scheduledFor: new Date(Date.now() + TRANSIENT_RESCHEDULE_MS),
+        lastError: e.message,
+      },
+    });
+    return { status: 'pending' };
+  }
+  if (e instanceof GitHubError && e.httpStatus >= 500) {
+    await prisma.refreshJob.update({
+      where: { id: job.id },
+      data: {
+        status: 'pending',
+        lockedUntil: null,
+        scheduledFor: new Date(Date.now() + FIVE_S_SERVER_ERROR_RESCHEDULE_MS),
+        lastError: e.message,
+      },
+    });
+    return { status: 'pending' };
+  }
+  if (e instanceof GitHubUnavailable) {
+    await prisma.refreshJob.update({
+      where: { id: job.id },
+      data: {
+        status: 'pending',
+        lockedUntil: null,
+        scheduledFor: new Date(Date.now() + TRANSIENT_RESCHEDULE_MS),
+        lastError: e.message,
+      },
+    });
+    return { status: 'pending' };
+  }
+  // 404 on /releases or /branches — likely a deprecated API path.
+  // Mark the job failed but DON'T poison the repo (other facets keep
+  // working). Operator sees a `refresh.{facet}_404` audit row.
+  if (e instanceof NotFoundError || (e instanceof GitHubError && e.httpStatus === 404)) {
+    await prisma.refreshJob.update({
+      where: { id: job.id },
+      data: {
+        status: 'failed',
+        lockedUntil: null,
+        lastError: e.message,
+      },
+    });
+    void writeAudit({
+      action: `refresh.${facet}.404`,
+      targetType: 'refresh_job',
+      targetId: job.id.toString(),
+      metadata: { facet, owner: repo.owner, name: repo.name, message: e.message },
+    });
+    return { status: 'failed', error: e.message };
+  }
+  // Anything else — log and reschedule with a short backoff. Per-facet
+  // jobs are cheap so we just retry aggressively.
+  const message = e instanceof AppError ? e.message : e instanceof Error ? e.message : String(e);
+  await prisma.refreshJob.update({
+    where: { id: job.id },
+    data: {
+      status: 'pending',
+      lockedUntil: null,
+      scheduledFor: new Date(Date.now() + TRANSIENT_RESCHEDULE_MS),
+      lastError: message,
+    },
+  });
+  logger.warn(
+    { jobId: job.id.toString(), facet, err: message },
+    `refresh.${facet}: unexpected error, will retry`,
+  );
+  return { status: 'pending' };
 }
 
 async function handleError(

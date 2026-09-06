@@ -29,6 +29,12 @@ const schema = z.object({
   // for a canary run before rolling out globally. See .superpowers/sdd/
   // m27-incremental-refresh/ for the rollout plan.
   M27_READ_FROM_TABLES: z.coerce.boolean().default(false),
+  // M27.4 — refresh-by-kind switch. When true, refreshOne dispatches
+  // by job.kind: `core` does the full re-fetch (today's path);
+  // `releases` hits only /releases; `branches` hits only /branches.
+  // Off by default; M27.5's per-facet scheduler enqueues the
+  // releases + branches jobs once this is on.
+  M27_REFRESH_BY_KIND: z.coerce.boolean().default(false),
   // Consecutive-429 auto-disable threshold for pool tokens (M14.4).
   // When a token returns 429 this many times in a row (with no intervening
   // success), the pool automatically marks it 'disabled' and drops it.

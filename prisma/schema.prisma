@@ -40,6 +40,11 @@ model Repository {
   node                  Json
   metadata              Json?
   etag                  String?     @db.VarChar(128)
+  // M27.4 — per-facet ETags. Each list endpoint (releases, branches)
+  // returns its own ETag; storing them separately lets a 304 on one
+  // not poison the other.
+  releasesEtag          String?     @map("releases_etag") @db.VarChar(128)
+  branchesEtag          String?     @map("branches_etag") @db.VarChar(128)
   lastFetchedAt         DateTime?   @map("last_fetched_at")
   // Per-facet freshness — supersedes lastFetchedAt once backfill runs.
   coreFetchedAt         DateTime?   @map("core_fetched_at")

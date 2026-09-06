@@ -140,6 +140,141 @@ async function fetchVersionExtras(
   return { releases, branches };
 }
 
+// -----------------------------------------------------------------------------
+// M27.4 — per-facet fetchers. `fetchReleasesOnly` and `fetchBranchesOnly`
+// hit a single list endpoint each, with the same token-pick + retry +
+// rate-limit-record logic as `fetchRepoCore`. The /repos/{o}/{n} core
+// fetch is NOT done; callers asking for releases-only get releases.
+// -----------------------------------------------------------------------------
+
+export interface FetchReleasesResult {
+  releases: ReleaseSummary[];
+  etag?: string;
+  notModified?: boolean;
+}
+
+export interface FetchBranchesResult {
+  branches: BranchSummary[];
+  etag?: string;
+  notModified?: boolean;
+}
+
+export async function fetchReleasesOnly(
+  owner: string,
+  name: string,
+  etag?: string,
+): Promise<FetchReleasesResult> {
+  await ensurePoolInitialized();
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    const picked = pickToken();
+    if (!picked) {
+      throw new GitHubUnavailable(
+        'no github tokens available (all exhausted or pool not initialized)',
+      );
+    }
+    try {
+      const res = await picked.octokit.repos.listReleases({
+        owner,
+        repo: name,
+        per_page: MAX_RELEASES,
+        ...(etag !== undefined ? { headers: { 'If-None-Match': etag } } : {}),
+      });
+      const responseEtag = res.headers.etag;
+      const remainingRaw = res.headers['x-ratelimit-remaining'];
+      const resetRaw = res.headers['x-ratelimit-reset'];
+      if (remainingRaw !== undefined && resetRaw !== undefined) {
+        const remaining = Number.parseInt(remainingRaw, 10);
+        const reset = Number.parseInt(resetRaw, 10);
+        if (Number.isFinite(remaining) && Number.isFinite(reset) && reset > 0) {
+          await recordUsage(picked.id, remaining, reset);
+        }
+      }
+      // Octokit returns 200 typed-narrow; the underlying axios call
+      // can still be 304 when the If-None-Match header is honored.
+      const status = (res as { status?: number }).status;
+      if (status === 304) {
+        return {
+          releases: [],
+          ...(responseEtag ? { etag: responseEtag } : {}),
+          notModified: true,
+        };
+      }
+      const releases = (res.data as unknown[]).map(toReleaseSummary);
+      return {
+        releases,
+        ...(responseEtag ? { etag: responseEtag } : {}),
+      };
+    } catch (e: unknown) {
+      lastError = e;
+      const backoff = getBackoff();
+      if (backoff) {
+        await sleep(backoff);
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw lastError ?? new GitHubUnavailable('fetchReleasesOnly: exhausted retries');
+}
+
+export async function fetchBranchesOnly(
+  owner: string,
+  name: string,
+  etag?: string,
+): Promise<FetchBranchesResult> {
+  await ensurePoolInitialized();
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    const picked = pickToken();
+    if (!picked) {
+      throw new GitHubUnavailable(
+        'no github tokens available (all exhausted or pool not initialized)',
+      );
+    }
+    try {
+      const res = await picked.octokit.repos.listBranches({
+        owner,
+        repo: name,
+        per_page: MAX_BRANCHES,
+        ...(etag !== undefined ? { headers: { 'If-None-Match': etag } } : {}),
+      });
+      const responseEtag = res.headers.etag;
+      const remainingRaw = res.headers['x-ratelimit-remaining'];
+      const resetRaw = res.headers['x-ratelimit-reset'];
+      if (remainingRaw !== undefined && resetRaw !== undefined) {
+        const remaining = Number.parseInt(remainingRaw, 10);
+        const reset = Number.parseInt(resetRaw, 10);
+        if (Number.isFinite(remaining) && Number.isFinite(reset) && reset > 0) {
+          await recordUsage(picked.id, remaining, reset);
+        }
+      }
+      const status = (res as { status?: number }).status;
+      if (status === 304) {
+        return {
+          branches: [],
+          ...(responseEtag ? { etag: responseEtag } : {}),
+          notModified: true,
+        };
+      }
+      const branches = (res.data as unknown[]).map(toBranchSummary);
+      return {
+        branches,
+        ...(responseEtag ? { etag: responseEtag } : {}),
+      };
+    } catch (e: unknown) {
+      lastError = e;
+      const backoff = getBackoff();
+      if (backoff) {
+        await sleep(backoff);
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw lastError ?? new GitHubUnavailable('fetchBranchesOnly: exhausted retries');
+}
+
 export interface FetchRepoCoreResult {
   data?: unknown;
   etag?: string;

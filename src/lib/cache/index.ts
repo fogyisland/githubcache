@@ -1,2 +1,2 @@
 export { getRepoMetadata, type RepoMetadataResult } from './read';
-export { storeRepoMetadata } from './write';
+export { storeRepoMetadata, storeRepoReleases, storeRepoBranches } from './write';
