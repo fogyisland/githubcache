@@ -1,7 +1,7 @@
 import { logger } from '@/lib/logger';
 import { env } from '@/lib/config/env';
 import { runTick } from './tick';
-import { nightlySweep } from './sweep';
+import { coreSweep, releasesSweep, branchesSweep } from './sweep';
 import { runWorkerTick } from '@/lib/webhooks/worker';
 import { runDailyReportTick } from './cron-daily-report';
 import { runWeeklyReportTick } from './cron-weekly-report';
@@ -27,9 +27,10 @@ interface SchedulerHandle {
 let activeHandle: SchedulerHandle | null = null;
 
 /**
- * Start the in-process scheduler. Sets up three intervals:
+ * Start the in-process scheduler. Sets up intervals:
  *  - tick: every SCHEDULER_TICK_MS (default 60s) — drain the refresh_jobs queue
- *  - sweep: every NIGHTLY_SWEEP_INTERVAL_MS (default 24h) — re-enqueue all ok repos
+ *  - M27.5: per-facet sweeps on their own cadences (or legacy single
+ *    sweep if M27_REFRESH_BY_KIND=false)
  *  - webhook worker: every WEBHOOK_WORKER_TICK_MS (default 15s) — deliver due webhooks
  *
  * Returns a handle with `stop()` to halt all intervals. Production wiring
@@ -62,11 +63,43 @@ export function startScheduler(): SchedulerHandle {
   setRefreshTickFn(runTick);
   resumeRefreshTick();
 
-  const sweepInterval = setInterval(() => {
-    nightlySweep().catch((e: unknown) => {
-      logger.error({ err: e }, 'nightlySweep failed');
-    });
-  }, env.NIGHTLY_SWEEP_INTERVAL_MS);
+  // M27.5 — per-facet sweeps. When M27_REFRESH_BY_KIND=true, three
+  // timers run on their own cadences (defaults 24h/24h/7d). When false
+  // (the production default today), the legacy single-sweep timer runs.
+  const sweepIntervals: ReturnType<typeof setInterval>[] = [];
+  if (env.M27_REFRESH_BY_KIND) {
+    sweepIntervals.push(
+      setInterval(() => {
+        releasesSweep().catch((e: unknown) => {
+          logger.error({ err: e, facet: 'releases' }, 'sweep failed');
+        });
+      }, env.SCHEDULER_RELEASES_SWEEP_HOURS * 3_600_000),
+    );
+    sweepIntervals.push(
+      setInterval(() => {
+        branchesSweep().catch((e: unknown) => {
+          logger.error({ err: e, facet: 'branches' }, 'sweep failed');
+        });
+      }, env.SCHEDULER_BRANCHES_SWEEP_HOURS * 3_600_000),
+    );
+    sweepIntervals.push(
+      setInterval(() => {
+        coreSweep().catch((e: unknown) => {
+          logger.error({ err: e, facet: 'core' }, 'sweep failed');
+        });
+      }, env.SCHEDULER_CORE_SWEEP_HOURS * 3_600_000),
+    );
+  } else {
+    // Legacy single-sweep timer. Runs every NIGHTLY_SWEEP_INTERVAL_MS
+    // (default 24h) and enqueues a `core` job for every ok repo.
+    sweepIntervals.push(
+      setInterval(() => {
+        coreSweep().catch((e: unknown) => {
+          logger.error({ err: e }, 'nightlySweep failed');
+        });
+      }, env.NIGHTLY_SWEEP_INTERVAL_MS),
+    );
+  }
 
   // M14.6 — webhook delivery worker. Runs alongside the refresh tick on
   // its own cadence (default 15s — faster than refresh because deliveries
@@ -92,18 +125,21 @@ export function startScheduler(): SchedulerHandle {
   const weeklyReportInterval = setInterval(() => {
     runWeeklyReportTick().catch((e: unknown) => {
       logger.error({ err: e }, 'weekly report tick failed');
-    });
+        });
   }, env.EMAIL_WEEKLY_REPORT_INTERVAL_MS);
   weeklyReportInterval.unref?.();
 
   // Don't keep the process alive solely for these timers (in case Next.js exits)
-  sweepInterval.unref?.();
+  sweepIntervals.forEach((i) => i.unref?.());
   webhookWorkerInterval.unref?.();
 
   logger.info(
     {
       tickMs: env.SCHEDULER_TICK_MS,
-      sweepMs: env.NIGHTLY_SWEEP_INTERVAL_MS,
+      perFacet: env.M27_REFRESH_BY_KIND,
+      releasesSweepHours: env.SCHEDULER_RELEASES_SWEEP_HOURS,
+      branchesSweepHours: env.SCHEDULER_BRANCHES_SWEEP_HOURS,
+      coreSweepHours: env.SCHEDULER_CORE_SWEEP_HOURS,
       webhookWorkerMs: env.WEBHOOK_WORKER_TICK_MS,
       webhookWorkerBatch: env.WEBHOOK_WORKER_BATCH_SIZE,
       dailyReportMs: env.EMAIL_DAILY_REPORT_INTERVAL_MS,
@@ -115,7 +151,7 @@ export function startScheduler(): SchedulerHandle {
   activeHandle = {
     stop: () => {
       pauseRefreshTick();
-      clearInterval(sweepInterval);
+      sweepIntervals.forEach((i) => clearInterval(i));
       clearInterval(webhookWorkerInterval);
       clearInterval(dailyReportInterval);
       clearInterval(weeklyReportInterval);

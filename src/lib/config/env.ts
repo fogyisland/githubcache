@@ -35,6 +35,13 @@ const schema = z.object({
   // Off by default; M27.5's per-facet scheduler enqueues the
   // releases + branches jobs once this is on.
   M27_REFRESH_BY_KIND: z.coerce.boolean().default(false),
+  // M27.5 — per-facet sweep cadences. The releases + branches sweeps
+  // run daily by default (cheap, only list endpoints). The core sweep
+  // runs weekly — the full /repos/{o}/{n} call is more expensive
+  // (~5k calls/day for 1k repos at 1-per-5min cadence).
+  SCHEDULER_RELEASES_SWEEP_HOURS: z.coerce.number().int().positive().default(24),
+  SCHEDULER_BRANCHES_SWEEP_HOURS: z.coerce.number().int().positive().default(24),
+  SCHEDULER_CORE_SWEEP_HOURS: z.coerce.number().int().positive().default(168),
   // Consecutive-429 auto-disable threshold for pool tokens (M14.4).
   // When a token returns 429 this many times in a row (with no intervening
   // success), the pool automatically marks it 'disabled' and drops it.
