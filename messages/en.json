@@ -51,6 +51,21 @@
     "yes": "Yes",
     "no": "No"
   },
+  "adminMode": {
+    "aria": "Admin color mode",
+    "label": {
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "fullLabel": {
+      "light": "Daylight mode",
+      "dark": "Nightfall mode"
+    },
+    "switchTo": "Switch to {name} — {mood}",
+    "status": {
+      "ok": "Admin mode is now {mode}"
+    }
+  },
   "nav": {
     "home": "Home",
     "status": "Status",

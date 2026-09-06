@@ -6,6 +6,7 @@ import { validateSession } from '@/lib/auth/session';
 import { LogoutButton } from '@/app/admin/logout-button';
 import { ThemeSwitcher } from '@/app/_components/theme-switcher';
 import { AdminVariantSwitcher } from '@/app/_components/admin-variant-switcher';
+import { AdminModeSwitcher } from '@/app/_components/admin-mode-switcher';
 import { LangSwitcher } from '@/app/_components/lang-switcher';
 import { TimezoneSwitcher } from '@/app/_components/timezone-switcher';
 import { AdminClock } from '@/app/_components/admin-clock';
@@ -20,12 +21,14 @@ import {
 import { THEME_COOKIE } from '@/lib/theme/cookie';
 import {
   ADMIN_VARIANT_COOKIE,
+  ADMIN_MODE_COOKIE,
 } from '@/lib/admin/cookie';
 import {
   isAdminVariant,
   DEFAULT_ADMIN_VARIANT,
   type AdminVariantId,
 } from '@/lib/admin/variant';
+import { resolveAdminMode, type AdminModeId } from '@/lib/admin/mode';
 import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 import { AdminShell } from '@/app/admin/_components/admin-shell';
 import { CommandPalette } from '@/app/admin/_components/command-palette';
@@ -99,6 +102,12 @@ export default async function AdminLayout({
   )
     ? (cookieStore.get(ADMIN_VARIANT_COOKIE)!.value as AdminVariantId)
     : DEFAULT_ADMIN_VARIANT;
+  // M26.x — admin color mode. Read from the dedicated cookie so it stays
+  // independent of the public surface's `ghc_theme` (which controls the
+  // site-wide terminal/editorial/brutalist palette).
+  const currentAdminMode: AdminModeId = resolveAdminMode(
+    cookieStore.get(ADMIN_MODE_COOKIE)?.value,
+  );
 
   const currentLang = resolveLocale({
     cookieValue: cookieStore.get(LANG_COOKIE)?.value ?? null,
@@ -159,13 +168,14 @@ export default async function AdminLayout({
 
   return (
     <div>
-      {/* Top utility bar (lang switcher + theme switcher + variant switcher + tz switcher + clock + logout)
+      {/* Top utility bar (lang switcher + theme switcher + variant switcher + mode switcher + tz switcher + clock + logout)
           — kept outside AdminShell so it stays on top across all variants. */}
       <div className="ghc-admin-utility">
         <span className="text-sm">
           {user.email} ({tShell(`role.${user.role}`)})
         </span>
         <AdminVariantSwitcher current={currentAdminVariant} />
+        <AdminModeSwitcher current={currentAdminMode} />
         <LangSwitcher current={currentLang} locales={LOCALES} />
         <TimezoneSwitcher current={currentTz} />
         <ThemeSwitcher current={currentTheme} />
@@ -175,6 +185,7 @@ export default async function AdminLayout({
       <AdminShell
         current={currentSection}
         variant={currentAdminVariant}
+        mode={currentAdminMode}
         user={{ email: user.email, role: user.role }}
         initialStatus={initialStatus}
       >

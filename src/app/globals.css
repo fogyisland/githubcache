@@ -270,6 +270,43 @@ a {
     color: var(--color-ink);
   }
 
+  /* ghc-mode-row / pill — M26.x admin color mode switcher (light/dark).
+     Mirrors the ghc-theme-pill shape but reads from the --admin-*
+     tokens so it tracks the active admin mode. */
+  .ghc-mode-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  .ghc-mode-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.6rem;
+    border-radius: var(--radius-pill, 999px);
+    background: transparent;
+    color: var(--admin-ink, var(--color-ink));
+    border: 1px solid var(--admin-rule, var(--color-rule));
+    font-family: var(--admin-mono, ui-monospace, monospace);
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+  }
+  .ghc-mode-pill:hover {
+    background: color-mix(in srgb, var(--admin-accent, var(--color-accent)) 10%, transparent);
+    color: var(--admin-accent, var(--color-accent));
+  }
+  .ghc-mode-pill[data-active="true"],
+  .ghc-mode-pill[aria-pressed="true"] {
+    background: var(--admin-accent, var(--color-accent));
+    color: var(--admin-accent-ink, var(--color-accent-ink));
+    border-color: var(--admin-accent, var(--color-accent));
+    font-weight: 600;
+  }
+  .ghc-mode-pill:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
   /* ghc-account-sidebar-list / link — the /account section sidebar.
      Active state is conveyed via [data-active="true"] so the same
      class works for all 3 themes via the standard tokens. */
@@ -2067,57 +2104,141 @@ a {
     white-space: nowrap;
   }
 
-  /* --- Mission Control: dark slate + Wulan sky-blue accent + mono --- */
+  /* =========================================================================
+   * ADMIN COLOR MODES (M26.x)
+   *
+   * Two-mode system that controls every color token used inside the admin
+   * surface. Modes are orthogonal to the variants above: pick a mode for
+   * color, pick a variant for typography + layout. This kills the
+   * "one element blue, one element white" drift between admin pages.
+   *
+   * Both palettes deliberately avoid the AI-default cream + terracotta
+   * and the pure-black + acid-green look. The accent is cobalt, which is
+   * the existing brand color of the public surface (it shows up in the
+   * logo + the site header) — so the admin feels like the same product,
+   * just in two screen-modes.
+   * ======================================================================= */
+
+  /* --- Daylight: paper surface, ink text, cobalt accent.
+        Light-on-paper. Reads as a control panel you can stare at for an
+        audit. The bg is a touch warmer than pure white (#FAFAF7) to avoid
+        the dead-screen look; the ink has a faint blue cast so it doesn't
+        read as flat black. --- */
+  [data-admin-mode="light"] {
+    --color-bg: #FAFAF7;
+    --color-surface: #FFFFFF;
+    --color-surface-2: #F0F1ED;
+    --color-ink: #0E0E11;
+    --color-ink-muted: #6B6B72;
+    --color-rule: #E0E0DC;
+    --color-rule-2: #C8C8C4;
+    --color-accent: #2D5BFF;
+    --color-accent-ink: #FFFFFF;
+    --color-accent-deep: #1E3FB0;
+    --color-warn: #B57A20;
+    --color-danger: #C53D3D;
+    --color-ok: #1B7A3D;
+    --color-info: #2D5BFF;
+    /* Admin-specific tokens (used by ghc-admin-* classes) */
+    --admin-bg: #FAFAF7;
+    --admin-surface: #FFFFFF;
+    --admin-surface-2: #F0F1ED;
+    --admin-ink: #0E0E11;
+    --admin-ink-muted: #6B6B72;
+    --admin-accent: #2D5BFF;
+    --admin-accent-deep: #1E3FB0;
+    --admin-accent-ink: #FFFFFF;
+    --admin-rule: #E0E0DC;
+    --admin-rule-2: #C8C8C4;
+    --admin-warn: #B57A20;
+    --admin-danger: #C53D3D;
+    --admin-ok: #1B7A3D;
+    --admin-shadow: 0 1px 2px rgba(14, 14, 17, 0.04), 0 1px 3px rgba(14, 14, 17, 0.06);
+    background: var(--admin-bg);
+    color: var(--admin-ink);
+  }
+
+  /* --- Nightfall: warm charcoal, bone text, luminous cobalt.
+        Dark-on-charcoal for late-ops focus. The bg (#14141A) is a touch
+        warmer than pure black so the chrome doesn't read as a screen-
+        saver; the ink is bone (#E8E8EC) not pure white, which would
+        glare; the accent is a brighter cobalt (#7B97FF) for legibility
+        on dark. --- */
+  [data-admin-mode="dark"] {
+    --color-bg: #14141A;
+    --color-surface: #1F1F26;
+    --color-surface-2: #2A2A33;
+    --color-ink: #E8E8EC;
+    --color-ink-muted: #8E8E97;
+    --color-rule: #2A2A33;
+    --color-rule-2: #353540;
+    --color-accent: #7B97FF;
+    --color-accent-ink: #14141A;
+    --color-accent-deep: #5A78E5;
+    --color-warn: #E0B560;
+    --color-danger: #F26A6A;
+    --color-ok: #4FB76D;
+    --color-info: #7B97FF;
+    --admin-bg: #14141A;
+    --admin-surface: #1F1F26;
+    --admin-surface-2: #2A2A33;
+    --admin-ink: #E8E8EC;
+    --admin-ink-muted: #8E8E97;
+    --admin-accent: #7B97FF;
+    --admin-accent-deep: #5A78E5;
+    --admin-accent-ink: #14141A;
+    --admin-rule: #2A2A33;
+    --admin-rule-2: #353540;
+    --admin-warn: #E0B560;
+    --admin-danger: #F26A6A;
+    --admin-ok: #4FB76D;
+    --admin-shadow: 0 1px 2px rgba(0, 0, 0, 0.32), 0 4px 12px rgba(0, 0, 0, 0.24);
+    background: var(--admin-bg);
+    color: var(--admin-ink);
+  }
+
+  /* =========================================================================
+   * ADMIN VARIANTS (typography + layout only — color is owned by mode)
+   *
+   * The three variants now differ ONLY in typeface, border-radius, and
+   * border weight. They read the same color tokens no matter which mode
+   * is active, so flipping light/dark doesn't clash with the variant
+   * choice. Variant + mode combine orthogonally:
+   *
+   *   mission_control + dark  → slate-mono ops bridge, late shift
+   *   mission_control + light → paper-mono ops bridge, day audit
+   *   inspector + dark        → bone-serif forensic walk
+   *   workbench + light       → paper-grotesk assembly manual
+   * ======================================================================= */
+
+  /* --- Mission Control: mono everywhere, dense HUD chrome. --- */
   [data-admin="mission_control"] {
-    --admin-bg: #0f1e3a;
-    --admin-ink: #e6edf7;
-    --admin-accent: #4a90e2;
-    --admin-rule: #1e3a5f;
     --admin-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
     --admin-display: ui-monospace, "SFMono-Regular", Menlo, monospace;
-    /* M24 patch: also override the global --color-bg/ink so admin elements
-       that reference var(--color-ink) directly (e.g. ghc-admin-page-title)
-       stay readable against the dark slate bg. */
-    --color-bg: #0f1e3a;
-    --color-ink: #e6edf7;
-    --color-ink-muted: #94a3b8;
-    --color-rule: #1e3a5f;
-    background: var(--admin-bg);
-    color: var(--admin-ink);
+    --radius-card: 6px;
+    --radius-button: 4px;
+    --radius-pill: 999px;
+    --border-width-card: 1px;
   }
 
-  /* --- Inspector: Wulan light surface + serif display --- */
+  /* --- Inspector: serif display on headers, sans body, hairline rules. --- */
   [data-admin="inspector"] {
-    --admin-bg: #fafbfc;
-    --admin-ink: #1a2b4a;
-    --admin-accent: #2c5f8e;
-    --admin-rule: #dde4ec;
     --admin-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
     --admin-display: "Source Serif Pro", "Iowan Old Style", Georgia, serif;
-    /* M24 patch: mirror --color-* so admin elements reference the same ink */
-    --color-bg: #fafbfc;
-    --color-ink: #1a2b4a;
-    --color-ink-muted: #6b7b95;
-    --color-rule: #dde4ec;
-    background: var(--admin-bg);
-    color: var(--admin-ink);
+    --radius-card: 0px;
+    --radius-button: 0px;
+    --radius-pill: 0px;
+    --border-width-card: 1px;
   }
 
-  /* --- Workbench: Wulan light + Space Grotesk display --- */
+  /* --- Workbench: grotesk display, oversized numerics, thick borders. --- */
   [data-admin="workbench"] {
-    --admin-bg: #ffffff;
-    --admin-ink: #1a2b4a;
-    --admin-accent: #4a90e2;
-    --admin-rule: #dde4ec;
     --admin-mono: ui-monospace, "SFMono-Regular", Menlo, monospace;
     --admin-display: "Space Grotesk", system-ui, -apple-system, sans-serif;
-    /* M24 patch: mirror --color-* so admin elements reference the same ink */
-    --color-bg: #ffffff;
-    --color-ink: #1a2b4a;
-    --color-ink-muted: #6b7b95;
-    --color-rule: #dde4ec;
-    background: var(--admin-bg);
-    color: var(--admin-ink);
+    --radius-card: 4px;
+    --radius-button: 4px;
+    --radius-pill: 999px;
+    --border-width-card: 2px;
   }
 
   /* --- Command palette (⌘K) --- */

@@ -36,6 +36,7 @@ vi.mock('next-intl', () => ({
 
 import { AdminShell } from '@/app/admin/_components/admin-shell';
 import type { AdminVariantId } from '@/lib/admin/variant';
+import type { AdminModeId } from '@/lib/admin/mode';
 
 const user = { email: 'op@example.com', role: 'operator' as const };
 const initialStatus = {
@@ -54,6 +55,7 @@ describe('AdminShell', () => {
       await AdminShell({
         current: 'dashboard',
         variant: 'mission_control',
+        mode: 'dark' as AdminModeId,
         user,
         initialStatus,
         children: createElement('div', { 'data-testid': 'page' }, 'Hello page'),
@@ -68,6 +70,7 @@ describe('AdminShell', () => {
       await AdminShell({
         current: 'dashboard',
         variant: 'mission_control',
+        mode: 'dark' as AdminModeId,
         user: { email: 'a@b', role: 'admin' as const },
         initialStatus,
         children: createElement('span', null, 'x'),
@@ -87,6 +90,7 @@ describe('AdminShell', () => {
       await AdminShell({
         current: 'users',
         variant: 'mission_control',
+        mode: 'dark' as AdminModeId,
         user: { email: 'a@b', role: 'admin' as const },
         initialStatus,
         children: createElement('span', null, 'x'),
@@ -102,6 +106,7 @@ describe('AdminShell', () => {
       await AdminShell({
         current: 'dashboard',
         variant: 'mission_control',
+        mode: 'dark' as AdminModeId,
         user, // role: operator
         initialStatus,
         children: createElement('span', null, 'x'),
@@ -120,6 +125,7 @@ describe('AdminShell', () => {
       await AdminShell({
         current: 'dashboard',
         variant: 'mission_control',
+        mode: 'dark' as AdminModeId,
         user,
         initialStatus,
         children: createElement('span', null, 'x'),
@@ -131,6 +137,7 @@ describe('AdminShell', () => {
       await AdminShell({
         current: 'dashboard',
         variant: 'inspector',
+        mode: 'dark' as AdminModeId,
         user,
         initialStatus,
         children: createElement('span', null, 'x'),
@@ -142,11 +149,42 @@ describe('AdminShell', () => {
       await AdminShell({
         current: 'dashboard',
         variant: 'workbench',
+        mode: 'dark' as AdminModeId,
         user,
         initialStatus,
         children: createElement('span', null, 'x'),
       }),
     );
     expect(wbHtml).not.toContain('ghc-admin-statusbar');
+  });
+
+  // M26.x — the shell passes the active color mode to the wrapper so the
+  // [data-admin-mode="..."] CSS scope can paint the right palette.
+  it('emits data-admin-mode="dark" by default', async () => {
+    const html = renderToStaticMarkup(
+      await AdminShell({
+        current: 'dashboard',
+        variant: 'mission_control',
+        mode: 'dark' as AdminModeId,
+        user,
+        initialStatus,
+        children: createElement('span', null, 'x'),
+      }),
+    );
+    expect(html).toMatch(/data-admin-mode="dark"/);
+  });
+
+  it('emits data-admin-mode="light" when mode=light', async () => {
+    const html = renderToStaticMarkup(
+      await AdminShell({
+        current: 'dashboard',
+        variant: 'inspector',
+        mode: 'light' as AdminModeId,
+        user,
+        initialStatus,
+        children: createElement('span', null, 'x'),
+      }),
+    );
+    expect(html).toMatch(/data-admin-mode="light"/);
   });
 });

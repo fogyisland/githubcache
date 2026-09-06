@@ -5,8 +5,15 @@ import {
   resolveAdminVariant,
   type AdminVariantId,
 } from '@/lib/admin/variant';
+import {
+  DEFAULT_ADMIN_MODE,
+  isAdminMode,
+  resolveAdminMode,
+  type AdminModeId,
+} from '@/lib/admin/mode';
 
 export const ADMIN_VARIANT_COOKIE = 'ghc_admin_variant';
+export const ADMIN_MODE_COOKIE = 'ghc_admin_mode';
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 
 /**
@@ -40,4 +47,28 @@ export function buildAdminVariantSetCookie(id: AdminVariantId): string {
   const safe = isAdminVariant(id) ? id : DEFAULT_ADMIN_VARIANT;
   const value = encodeURIComponent(safe);
   return `${ADMIN_VARIANT_COOKIE}=${value}; Path=/; Max-Age=${ONE_YEAR_SECONDS}; SameSite=Lax`;
+}
+
+/**
+ * Read the admin color mode from a `next/headers` headers() entry. Falls
+ * back to DEFAULT_ADMIN_MODE ("dark") when the cookie is missing or
+ * malformed — by design, the mode always resolves to a known id.
+ */
+export function readAdminModeFromCookieHeader(cookieHeader: string | null): AdminModeId {
+  const fakeRequest = {
+    headers: { get: (name: string) => (name.toLowerCase() === 'cookie' ? cookieHeader : null) },
+  } as unknown as Request;
+  return readAdminModeFromRequest(fakeRequest);
+}
+
+export function readAdminModeFromRequest(req: Request): AdminModeId {
+  const cookies = cookiesFromRequest(req);
+  const raw = cookies.get(ADMIN_MODE_COOKIE)?.value;
+  return resolveAdminMode(raw);
+}
+
+export function buildAdminModeSetCookie(id: AdminModeId): string {
+  const safe = isAdminMode(id) ? id : DEFAULT_ADMIN_MODE;
+  const value = encodeURIComponent(safe);
+  return `${ADMIN_MODE_COOKIE}=${value}; Path=/; Max-Age=${ONE_YEAR_SECONDS}; SameSite=Lax`;
 }
