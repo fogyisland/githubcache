@@ -146,6 +146,8 @@ beforeEach(async () => {
       owner: `${REPO_OWNER_PREFIX}1`,
       name: 'refresh-target',
       node: { id: 99_111_001 },
+      // M27 — defaultBranch is NOT NULL in the schema.
+      defaultBranch: 'main',
       fetchStatus: 'ok',
     },
   });

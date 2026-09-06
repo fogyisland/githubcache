@@ -263,6 +263,9 @@ export async function runProvider(
         owner: p.owner,
         name: p.name,
         node: { stub: true } as never,
+        // M27 — stub rows. Real defaultBranch arrives when the worker
+        // populates these rows.
+        defaultBranch: 'main',
         fetchStatus: 'ok' as const,
       })),
       skipDuplicates: true,

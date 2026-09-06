@@ -67,6 +67,9 @@ async function enqueueRefresh(owner: string, name: string): Promise<{
       owner,
       name,
       node: { stub: true } as never,
+      // M27 — stub rows are placeholder before the first fetch. Real
+      // defaultBranch arrives when the worker populates this row.
+      defaultBranch: 'main',
       fetchStatus: 'ok',
     },
     update: {},

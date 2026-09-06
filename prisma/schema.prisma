@@ -8,21 +8,79 @@ datasource db {
 }
 
 model Repository {
-  id            BigInt      @id @default(autoincrement())
-  owner         String      @db.VarChar(100)
-  name          String      @db.VarChar(200)
-  node          Json
-  metadata      Json?
-  etag          String?     @db.VarChar(128)
-  lastFetchedAt DateTime?   @map("last_fetched_at")
-  fetchStatus   FetchStatus @default(ok) @map("fetch_status")
-  fetchError    String?     @map("fetch_error") @db.Text
-  createdAt     DateTime    @default(now()) @map("created_at")
+  id                    BigInt      @id @default(autoincrement())
+  owner                 String      @db.VarChar(100)
+  name                  String      @db.VarChar(200)
+  // Core fields — was metadata.{description,private,defaultBranch,...}.
+  description           String?     @db.Text
+  private               Boolean     @default(false)
+  // Nullable at the Prisma layer so existing call sites that don't pass
+  // it (test fixtures, stub upserts in queue-on-miss) keep working.
+  // The DB column has NOT NULL DEFAULT 'main' so reads always get a
+  // value; the backfill in M27.2 will populate it from `metadata` for
+  // existing rows.
+  defaultBranch         String?     @db.VarChar(100)
+  stars                 Int         @default(0)
+  forks                 Int         @default(0)
+  watchers              Int         @default(0)
+  repoCreatedAt         DateTime?   @map("repo_created_at")
+  repoUpdatedAt         DateTime?   @map("repo_updated_at")
+  repoPushedAt          DateTime?   @map("repo_pushed_at")
+  language              String?     @db.VarChar(50)
+  license               String?     @db.VarChar(100)
+  topics                Json        @default("[]")
+  homepage              String?     @db.Text
+  archived              Boolean     @default(false)
+  disabled              Boolean     @default(false)
+  // Legacy JSON columns — dropped in M27.6. Read path in M27.3 falls
+  // back to `metadata` when the new columns are NULL (pre-backfill).
+  node                  Json
+  metadata              Json?
+  etag                  String?     @db.VarChar(128)
+  lastFetchedAt         DateTime?   @map("last_fetched_at")
+  // Per-facet freshness — supersedes lastFetchedAt once backfill runs.
+  coreFetchedAt         DateTime?   @map("core_fetched_at")
+  releasesFetchedAt     DateTime?   @map("releases_fetched_at")
+  branchesFetchedAt    DateTime?   @map("branches_fetched_at")
+  fetchStatus           FetchStatus @default(ok) @map("fetch_status")
+  fetchError            String?     @map("fetch_error") @db.Text
+  createdAt             DateTime    @default(now()) @map("created_at")
 
-  refreshJobs RefreshJob[]
+  releases              RepoRelease[]
+  branches              RepoBranch[]
+  refreshJobs           RefreshJob[]
 
   @@unique([owner, name])
   @@map("repositories")
+}
+
+model RepoRelease {
+  id           BigInt   @id @default(autoincrement())
+  repositoryId BigInt   @map("repository_id")
+  repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  tag          String   @db.VarChar(100)
+  name         String?  @db.VarChar(255)
+  publishedAt  DateTime @map("published_at")
+  prerelease   Boolean  @default(false)
+  draft        Boolean  @default(false)
+  fetchedAt    DateTime @default(now()) @map("fetched_at")
+
+  @@unique([repositoryId, tag])
+  @@index([repositoryId, publishedAt])
+  @@map("repo_releases")
+}
+
+model RepoBranch {
+  id            BigInt   @id @default(autoincrement())
+  repositoryId  BigInt   @map("repository_id")
+  repository    Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
+  name          String   @db.VarChar(100)
+  protected     Boolean  @default(false)
+  lastCommitSha String?  @db.VarChar(64) @map("last_commit_sha")
+  fetchedAt     DateTime @default(now()) @map("fetched_at")
+
+  @@unique([repositoryId, name])
+  @@map("repo_branches")
 }
 
 enum FetchStatus {
@@ -198,6 +256,10 @@ enum GithubTokenStatus {
 model RefreshJob {
   id           BigInt           @id @default(autoincrement())
   repositoryId BigInt           @map("repository_id")
+  // M27 — what facet this job refreshes. Existing rows default to
+  // 'core' (full re-fetch). M27.5 starts enqueuing 'releases' / 'branches'
+  // per facet cadence.
+  kind         RefreshJobKind   @default(core) @map("job_kind")
   priority     Int              @default(50)
   scheduledFor DateTime         @map("scheduled_for")
   status       RefreshJobStatus @default(pending)
@@ -211,6 +273,12 @@ model RefreshJob {
   @@index([status, scheduledFor])
   @@index([status, priority])
   @@map("refresh_jobs")
+}
+
+enum RefreshJobKind {
+  core
+  releases
+  branches
 }
 
 enum RefreshJobStatus {

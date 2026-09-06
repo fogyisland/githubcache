@@ -236,6 +236,110 @@ async function maybeSeedProvider(cfg: Config): Promise<void> {
 }
 
 // -----------------------------------------------------------------------------
+// Step 6: Seed M27 demo repository (optional)
+// -----------------------------------------------------------------------------
+//
+// Fresh installs benefit from a sample row in the new `repo_releases` /
+// `repo_branches` tables so the new normalized read path (M27.3) has
+// something to return. We seed torvalds/linux as a recognizable demo
+// and set `coreFetchedAt` / `releasesFetchedAt` / `branchesFetchedAt`
+// so the per-facet freshness scheduler (M27.5) treats it as warm.
+//
+// Skipped if any repositories already exist — operators on a populated
+// DB keep their real data.
+
+async function seedM27DemoRepository(): Promise<void> {
+  section('6 · M27 demo repository');
+
+  const existing = await prisma.repository.count();
+  if (existing > 0) {
+    console.log(`· skipped — ${existing} repo(s) already exist`);
+    return;
+  }
+
+  const now = new Date();
+  // 30 / 90 / 365 days ago — gives the freshness scheduler something to
+  // chew on the first time it runs.
+  const coreAgo = new Date(now.getTime() - 30 * 86_400_000);
+  const releasesAgo = new Date(now.getTime() - 90 * 86_400_000);
+  const branchesAgo = new Date(now.getTime() - 365 * 86_400_000);
+
+  // Core row — exercises every new column on `repositories`.
+  const repo = await prisma.repository.create({
+    data: {
+      owner: 'torvalds',
+      name: 'linux',
+      description: 'Linux kernel source tree',
+      private: false,
+      defaultBranch: 'master',
+      stars: 172_934,
+      forks: 55_120,
+      watchers: 9_800,
+      repoCreatedAt: new Date('2011-09-11T15:30:00Z'),
+      repoUpdatedAt: now,
+      repoPushedAt: now,
+      language: 'C',
+      license: 'GPL-2.0',
+      topics: ['linux', 'kernel', 'operating-system'],
+      homepage: 'https://www.kernel.org/',
+      archived: false,
+      disabled: false,
+      node: { id: 2325298, node_id: 'MDEwOlJlcG9zaXRvcnkxMzQ2Mzc1' },
+      metadata: { name: 'linux', full_name: 'torvalds/linux' },
+      coreFetchedAt: coreAgo,
+      releasesFetchedAt: releasesAgo,
+      branchesFetchedAt: branchesAgo,
+      fetchStatus: 'ok',
+    },
+  });
+
+  // Releases — three recent tags, exercises the top-N read path.
+  await prisma.repoRelease.createMany({
+    data: [
+      {
+        repositoryId: repo.id,
+        tag: 'v6.10',
+        name: 'Linux 6.10',
+        publishedAt: new Date(now.getTime() - 14 * 86_400_000),
+        prerelease: false,
+        draft: false,
+      },
+      {
+        repositoryId: repo.id,
+        tag: 'v6.9',
+        name: 'Linux 6.9',
+        publishedAt: new Date(now.getTime() - 45 * 86_400_000),
+        prerelease: false,
+        draft: false,
+      },
+      {
+        repositoryId: repo.id,
+        tag: 'v6.8',
+        name: 'Linux 6.8',
+        publishedAt: new Date(now.getTime() - 75 * 86_400_000),
+        prerelease: false,
+        draft: false,
+      },
+    ],
+  });
+
+  // Branches — five protected + unprotected, exercises the LIMIT 20
+  // cap on the read path.
+  await prisma.repoBranch.createMany({
+    data: [
+      { repositoryId: repo.id, name: 'master', protected: true },
+      { repositoryId: repo.id, name: 'stable', protected: true },
+      { repositoryId: repo.id, name: 'linux-next', protected: true },
+      { repositoryId: repo.id, name: 'akpm', protected: false },
+      { repositoryId: repo.id, name: 'kbuild', protected: false },
+    ],
+  });
+
+  console.log(`✓ seeded torvalds/linux (id=${repo.id}) with 3 releases + 5 branches`);
+  console.log('  per-facet freshness: core=30d, releases=90d, branches=365d');
+}
+
+// -----------------------------------------------------------------------------
 // Step 0.5: write SITE_NAME to .env
 // -----------------------------------------------------------------------------
 
@@ -325,6 +429,7 @@ async function main(): Promise<void> {
   await bootstrapAdmin(cfg);
   await ensureGithubToken(cfg);
   await maybeSeedProvider(cfg);
+  await seedM27DemoRepository();
 
   printSummary();
 }
