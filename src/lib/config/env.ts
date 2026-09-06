@@ -23,6 +23,12 @@ const schema = z.object({
   // and matches the M26 signup rate limit so all limits across the
   // service share the same order of magnitude.
   PUBLIC_REPO_RATE_PER_HOUR: z.coerce.number().int().positive().default(50_000),
+  // M27.3 — read-path switch. When true, getRepoMetadata sources data
+  // from the new typed columns + repo_releases / repo_branches tables
+  // instead of the legacy `metadata` JSON. Off by default; flip on
+  // for a canary run before rolling out globally. See .superpowers/sdd/
+  // m27-incremental-refresh/ for the rollout plan.
+  M27_READ_FROM_TABLES: z.coerce.boolean().default(false),
   // Consecutive-429 auto-disable threshold for pool tokens (M14.4).
   // When a token returns 429 this many times in a row (with no intervening
   // success), the pool automatically marks it 'disabled' and drops it.

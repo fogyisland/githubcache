@@ -12,26 +12,29 @@ model Repository {
   owner                 String      @db.VarChar(100)
   name                  String      @db.VarChar(200)
   // Core fields — was metadata.{description,private,defaultBranch,...}.
-  description           String?     @db.Text
-  private               Boolean     @default(false)
+  // M27 — these were added without @map annotations, which made Prisma
+  // emit camelCase column names that don't exist in the DB (the
+  // migration created them as snake_case). @map fixes the mismatch.
+  description           String?     @map("description") @db.Text
+  private               Boolean     @default(false) @map("private")
   // Nullable at the Prisma layer so existing call sites that don't pass
   // it (test fixtures, stub upserts in queue-on-miss) keep working.
   // The DB column has NOT NULL DEFAULT 'main' so reads always get a
   // value; the backfill in M27.2 will populate it from `metadata` for
   // existing rows.
-  defaultBranch         String?     @db.VarChar(100)
-  stars                 Int         @default(0)
-  forks                 Int         @default(0)
-  watchers              Int         @default(0)
+  defaultBranch         String?     @map("default_branch") @db.VarChar(100)
+  stars                 Int         @default(0) @map("stars")
+  forks                 Int         @default(0) @map("forks")
+  watchers              Int         @default(0) @map("watchers")
   repoCreatedAt         DateTime?   @map("repo_created_at")
   repoUpdatedAt         DateTime?   @map("repo_updated_at")
   repoPushedAt          DateTime?   @map("repo_pushed_at")
-  language              String?     @db.VarChar(50)
-  license               String?     @db.VarChar(100)
-  topics                Json        @default("[]")
-  homepage              String?     @db.Text
-  archived              Boolean     @default(false)
-  disabled              Boolean     @default(false)
+  language              String?     @map("language") @db.VarChar(50)
+  license               String?     @map("license") @db.VarChar(100)
+  topics                Json        @default("[]") @map("topics")
+  homepage              String?     @map("homepage") @db.Text
+  archived              Boolean     @default(false) @map("archived")
+  disabled              Boolean     @default(false) @map("disabled")
   // Legacy JSON columns — dropped in M27.6. Read path in M27.3 falls
   // back to `metadata` when the new columns are NULL (pre-backfill).
   node                  Json

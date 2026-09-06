@@ -50,8 +50,46 @@ export async function createTestRepo(opts: CreateTestRepoOpts) {
       metadata: jsonMetadata,
       fetchStatus: opts.status,
       lastFetchedAt: new Date(),
+      // M27 — write the typed columns too so the new read path
+      // (M27.3) has data to return when the flag is on.
+      description: metadata.description,
+      private: metadata.private,
+      defaultBranch: metadata.defaultBranch,
+      stars: metadata.stars,
+      forks: metadata.forks,
+      watchers: metadata.watchers,
+      language: metadata.language,
+      license: metadata.license,
+      topics: metadata.topics as unknown as Prisma.InputJsonValue,
+      homepage: metadata.homepage,
+      archived: metadata.archived,
+      disabled: metadata.disabled,
+      repoCreatedAt: metadata.createdAt ? new Date(metadata.createdAt) : null,
+      repoUpdatedAt: metadata.updatedAt ? new Date(metadata.updatedAt) : null,
+      repoPushedAt: metadata.pushedAt ? new Date(metadata.pushedAt) : null,
     },
-    update: { fetchStatus: opts.status, lastFetchedAt: new Date(), metadata: jsonMetadata },
+    update: {
+      fetchStatus: opts.status,
+      lastFetchedAt: new Date(),
+      metadata: jsonMetadata,
+      // M27 — mirror metadata into typed columns so the new read
+      // path (M27.3) returns the same values regardless of the flag.
+      description: metadata.description,
+      private: metadata.private,
+      defaultBranch: metadata.defaultBranch,
+      stars: metadata.stars,
+      forks: metadata.forks,
+      watchers: metadata.watchers,
+      language: metadata.language,
+      license: metadata.license,
+      topics: metadata.topics as unknown as Prisma.InputJsonValue,
+      homepage: metadata.homepage,
+      archived: metadata.archived,
+      disabled: metadata.disabled,
+      repoCreatedAt: metadata.createdAt ? new Date(metadata.createdAt) : null,
+      repoUpdatedAt: metadata.updatedAt ? new Date(metadata.updatedAt) : null,
+      repoPushedAt: metadata.pushedAt ? new Date(metadata.pushedAt) : null,
+    },
   });
   return repo;
 }
