@@ -41,7 +41,7 @@ export function AccountLogoutButton(): React.ReactElement {
   return (
     <span style={{ display: 'inline-flex', gap: '0.5rem', alignItems: 'center' }}>
       {error !== null && (
-        <span role="alert" style={{ color: 'red', fontSize: '0.85rem' }}>
+        <span role="alert" className="ghc-text-danger text-sm">
           {error}
         </span>
       )}
@@ -51,8 +51,7 @@ export function AccountLogoutButton(): React.ReactElement {
           void handleLogout();
         }}
         disabled={loading}
-        className="ghc-btn-secondary"
-        style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
+        className="ghc-btn-secondary ghc-btn-sm"
       >
         {loading ? t('loggingOut') : t('label')}
       </button>

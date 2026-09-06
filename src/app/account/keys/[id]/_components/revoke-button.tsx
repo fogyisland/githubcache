@@ -14,9 +14,8 @@ function SubmitBtn({ label }: { label: string }): ReactElement {
   return (
     <button
       type="submit"
-      className="ghc-btn-danger"
+      className="ghc-btn-danger ghc-btn-sm"
       disabled={pending}
-      style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem' }}
     >
       {pending ? '…' : label}
     </button>

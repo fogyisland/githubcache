@@ -114,7 +114,7 @@ export function SignupForm(): React.ReactElement {
           className="ghc-input"
           aria-describedby="signup-password-help"
         />
-        <p id="signup-password-help" className="text-xs" style={{ color: 'var(--color-ink-muted)' }}>
+        <p id="signup-password-help" className="text-xs ghc-text-muted">
           {t('password.help')}
         </p>
       </div>
@@ -149,7 +149,7 @@ export function SignupForm(): React.ReactElement {
           className="ghc-input"
           aria-describedby="signup-name-help"
         />
-        <p id="signup-name-help" className="text-xs" style={{ color: 'var(--color-ink-muted)' }}>
+        <p id="signup-name-help" className="text-xs ghc-text-muted">
           {t('name.help')}
         </p>
       </div>
@@ -163,7 +163,7 @@ export function SignupForm(): React.ReactElement {
 
       <SubmitBtn />
 
-      <p className="mt-2 text-center text-sm" style={{ color: 'var(--color-ink-muted)' }}>
+      <p className="mt-2 text-center text-sm ghc-text-muted">
         <Link href="/login" className="ghc-link">
           {t('haveAccount')}
         </Link>

@@ -21,7 +21,7 @@ export default async function AccountPasswordPage({
     <div className="ghc-fade-up flex flex-col gap-6">
       <header>
         <h2 className="text-xl font-semibold">{t('title')}</h2>
-        <p className="mt-1 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
+        <p className="mt-1 text-sm ghc-text-muted">
           {t('subtitle')}
         </p>
       </header>

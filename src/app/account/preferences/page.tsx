@@ -53,9 +53,7 @@ export default async function AccountPreferencesPage(): Promise<ReactElement> {
     <div className="ghc-fade-up flex flex-col gap-6 max-w-2xl">
       <header>
         <h2 className="text-xl font-semibold">{t('title')}</h2>
-        <p className="mt-1 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-          {t('subtitle')}
-        </p>
+        <p className="mt-1 text-sm ghc-text-muted">{t('subtitle')}</p>
       </header>
 
       <PrefSection title={t('lang.label')} body={t('lang.body')}>
@@ -84,11 +82,9 @@ function PrefSection({
 }): ReactElement {
   return (
     <section className="ghc-card p-6 flex items-start justify-between gap-4 flex-wrap">
-      <div style={{ minWidth: 0 }}>
+      <div className="min-w-0">
         <h3 className="font-semibold">{title}</h3>
-        <p className="mt-1 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-          {body}
-        </p>
+        <p className="mt-1 text-sm ghc-text-muted">{body}</p>
       </div>
       <div>{children}</div>
     </section>

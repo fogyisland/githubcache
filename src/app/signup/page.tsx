@@ -32,16 +32,9 @@ export default async function SignupPage(): Promise<ReactElement> {
   return (
     <main className="mx-auto max-w-[26rem] py-16 px-4 ghc-fade-up">
       <header className="mb-8 text-center">
-        <p
-          className="font-mono text-xs tracking-[0.2em] uppercase"
-          style={{ color: 'var(--color-accent)' }}
-        >
-          {t('eyebrow')}
-        </p>
+        <p className="ghc-eyebrow">{t('eyebrow')}</p>
         <h1 className="mt-3 text-2xl font-semibold">{t('title')}</h1>
-        <p className="mt-2 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-          {t('subtitle')}
-        </p>
+        <p className="mt-2 text-sm ghc-text-muted">{t('subtitle')}</p>
       </header>
 
       <div className="ghc-card p-6">

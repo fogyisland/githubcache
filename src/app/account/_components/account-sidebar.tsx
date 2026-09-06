@@ -37,7 +37,7 @@ export function AccountSidebar({ isAdmin = false }: { isAdmin?: boolean }): Reac
 
   return (
     <nav aria-label={t('aria')} className="ghc-account-sidebar">
-      <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+      <ul className="ghc-account-sidebar-list">
         {items.map((item) => {
           const active = isActive(item.href);
           return (
@@ -45,15 +45,8 @@ export function AccountSidebar({ isAdmin = false }: { isAdmin?: boolean }): Reac
               <Link
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
-                style={{
-                  display: 'block',
-                  padding: '0.5rem 0.75rem',
-                  borderRadius: '0.375rem',
-                  textDecoration: 'none',
-                  background: active ? 'var(--color-accent-soft)' : 'transparent',
-                  color: active ? 'var(--color-accent)' : 'var(--color-ink)',
-                  fontWeight: active ? 600 : 400,
-                }}
+                data-active={active}
+                className="ghc-account-sidebar-link"
               >
                 {t(`items.${item.key}`)}
               </Link>

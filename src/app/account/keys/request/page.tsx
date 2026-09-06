@@ -15,7 +15,7 @@ export default async function RequestKeyPage(): Promise<ReactElement> {
     <div className="ghc-fade-up flex flex-col gap-6 max-w-xl">
       <header>
         <h2 className="text-xl font-semibold">{t('title')}</h2>
-        <p className="mt-1 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
+        <p className="mt-1 text-sm ghc-text-muted">
           {t('body')}
         </p>
       </header>

@@ -17,6 +17,10 @@ import { AccountLogoutButton } from './_components/account-logout-button';
  * Renders a left sidebar (AccountSidebar client component) + a top
  * header strip with the user's email + logout button. The page
  * children render in the right-hand content column.
+ *
+ * M26.x — chrome uses ghc-* classes (ghc-page, ghc-eyebrow,
+ * ghc-account-grid, ghc-text-muted) for theming instead of inlining
+ * the same color tokens on every page.
  */
 export default async function AccountLayout({
   children,
@@ -39,40 +43,19 @@ export default async function AccountLayout({
   const t = await getTranslations('account.layout');
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10">
-      <header
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '1rem',
-          marginBottom: '1.5rem',
-        }}
-      >
+    <div className="ghc-page mx-auto max-w-6xl px-4 py-10">
+      <header className="ghc-account-header">
         <div>
-          <p
-            className="font-mono text-xs tracking-[0.2em] uppercase"
-            style={{ color: 'var(--color-accent)' }}
-          >
-            {t('eyebrow')}
-          </p>
+          <p className="ghc-eyebrow">{t('eyebrow')}</p>
           <h1 className="mt-1 text-2xl font-semibold">{t('title')}</h1>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <span className="text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-            {user.email}
-          </span>
+        <div className="ghc-account-header-actions">
+          <span className="text-sm ghc-text-muted">{user.email}</span>
           <AccountLogoutButton />
         </div>
       </header>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(11rem, 14rem) 1fr',
-          gap: '1.5rem',
-        }}
-      >
+      <div className="ghc-account-grid">
         <aside>
           <AccountSidebar isAdmin={user.role === 'admin'} />
         </aside>

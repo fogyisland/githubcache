@@ -23,6 +23,11 @@ function parseStatusFilter(raw: string | undefined): StatusFilter {
  * Lists the signed-in user's API keys with optional status filter
  * (URL-synced, like the admin filter bar pattern). Reads session from
  * cookies; layout already redirected if absent.
+ *
+ * M26.x — styling routed through ghc-* classes (ghc-card, ghc-pill-link,
+ * ghc-chip-status, ghc-text-muted) instead of inline color variables.
+ * Status chips read their variant from the ghc-chip-status[data-variant]
+ * attribute so the same code path works across all themes.
  */
 export default async function AccountKeysPage({
   searchParams,
@@ -54,10 +59,10 @@ export default async function AccountKeysPage({
     take: PAGE_SIZE,
   });
 
-  const statusChip: Record<ApiKeyStatus, { bg: string; fg: string }> = {
-    active: { bg: 'var(--color-ok-soft)', fg: 'var(--color-ok)' },
-    pending: { bg: 'var(--color-warn-soft)', fg: 'var(--color-warn)' },
-    revoked: { bg: 'var(--color-danger-soft)', fg: 'var(--color-danger)' },
+  const chipVariant: Record<ApiKeyStatus, 'ok' | 'warn' | 'danger'> = {
+    active: 'ok',
+    pending: 'warn',
+    revoked: 'danger',
   };
 
   return (
@@ -69,7 +74,10 @@ export default async function AccountKeysPage({
         </Link>
       </header>
 
-      <nav aria-label={t('filterAria')} style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+      <nav
+        aria-label={t('filterAria')}
+        className="flex flex-wrap gap-2"
+      >
         {(['all', 'active', 'pending', 'revoked'] as StatusFilter[]).map((s) => {
           const active = s === filter;
           const href = s === 'all' ? '/account/keys' : `/account/keys?status=${s}`;
@@ -78,17 +86,8 @@ export default async function AccountKeysPage({
               key={s}
               href={href}
               aria-current={active ? 'page' : undefined}
-              className="ghc-pill-link"
               data-active={active}
-              style={{
-                padding: '0.3rem 0.7rem',
-                borderRadius: '999px',
-                textDecoration: 'none',
-                fontSize: '0.85rem',
-                background: active ? 'var(--color-accent-soft)' : 'transparent',
-                color: active ? 'var(--color-accent)' : 'var(--color-ink)',
-                border: '1px solid var(--color-border)',
-              }}
+              className="ghc-pill-link"
             >
               {t(`status.${s}` as 'status.all')}
             </Link>
@@ -98,76 +97,54 @@ export default async function AccountKeysPage({
 
       {keys.length === 0 ? (
         <div className="ghc-card p-8 text-center">
-          <p className="text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-            {t('empty')}
-          </p>
+          <p className="text-sm ghc-text-muted">{t('empty')}</p>
           <Link href="/account/keys/request" className="ghc-btn-primary mt-4">
             {t('requestButton')}
           </Link>
         </div>
       ) : (
         <div className="ghc-card overflow-x-auto">
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <table className="ghc-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid var(--color-border)' }}>
-                <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem' }}>{t('columns.name')}</th>
-                <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem' }}>{t('columns.prefix')}</th>
-                <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem' }}>{t('columns.status')}</th>
-                <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem' }}>{t('columns.created')}</th>
-                <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem' }}>{t('columns.approved')}</th>
-                <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem' }}>{t('columns.lastUsed')}</th>
+              <tr className="ghc-table-header-row">
+                <th className="ghc-table-th">{t('columns.name')}</th>
+                <th className="ghc-table-th">{t('columns.prefix')}</th>
+                <th className="ghc-table-th">{t('columns.status')}</th>
+                <th className="ghc-table-th">{t('columns.created')}</th>
+                <th className="ghc-table-th">{t('columns.approved')}</th>
+                <th className="ghc-table-th">{t('columns.lastUsed')}</th>
               </tr>
             </thead>
             <tbody>
-              {keys.map((k) => {
-                const chip = statusChip[k.status];
-                return (
-                  <tr
-                    key={k.id.toString()}
-                    style={{ borderBottom: '1px solid var(--color-border-subtle, var(--color-border))' }}
-                  >
-                    <td style={{ padding: '0.6rem 0.75rem' }}>
-                      <Link href={`/account/keys/${k.id}`} className="ghc-link">
-                        {k.name}
-                      </Link>
-                    </td>
-                    <td style={{ padding: '0.6rem 0.75rem' }}>
-                      <code style={{ fontFamily: 'Menlo, Consolas, monospace', fontSize: '0.85rem' }}>
-                        {k.keyPrefix}…
-                      </code>
-                    </td>
-                    <td style={{ padding: '0.6rem 0.75rem' }}>
-                      <span
-                        style={{
-                          padding: '0.15rem 0.5rem',
-                          borderRadius: '999px',
-                          background: chip.bg,
-                          color: chip.fg,
-                          fontSize: '0.75rem',
-                          fontWeight: 600,
-                        }}
-                      >
-                        {t(`status.${k.status}` as 'status.pending')}
-                      </span>
-                    </td>
-                    <td style={{ padding: '0.6rem 0.75rem', fontSize: '0.85rem' }}>
-                      {formatDate(k.createdAt, userTz)}
-                    </td>
-                    <td style={{ padding: '0.6rem 0.75rem', fontSize: '0.85rem' }}>
-                      {k.approvedAt ? formatDateTime(k.approvedAt, userTz) : t('dash')}
-                    </td>
-                    <td style={{ padding: '0.6rem 0.75rem', fontSize: '0.85rem' }}>
-                      {k.lastUsedAt ? formatDateTime(k.lastUsedAt, userTz) : t('never')}
-                    </td>
-                  </tr>
-                );
-              })}
+              {keys.map((k) => (
+                <tr key={k.id.toString()} className="ghc-table-row">
+                  <td className="ghc-table-td">
+                    <Link href={`/account/keys/${k.id}`} className="ghc-link">
+                      {k.name}
+                    </Link>
+                  </td>
+                  <td className="ghc-table-td">
+                    <code className="ghc-input-mono">{k.keyPrefix}…</code>
+                  </td>
+                  <td className="ghc-table-td">
+                    <span className="ghc-chip-status" data-variant={chipVariant[k.status]}>
+                      {t(`status.${k.status}` as 'status.pending')}
+                    </span>
+                  </td>
+                  <td className="ghc-table-td text-sm">
+                    {formatDate(k.createdAt, userTz)}
+                  </td>
+                  <td className="ghc-table-td text-sm">
+                    {k.approvedAt ? formatDateTime(k.approvedAt, userTz) : t('dash')}
+                  </td>
+                  <td className="ghc-table-td text-sm">
+                    {k.lastUsedAt ? formatDateTime(k.lastUsedAt, userTz) : t('never')}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
-          <p
-            className="px-3 py-2 text-xs"
-            style={{ color: 'var(--color-ink-muted)' }}
-          >
+          <p className="px-3 py-2 text-xs ghc-text-muted">
             {tList('showing', {
               start: keys.length === 0 ? 0 : 1,
               end: keys.length,

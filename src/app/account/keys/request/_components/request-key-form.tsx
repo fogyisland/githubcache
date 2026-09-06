@@ -48,7 +48,7 @@ export function RequestKeyForm(): React.ReactElement {
           className="ghc-input"
         />
         {f?.name && (
-          <p role="alert" className="text-xs" style={{ color: 'var(--color-danger)' }}>
+          <p role="alert" className="text-xs ghc-text-danger">
             {f.name}
           </p>
         )}
@@ -70,7 +70,7 @@ export function RequestKeyForm(): React.ReactElement {
           className="ghc-input"
         />
         {f?.description && (
-          <p role="alert" className="text-xs" style={{ color: 'var(--color-danger)' }}>
+          <p role="alert" className="text-xs ghc-text-danger">
             {f.description}
           </p>
         )}

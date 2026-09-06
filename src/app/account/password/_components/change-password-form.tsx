@@ -47,7 +47,7 @@ export function ChangePasswordForm(): React.ReactElement {
           className="ghc-input"
         />
         {f?.current && (
-          <p role="alert" className="text-xs" style={{ color: 'var(--color-danger)' }}>
+          <p role="alert" className="text-xs ghc-text-danger">
             {f.current}
           </p>
         )}
@@ -69,7 +69,7 @@ export function ChangePasswordForm(): React.ReactElement {
           className="ghc-input"
         />
         {f?.next && (
-          <p role="alert" className="text-xs" style={{ color: 'var(--color-danger)' }}>
+          <p role="alert" className="text-xs ghc-text-danger">
             {f.next}
           </p>
         )}
@@ -91,7 +91,7 @@ export function ChangePasswordForm(): React.ReactElement {
           className="ghc-input"
         />
         {f?.confirm && (
-          <p role="alert" className="text-xs" style={{ color: 'var(--color-danger)' }}>
+          <p role="alert" className="text-xs ghc-text-danger">
             {f.confirm}
           </p>
         )}

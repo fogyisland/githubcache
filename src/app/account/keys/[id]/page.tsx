@@ -16,6 +16,10 @@ import { RevokeOwnKeyButton } from './_components/revoke-button';
  * profile fields as the admin key detail but without the admin-only
  * actions (approve / edit limits). The owner can self-revoke from
  * here.
+ *
+ * M26.x — styling routed through ghc-* classes (ghc-card,
+ * ghc-eyebrow, ghc-chip-status, ghc-text-muted) for theme consistency
+ * with the rest of the account surface.
  */
 export default async function AccountKeyDetailPage({
   params,
@@ -56,47 +60,24 @@ export default async function AccountKeyDetailPage({
   });
   const filteredAudit = audit.rows.filter((r) => r.targetId === id.toString());
 
+  const chipVariant: 'ok' | 'warn' | 'danger' =
+    key.status === 'active' ? 'ok' : key.status === 'pending' ? 'warn' : 'danger';
+
   return (
     <div className="ghc-fade-up flex flex-col gap-6">
       <header>
-        <p
-          className="font-mono text-xs tracking-[0.2em] uppercase"
-          style={{ color: 'var(--color-accent)' }}
-        >
-          {t('eyebrow')}
-        </p>
+        <p className="ghc-eyebrow">{t('eyebrow')}</p>
         <h2 className="mt-1 text-2xl font-semibold">{key.name}</h2>
-        <p className="mt-1 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-          {t('subtitle')}
-        </p>
+        <p className="mt-1 text-sm ghc-text-muted">{t('subtitle')}</p>
       </header>
 
       <section className="ghc-card p-6">
-        <dl style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.75rem 1.5rem' }}>
-          <Row label={t('prefix')} value={<code>{key.keyPrefix}…</code>} />
+        <dl className="ghc-detail-dl">
+          <Row label={t('prefix')} value={<code className="ghc-input-mono">{key.keyPrefix}…</code>} />
           <Row
             label={t('status')}
             value={
-              <span
-                style={{
-                  padding: '0.15rem 0.55rem',
-                  borderRadius: '999px',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  background:
-                    key.status === 'active'
-                      ? 'var(--color-ok-soft)'
-                      : key.status === 'pending'
-                      ? 'var(--color-warn-soft)'
-                      : 'var(--color-danger-soft)',
-                  color:
-                    key.status === 'active'
-                      ? 'var(--color-ok)'
-                      : key.status === 'pending'
-                      ? 'var(--color-warn)'
-                      : 'var(--color-danger)',
-                }}
-              >
+              <span className="ghc-chip-status" data-variant={chipVariant}>
                 {key.status}
               </span>
             }
@@ -119,15 +100,11 @@ export default async function AccountKeyDetailPage({
 
       <section className="ghc-card p-6">
         <h3 className="font-semibold">{t('actions.heading')}</h3>
-        <p className="mt-1 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-          {t('actions.body')}
-        </p>
+        <p className="mt-1 text-sm ghc-text-muted">{t('actions.body')}</p>
         <div className="mt-3">
           {key.status !== 'revoked' && <RevokeOwnKeyButton keyId={key.id.toString()} />}
           {key.status === 'revoked' && (
-            <span className="text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-              {t('actions.alreadyRevoked')}
-            </span>
+            <span className="text-sm ghc-text-muted">{t('actions.alreadyRevoked')}</span>
           )}
         </div>
       </section>
@@ -135,25 +112,13 @@ export default async function AccountKeyDetailPage({
       <section className="ghc-card p-6">
         <h3 className="font-semibold">{t('history.heading')}</h3>
         {filteredAudit.length === 0 ? (
-          <p className="mt-2 text-sm" style={{ color: 'var(--color-ink-muted)' }}>
-            {t('history.empty')}
-          </p>
+          <p className="mt-2 text-sm ghc-text-muted">{t('history.empty')}</p>
         ) : (
-          <ul style={{ listStyle: 'none', padding: 0, marginTop: '0.5rem' }}>
+          <ul className="ghc-history-list">
             {filteredAudit.map((row) => (
-              <li
-                key={row.id.toString()}
-                style={{
-                  padding: '0.4rem 0',
-                  borderBottom: '1px solid var(--color-border-subtle, var(--color-border))',
-                  fontSize: '0.85rem',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  gap: '1rem',
-                }}
-              >
+              <li key={row.id.toString()} className="ghc-history-row">
                 <code>{row.action}</code>
-                <span style={{ color: 'var(--color-ink-muted)' }}>
+                <span className="ghc-text-muted">
                   {formatDateTime(row.createdAt, userTz)}
                 </span>
               </li>
@@ -168,19 +133,8 @@ export default async function AccountKeyDetailPage({
 function Row({ label, value }: { label: string; value: React.ReactNode }): ReactElement {
   return (
     <>
-      <dt
-        style={{
-          fontSize: '0.8rem',
-          fontWeight: 600,
-          textTransform: 'uppercase',
-          letterSpacing: '0.05em',
-          color: 'var(--color-ink-muted)',
-          paddingTop: '0.25rem',
-        }}
-      >
-        {label}
-      </dt>
-      <dd style={{ fontSize: '0.95rem' }}>{value}</dd>
+      <dt className="ghc-detail-dt">{label}</dt>
+      <dd className="ghc-detail-dd">{value}</dd>
     </>
   );
 }

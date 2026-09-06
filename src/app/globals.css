@@ -189,6 +189,160 @@ a {
     transform: translateY(-1px);
   }
 
+  /* ghc-text-muted — secondary text color for captions + helper text.
+     Wraps the existing --color-ink-muted token so callers don't have
+     to write `style={{ color: 'var(--color-ink-muted)' }}` everywhere. */
+  .ghc-text-muted {
+    color: var(--color-ink-muted, color-mix(in srgb, var(--color-ink) 65%, transparent));
+  }
+
+  /* ghc-text-danger / warn / ok / accent — small inline text helpers
+     used by alert spans inside form chrome where a full alert block
+     would be too loud. */
+  .ghc-text-danger { color: var(--color-danger); }
+  .ghc-text-warn { color: var(--color-warn); }
+  .ghc-text-ok { color: var(--color-ok); }
+  .ghc-text-accent { color: var(--color-accent); }
+
+  /* ghc-btn-sm — size modifier for ghc-btn-* buttons used in dense
+     toolbars (logout, revoke, "Cancel" links). */
+  .ghc-btn-sm {
+    font-size: 0.8125rem;
+    padding: 0.4rem 0.8rem;
+  }
+
+  /* ghc-table — plain themed data table used by the /account surface.
+     Mirrors the look of <AdminTable> without the role-gated chrome.
+     Header row uses the surface-2 token, body rows share a hairline
+     border that matches --color-border. */
+  .ghc-table {
+    font-size: 0.875rem;
+    color: var(--color-ink);
+  }
+  .ghc-table-header-row {
+    border-bottom: 1px solid var(--color-border, color-mix(in srgb, var(--color-ink) 18%, transparent));
+  }
+  .ghc-table-th {
+    text-align: left;
+    padding: 0.6rem 0.75rem;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-ink-muted, color-mix(in srgb, var(--color-ink) 65%, transparent));
+  }
+  .ghc-table-row {
+    border-bottom: 1px solid color-mix(in srgb, var(--color-ink) 10%, transparent);
+  }
+  .ghc-table-row:last-child {
+    border-bottom: 0;
+  }
+  .ghc-table-td {
+    padding: 0.6rem 0.75rem;
+    vertical-align: middle;
+  }
+
+  /* ghc-input-mono — small monospace prefix/code cell, like the
+     AdminTable `ghc-admin-mono` chip but available on the public side. */
+  .ghc-input-mono {
+    font-family: var(--font-mono-active);
+    font-size: 0.85rem;
+    color: var(--color-ink);
+  }
+
+  /* ghc-detail-dl / dt / dd — labelled definition list used by the
+     /account/keys/[id] profile block. */
+  .ghc-detail-dl {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.75rem 1.5rem;
+  }
+  .ghc-detail-dt {
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-ink-muted, color-mix(in srgb, var(--color-ink) 65%, transparent));
+    padding-top: 0.25rem;
+  }
+  .ghc-detail-dd {
+    font-size: 0.95rem;
+    color: var(--color-ink);
+  }
+
+  /* ghc-account-sidebar-list / link — the /account section sidebar.
+     Active state is conveyed via [data-active="true"] so the same
+     class works for all 3 themes via the standard tokens. */
+  .ghc-account-sidebar-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .ghc-account-sidebar-link {
+    display: block;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.375rem;
+    text-decoration: none;
+    color: var(--color-ink);
+    background: transparent;
+    font-weight: 400;
+    transition: background 0.12s ease, color 0.12s ease;
+  }
+  .ghc-account-sidebar-link:hover {
+    background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+    color: var(--color-accent);
+  }
+  .ghc-account-sidebar-link[aria-current="page"],
+  .ghc-account-sidebar-link[data-active="true"] {
+    background: var(--color-accent-soft, color-mix(in srgb, var(--color-accent) 18%, transparent));
+    color: var(--color-accent);
+    font-weight: 600;
+  }
+
+  /* ghc-account-header / account-header-actions / account-grid —
+     layout chrome for the /account surface. Mirrors the role-gated
+     <AdminShell> structure but without the admin sidebar / command
+     palette. */
+  .ghc-account-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .ghc-account-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .ghc-account-grid {
+    display: grid;
+    grid-template-columns: minmax(11rem, 14rem) 1fr;
+    gap: 1.5rem;
+  }
+
+  /* ghc-history-list / row — small audit-history timeline used in the
+     /account/keys/[id] "Recent activity" section. */
+  .ghc-history-list {
+    list-style: none;
+    padding: 0;
+    margin-top: 0.5rem;
+  }
+  .ghc-history-row {
+    padding: 0.4rem 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--color-ink) 10%, transparent);
+    font-size: 0.85rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .ghc-history-row:last-child {
+    border-bottom: 0;
+  }
+
   /* ghc-link — inline text link */
   .ghc-link {
     color: var(--color-accent);
@@ -328,6 +482,123 @@ a {
     font-family: var(--font-mono-active);
     font-size: 0.8125rem;
     line-height: 1.25rem;
+  }
+
+  /* ghc-alert-ok — success alert (used by /account/password after a
+     successful change). Tinted with --color-ok instead of --color-danger
+     so it reads as a positive confirmation. */
+  .ghc-alert-ok {
+    background: color-mix(in srgb, var(--color-ok) 12%, var(--color-surface));
+    color: var(--color-ok);
+    border: 1px solid var(--color-ok);
+    border-radius: var(--radius-button);
+    padding: 0.625rem 0.75rem;
+    font-family: var(--font-mono-active);
+    font-size: 0.8125rem;
+    line-height: 1.25rem;
+  }
+
+  /* ghc-alert-warn — warning alert (rate limit, validation). Tinted
+     with --color-warn. */
+  .ghc-alert-warn {
+    background: color-mix(in srgb, var(--color-warn) 12%, var(--color-surface));
+    color: var(--color-warn);
+    border: 1px solid var(--color-warn);
+    border-radius: var(--radius-button);
+    padding: 0.625rem 0.75rem;
+    font-family: var(--font-mono-active);
+    font-size: 0.8125rem;
+    line-height: 1.25rem;
+  }
+
+  /* ghc-btn-secondary — outlined secondary button. Used for less-prominent
+     actions (logout, "Cancel" in forms). Uses the surface + ink tokens
+     so it sits behind ghc-btn-primary visually. */
+  .ghc-btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: var(--color-ink);
+    border: 1px solid var(--color-border, color-mix(in srgb, var(--color-ink) 20%, transparent));
+    border-radius: var(--radius-button);
+    padding: 0.5rem 0.9rem;
+    font-family: var(--font-mono-active);
+    font-size: 0.8125rem;
+    line-height: 1.25rem;
+    cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease;
+  }
+  .ghc-btn-secondary:hover {
+    background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+    color: var(--color-accent);
+  }
+  .ghc-btn-secondary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* ghc-pill-link — small filter/status pill used in the /account
+     sidebar nav and the /account/keys status filter. Active state uses
+     the accent color, inactive uses the ink color over a transparent
+     background. */
+  .ghc-pill-link {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    text-decoration: none;
+    font-size: 0.8125rem;
+    font-family: var(--font-mono-active);
+    color: var(--color-ink);
+    background: transparent;
+    border: 1px solid color-mix(in srgb, var(--color-ink) 20%, transparent);
+    transition: background 0.12s ease, color 0.12s ease;
+  }
+  .ghc-pill-link:hover {
+    background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+    color: var(--color-accent);
+  }
+  .ghc-pill-link[data-active="true"],
+  .ghc-pill-link[aria-current="page"] {
+    background: var(--color-accent-soft, color-mix(in srgb, var(--color-accent) 18%, transparent));
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+    font-weight: 600;
+  }
+
+  /* ghc-chip-status — small status pill rendered in a table cell.
+     Variants (ok / warn / danger / neutral) are set via data-variant
+     so the same class can carry any status color. */
+  .ghc-chip-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: var(--font-mono-active);
+    line-height: 1.25;
+  }
+  .ghc-chip-status[data-variant="ok"] {
+    background: var(--color-ok-soft, color-mix(in srgb, var(--color-ok) 18%, transparent));
+    color: var(--color-ok);
+  }
+  .ghc-chip-status[data-variant="warn"] {
+    background: var(--color-warn-soft, color-mix(in srgb, var(--color-warn) 18%, transparent));
+    color: var(--color-warn);
+  }
+  .ghc-chip-status[data-variant="danger"] {
+    background: var(--color-danger-soft, color-mix(in srgb, var(--color-danger) 18%, transparent));
+    color: var(--color-danger);
+  }
+  .ghc-chip-status[data-variant="info"] {
+    background: var(--color-info-soft, color-mix(in srgb, var(--color-accent) 18%, transparent));
+    color: var(--color-accent);
+  }
+  .ghc-chip-status[data-variant="neutral"] {
+    background: color-mix(in srgb, var(--color-ink) 8%, transparent);
+    color: var(--color-ink-muted, var(--color-ink));
   }
 
   /* ghc-fade-up — page-load entrance (already wrapped in reduced-motion gate) */
