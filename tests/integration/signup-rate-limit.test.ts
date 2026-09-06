@@ -33,7 +33,8 @@ vi.mock('@/lib/email/triggers/signup-welcome', () => ({
   sendSignupWelcomeEmail: () => sendWelcomeMock(),
 }));
 
-import { signupAction, getSignupRateLimit } from '@/app/signup/_actions/signup';
+import { signupAction } from '@/app/signup/_actions/signup';
+import { getSignupRateLimit } from '@/lib/auth/signup-rate';
 
 const TEST_EMAIL_PREFIX = 'signup-rl-int-';
 const idleState = { status: 'idle' as const };

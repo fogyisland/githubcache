@@ -9,6 +9,7 @@ import { createSession } from '@/lib/auth/session';
 import { writeAudit } from '@/lib/audit/writer';
 import { sendSignupWelcomeEmail } from '@/lib/email/triggers/signup-welcome';
 import { logger } from '@/lib/logger';
+import { getSignupRateLimit } from '@/lib/auth/signup-rate';
 
 export interface SignupState {
   status: 'idle' | 'ok' | 'invalid' | 'duplicate' | 'rate_limited' | 'error';
@@ -28,28 +29,12 @@ const SignupSchema = z.object({
   name: z.string().max(100).optional(),
 });
 
-const SIGNUP_RATE_PER_HOUR = 50_000;
-
-/**
- * Exposed for tests so they can override the per-hour ceiling without
- * inserting tens of thousands of audit rows. Production code reads the
- * constant directly.
- */
-export function getSignupRateLimit(): number {
-  const envVal = process.env['SIGNUP_RATE_PER_HOUR'];
-  if (envVal !== undefined && envVal !== '') {
-    const n = Number(envVal);
-    if (Number.isFinite(n) && n > 0) return n;
-  }
-  return SIGNUP_RATE_PER_HOUR;
-}
-
 /**
  * Extract the client IP from the inbound request — same logic as the
  * login route. Falls back to `unknown` so the rate limiter still
  * applies (the bucket just keys on the literal `unknown` and so a real
  * IP, a missing header, and a deliberate spoof all share the same
- * bucket — acceptable for a low-stakes 10/hr cap).
+ * bucket — acceptable for a low-stakes 50000/hr cap).
  */
 function getClientIp(headersList: Headers): string {
   const fwd = headersList.get('x-forwarded-for');
