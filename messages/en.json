@@ -1245,7 +1245,7 @@
   },
   "login": {
     "eyebrow": "github metadata cache",
-    "title": "Sign in to admin",
+    "title": "Sign in",
     "tagline": "Manage tokens, schedule refreshes, audit requests.",
     "backToHome": "← Back to home",
     "form": {

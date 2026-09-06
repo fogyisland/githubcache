@@ -1245,7 +1245,7 @@
   },
   "login": {
     "eyebrow": "github metadata 缓存",
-    "title": "登录到管理后台",
+    "title": "登录",
     "tagline": "管理令牌、调度刷新、审计请求。",
     "backToHome": "← 返回首页",
     "form": {
