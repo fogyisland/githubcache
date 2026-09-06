@@ -48,6 +48,9 @@ export async function SiteHeader() {
         <nav className="flex items-center gap-3">
           <LangSwitcher current={currentLang} locales={LOCALES} />
           <ThemeSwitcher current={currentTheme} />
+          <Link href="/get-started" className="ghc-header-util-link">
+            {t('apiGuide')}
+          </Link>
           <Link href="/api/v1/status" className="ghc-header-util-link" aria-label={t('statusAria')}>
             {t('status')}
           </Link>

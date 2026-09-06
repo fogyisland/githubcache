@@ -56,6 +56,7 @@
     "status": "Status",
     "admin": "Admin",
     "docs": "Docs",
+    "apiGuide": "API Guide",
     "login": "Log in",
     "logout": "Log out",
     "statusAria": "System status JSON",
@@ -1776,5 +1777,37 @@
         }
       }
     }
+  },
+  "getStarted": {
+    "eyebrow": "Quickstart",
+    "title": "Use the API in 4 steps",
+    "lede": "githubcache is a cache for GitHub repository metadata. This page walks you through getting an account, requesting an API key, and making your first call.",
+    "step1": {
+      "heading": "1 · Ask an admin for an account",
+      "body": "githubcache is admin-mediated — there is no public signup. Ask your admin to invite you at `/admin/users`. You'll receive an invitation link like `/request-access?invitation=xxx` to set your password."
+    },
+    "step2": {
+      "heading": "2 · Request an API key",
+      "body": "After logging in at `/login`, go to `/admin/api-keys` and click \"Request\". The key enters `pending` status and an admin will see it in the approval queue."
+    },
+    "step3": {
+      "heading": "3 · Wait for admin approval",
+      "body": "The admin opens `/admin/api-keys/[id]` and clicks Approve. The plaintext token is shown ONCE with a copy button. If SMTP is configured, it's also emailed to you. Store the token securely — it cannot be recovered later."
+    },
+    "step4": {
+      "heading": "4 · Make your first call",
+      "sanityCaption": "Sanity check (no auth required)",
+      "singleRepoCaption": "Fetch one repo's metadata (no auth required)",
+      "batchCaption": "Authenticated batch lookup (requires X-API-Key)",
+      "responsesHeading": "Common responses",
+      "responsesIntro": "Each response includes a machine-readable `code` field. Match on `code`, not on the human-readable `error` string.",
+      "response200": "200 — success, returns the metadata or batch result",
+      "response4xx": "401 / 403 — check X-API-Key header (missing or invalid)",
+      "response429": "429 — rate limit reached, wait `Retry-After` seconds before retrying",
+      "response404": "404 — owner/name doesn't exist on GitHub (case-sensitive)"
+    },
+    "deeperHeading": "Deeper references",
+    "deeperApi": "Full API reference (every endpoint, every error code)",
+    "deeperDev": "Run it locally or contribute changes"
   }
 }
