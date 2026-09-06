@@ -229,6 +229,7 @@
         "logoutAll": "Logout all sessions",
         "confirmLogoutAll": "Log out all sessions for this user?",
         "confirmResetPassword": "Reset password? All sessions will be invalidated.",
+        "confirmDisable": "Disable this user? They will be locked out immediately.",
         "failedWithStatus": "Failed: HTTP {status}",
         "disabledOk": "User disabled",
         "enabledOk": "User enabled",

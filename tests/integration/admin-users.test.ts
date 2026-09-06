@@ -295,6 +295,24 @@ describe('PATCH /api/admin/users/[id]', () => {
     );
     expect(res.status).toBe(404);
   });
+
+  // M26.x — guard against admin self-disable (would lock the only
+  // admin out with no UI recovery path).
+  it('rejects an admin disabling themselves with 400', async () => {
+    const res = await patchUser(
+      new Request(`http://x/api/admin/users/${adminUserId}`, {
+        method: 'PATCH',
+        headers: authHeaders({ 'content-type': 'application/json' }),
+        body: JSON.stringify({ status: 'disabled', csrf: csrfToken }),
+      }),
+      { params: { id: String(adminUserId) } },
+    );
+    expect(res.status).toBe(400);
+
+    // Status must NOT have changed — the admin stays active.
+    const after = await prisma.user.findUnique({ where: { id: adminUserId } });
+    expect(after!.status).toBe('active');
+  });
 });
 
 describe('DELETE /api/admin/users/[id]', () => {

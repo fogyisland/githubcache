@@ -192,7 +192,11 @@ export default async function AdminUserDetailPage({
 
       <section>
         <h2 className="ghc-admin-section-title">{t('actionsHeading')}</h2>
-        <UserActions userId={user.id.toString()} currentStatus={user.status} />
+        <UserActions
+          userId={user.id.toString()}
+          currentStatus={user.status}
+          isSelf={user.id === session.id}
+        />
       </section>
 
       <section>

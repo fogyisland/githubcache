@@ -85,6 +85,15 @@ export async function PATCH(
     return apiError('forbidden', 'invalid csrf', {}, req);
   }
 
+  // M26.x — block self-disable. An admin who disables their own account
+  // gets locked out immediately (findSessionById deletes the session on
+  // next request) and there is no admin self-recovery path. Re-enable
+  // requires another admin or a direct SQL fix. The UI hides the button
+  // too; this is defense-in-depth.
+  if (parsed.data.status === 'disabled' && target.id === auth.user.id) {
+    return apiError('bad_request', 'cannot disable self', {}, req);
+  }
+
   await updateUserStatus(id, parsed.data.status);
 
   const fwdPatch = req.headers.get('x-forwarded-for');
