@@ -1782,32 +1782,63 @@
     "eyebrow": "Quickstart",
     "title": "Use the API in 4 steps",
     "lede": "githubcache is a cache for GitHub repository metadata. This page walks you through getting an account, requesting an API key, and making your first call.",
+    "treeheader": {
+      "branch": "4-step on-ramp",
+      "commitStep": "step {n} of 4"
+    },
     "step1": {
-      "heading": "1 · Ask an admin for an account",
-      "body": "githubcache is admin-mediated — there is no public signup. Ask your admin to invite you at `/admin/users`. You'll receive an invitation link like `/request-access?invitation=xxx` to set your password."
+      "heading": "Ask an admin for an account",
+      "body": "githubcache is admin-mediated — there is no public signup. Ask your admin to invite you at `/admin/users`. You'll receive an invitation link like `/request-access?invitation=xxx` to set your password.",
+      "calloutHeading": "note",
+      "calloutBody": "Already have an invite link? Open it, set a password, and you're in. If you don't know who the admin is, ask the person who told you about githubcache."
     },
     "step2": {
-      "heading": "2 · Request an API key",
-      "body": "After logging in at `/login`, go to `/admin/api-keys` and click \"Request\". The key enters `pending` status and an admin will see it in the approval queue."
+      "heading": "Request an API key",
+      "body": "Once logged in, request a key from the API keys page:",
+      "action1": "Log in at `/login`.",
+      "action2": "Open `/admin/api-keys` and click Request.",
+      "action3": "The key appears in your list with status `pending`."
     },
     "step3": {
-      "heading": "3 · Wait for admin approval",
-      "body": "The admin opens `/admin/api-keys/[id]` and clicks Approve. The plaintext token is shown ONCE with a copy button. If SMTP is configured, it's also emailed to you. Store the token securely — it cannot be recovered later."
+      "heading": "Wait for admin approval",
+      "body": "An admin reviews your request and approves it. They open `/admin/api-keys/[id]` and click Approve.",
+      "calloutHeading": "warning",
+      "calloutBody": "The plaintext token is shown ONCE — copy it the moment it appears. githubcache cannot recover it later. If SMTP is configured, it's also emailed to you."
     },
     "step4": {
-      "heading": "4 · Make your first call",
-      "sanityCaption": "Sanity check (no auth required)",
-      "singleRepoCaption": "Fetch one repo's metadata (no auth required)",
-      "batchCaption": "Authenticated batch lookup (requires X-API-Key)",
-      "responsesHeading": "Common responses",
-      "responsesIntro": "Each response includes a machine-readable `code` field. Match on `code`, not on the human-readable `error` string.",
-      "response200": "200 — success, returns the metadata or batch result",
-      "response4xx": "401 / 403 — check X-API-Key header (missing or invalid)",
-      "response429": "429 — rate limit reached, wait `Retry-After` seconds before retrying",
-      "response404": "404 — owner/name doesn't exist on GitHub (case-sensitive)"
+      "heading": "Make your first call",
+      "body": "Three examples from no-auth to authenticated batch. Copy and paste; replace `YOUR_KEY_HERE` with the token from step 3.",
+      "example1Heading": "no auth required — sanity check",
+      "example1Body": "Status endpoint confirms the service is up and reports cache stats.",
+      "example2Heading": "no auth required — fetch one repo",
+      "example2Body": "Public read of the cache for a single repo. Cache miss queues a refresh and waits synchronously.",
+      "example3Heading": "auth required — batch up to 50",
+      "example3Body": "Authenticated batch lookup. Send your key as the `X-API-Key` header; pass up to 50 owner/name pairs in the body.",
+      "errorsHeading": "common error codes",
+      "errorCol": {
+        "code": "code",
+        "status": "http",
+        "meaning": "meaning"
+      },
+      "errors": {
+        "unauthorized": "Missing `X-API-Key` header.",
+        "forbidden": "Key invalid, revoked, or your account is disabled.",
+        "rate_limited": "Per-key or per-IP bucket exhausted — wait `Retry-After` seconds.",
+        "not_found": "Repository doesn't exist on GitHub (or is private)."
+      }
     },
-    "deeperHeading": "Deeper references",
-    "deeperApi": "Full API reference (every endpoint, every error code)",
-    "deeperDev": "Run it locally or contribute changes"
+    "deeper": {
+      "heading": "Deeper reading",
+      "apiRef": "API reference",
+      "apiRefBody": "every endpoint, every error code, sample responses",
+      "devGuide": "Development & contributing guide",
+      "devGuideBody": "run locally, fork, send a PR",
+      "specBody": "machine-readable JSON spec for client codegen"
+    },
+    "blame": {
+      "lastTouched": "last touched 2026-09-06",
+      "author": "githubcache team",
+      "version": "v1.0"
+    }
   }
 }

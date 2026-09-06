@@ -1782,32 +1782,63 @@
     "eyebrow": "快速开始",
     "title": "4 步开始使用 API",
     "lede": "githubcache 是 GitHub 仓库元数据缓存服务。本页演示如何申请账号、获取 API key 并发起首次调用。",
+    "treeheader": {
+      "branch": "4 步引导",
+      "commitStep": "第 {n} 步 / 共 4 步"
+    },
     "step1": {
-      "heading": "1 · 让管理员开账号",
-      "body": "githubcache 由管理员开通账号，没有公开注册。请管理员在 `/admin/users` 发邀请。收到形如 `/request-access?invitation=xxx` 的链接后设置密码。"
+      "heading": "让管理员开账号",
+      "body": "githubcache 由管理员开通账号，没有公开注册。请管理员在 `/admin/users` 发邀请。收到形如 `/request-access?invitation=xxx` 的链接后设置密码。",
+      "calloutHeading": "提示",
+      "calloutBody": "已经有邀请链接？打开它、设置密码即可登录。如果不知道管理员是谁，去问那个告诉你 githubcache 的人。"
     },
     "step2": {
-      "heading": "2 · 申请 API key",
-      "body": "登录 `/login` 后进入 `/admin/api-keys` 点击「Request」。key 进入 `pending` 状态，管理员会在审批队列里看到。"
+      "heading": "申请 API key",
+      "body": "登录后到 API keys 页面申请：",
+      "action1": "在 `/login` 登录。",
+      "action2": "打开 `/admin/api-keys` 点击 Request。",
+      "action3": "key 出现在你的列表里，状态是 `pending`。"
     },
     "step3": {
-      "heading": "3 · 等待管理员批准",
-      "body": "管理员在 `/admin/api-keys/[id]` 点 Approve。明文 token 仅展示一次，含复制按钮。如果配置了 SMTP，也会发邮件给你。请妥善保存——之后无法找回。"
+      "heading": "等待管理员批准",
+      "body": "管理员审阅你的请求并批准。他们打开 `/admin/api-keys/[id]` 点 Approve。",
+      "calloutHeading": "警告",
+      "calloutBody": "明文 token 仅显示一次 —— 出现的瞬间请立即复制。githubcache 之后无法找回。如果配置了 SMTP，也会发邮件给你。"
     },
     "step4": {
-      "heading": "4 · 发起首次调用",
-      "sanityCaption": "健康检查（无需认证）",
-      "singleRepoCaption": "获取单个仓库元数据（无需认证）",
-      "batchCaption": "认证批量查询（需 X-API-Key）",
-      "responsesHeading": "常见响应",
-      "responsesIntro": "每个响应都包含机器可读的 `code` 字段。按 `code` 匹配，不要匹配人类可读的 `error` 字符串。",
-      "response200": "200 — 成功，返回元数据或批量结果",
-      "response4xx": "401 / 403 — 检查 X-API-Key 头（缺失或无效）",
-      "response429": "429 — 速率限制已达上限，等 `Retry-After` 秒后重试",
-      "response404": "404 — owner/name 在 GitHub 上不存在（大小写敏感）"
+      "heading": "发起首次调用",
+      "body": "三个示例，从无认证到批量认证。复制粘贴即可，把 `YOUR_KEY_HERE` 换成第 3 步拿到的 token。",
+      "example1Heading": "无需认证 —— 健康检查",
+      "example1Body": "状态端点确认服务在线，并报告缓存统计。",
+      "example2Heading": "无需认证 —— 获取单个仓库",
+      "example2Body": "公开读取单个仓库缓存。缓存未命中会排队 refresh 并同步等待。",
+      "example3Heading": "需要认证 —— 批量最多 50 个",
+      "example3Body": "认证批量查询。把 key 放在 `X-API-Key` 头里，body 里最多 50 个 owner/name 对。",
+      "errorsHeading": "常见错误码",
+      "errorCol": {
+        "code": "code",
+        "status": "http",
+        "meaning": "含义"
+      },
+      "errors": {
+        "unauthorized": "缺少 `X-API-Key` 头。",
+        "forbidden": "key 无效、已撤销，或账号被禁用。",
+        "rate_limited": "按 key 或按 IP 的桶耗尽 —— 等 `Retry-After` 秒。",
+        "not_found": "GitHub 上仓库不存在（或私有）。"
+      }
     },
-    "deeperHeading": "深度参考",
-    "deeperApi": "完整 API 参考（每个端点、每个错误码）",
-    "deeperDev": "本地运行或贡献代码"
+    "deeper": {
+      "heading": "深入阅读",
+      "apiRef": "API 参考",
+      "apiRefBody": "每个端点、每个错误码、示例响应",
+      "devGuide": "开发与贡献指南",
+      "devGuideBody": "本地运行、fork、提 PR",
+      "specBody": "机器可读 JSON 规格，供客户端代码生成"
+    },
+    "blame": {
+      "lastTouched": "最后更新 2026-09-06",
+      "author": "githubcache 团队",
+      "version": "v1.0"
+    }
   }
 }
