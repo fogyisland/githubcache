@@ -1881,7 +1881,9 @@
         "request": "请求",
         "response": "响应",
         "exampleResponse": "响应示例",
-        "tryIt": "试一试",
+        "tryIt": "试一试 (curl)",
+        "python": "试一试 (Python)",
+        "javascript": "试一试 (JavaScript)",
         "responseHeaders": "响应头",
         "errors": "错误",
         "bodySchema": "请求体结构"

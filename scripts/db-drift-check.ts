@@ -14,7 +14,7 @@
  */
 
 import { prisma } from '@/lib/db/client';
-import { checkDrift } from '@/lib/database/drift-check';
+import { checkDrift, DRIFT_CHECK_TABLES } from '@/lib/database/drift-check';
 
 async function main(): Promise<void> {
   const result = await checkDrift();
@@ -36,11 +36,26 @@ async function main(): Promise<void> {
     `Last applied migration finished_at: ${result.lastFinishedAt!.toISOString()}`,
   );
   console.log(`Drift grace window: ${result.graceMin} minutes`);
+  console.log(
+    `Connection: DATABASE()=${result.database ?? '?'}; tablesScanned=${result.tablesScanned} of ${DRIFT_CHECK_TABLES.length} expected`,
+  );
   console.log('');
 
   if (result.healthy.length > 0) {
     console.log('✓ healthy (CREATE_TIME within grace window):');
     for (const n of result.healthy) console.log(`  - ${n}`);
+  }
+
+  if (result.missing.length > 0) {
+    console.error('');
+    console.error(
+      `✗ ${result.missing.length} expected table(s) not found in the current schema:`,
+    );
+    for (const n of result.missing) console.error(`  - ${n}`);
+    console.error(
+      'Did the migration that creates this table fail, or is your connection pointed at the wrong schema?',
+    );
+    process.exit(1);
   }
 
   if (result.drifted.length > 0) {

@@ -76,6 +76,15 @@ export interface DriftResult {
   lastFinishedAt: Date | null;
   /** Effective grace window applied (minutes). */
   graceMin: number;
+  /** DATABASE() the check ran against. Useful when connection string has
+   *  a default schema different from what the operator expected. */
+  database: string | null;
+  /** Total rows information_schema returned. Useful to catch the
+   *  "Prisma tagged template treated DATABASE() as a parameter" bug. */
+  tablesScanned: number;
+  /** Tables from DRIFT_CHECK_TABLES that the DB doesn't have at all
+   *  (CREATE_TIME doesn't exist because the table doesn't exist). */
+  missing: string[];
   drifted: DriftedTable[];
   healthy: string[];
   /** Error message when the check could not run at all (DB unreachable etc). */
@@ -106,23 +115,42 @@ export async function checkDrift(
         noMigrations: true,
         lastFinishedAt: null,
         graceMin,
+        database: await currentDatabase(),
+        tablesScanned: 0,
+        missing: [],
         drifted: [],
         healthy: [],
         error: 'no migrations recorded in _prisma_migrations',
       };
     }
 
-    const tables = await prisma.$queryRaw<TableRow[]>`
+    // Use $queryRawUnsafe so DATABASE() is passed as a raw SQL token.
+    // Prisma's $queryRaw tagged template literal treats DATABASE() as
+    // a parameter binding, which yields zero rows — we hit this exact
+    // bug on the first dev:server boot and the log showed
+    // tablesScanned: 0 even though the DB clearly had 3+ tables.
+    const tables = (await prisma.$queryRawUnsafe(`
       SELECT TABLE_NAME, CREATE_TIME
       FROM information_schema.TABLES
       WHERE TABLE_SCHEMA = DATABASE()
         AND TABLE_NAME IN (${DRIFT_CHECK_TABLES.map((t) => `'${t}'`).join(',')})
       ORDER BY TABLE_NAME
-    `;
+    `)) as TableRow[];
 
     const graceMs = graceMin * 60 * 1000;
     const drifted: DriftedTable[] = [];
     const healthy: string[] = [];
+    const missing: string[] = [];
+
+    // Detect expected tables that did not show up in information_schema
+    // — those count as "missing", not "healthy", so we surface them
+    // loudly instead of silently skipping.
+    const foundNames = new Set(tables.map((t) => t.TABLE_NAME));
+    for (const expected of DRIFT_CHECK_TABLES) {
+      if (!foundNames.has(expected)) {
+        missing.push(expected);
+      }
+    }
 
     for (const t of tables) {
       const driftMs = t.CREATE_TIME.getTime() - lastFinishedAt.getTime();
@@ -138,10 +166,13 @@ export async function checkDrift(
     }
 
     return {
-      ok: drifted.length === 0,
+      ok: drifted.length === 0 && missing.length === 0,
       noMigrations: false,
       lastFinishedAt,
       graceMin,
+      database: await currentDatabase(),
+      tablesScanned: tables.length,
+      missing,
       drifted,
       healthy,
       error: null,
@@ -152,9 +183,24 @@ export async function checkDrift(
       noMigrations: false,
       lastFinishedAt: null,
       graceMin,
+      database: null,
+      tablesScanned: 0,
+      missing: [],
       drifted: [],
       healthy: [],
       error: e instanceof Error ? e.message : String(e),
     };
+  }
+}
+
+/** Returns the schema name of the current connection (DATABASE()). */
+async function currentDatabase(): Promise<string | null> {
+  try {
+    const rows = (await prisma.$queryRawUnsafe(
+      'SELECT DATABASE() AS db',
+    )) as { db: string }[];
+    return rows[0]?.db ?? null;
+  } catch {
+    return null;
   }
 }

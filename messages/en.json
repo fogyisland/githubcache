@@ -1881,7 +1881,9 @@
         "request": "Request",
         "response": "Response",
         "exampleResponse": "Example response",
-        "tryIt": "Try it",
+        "tryIt": "Try it (curl)",
+        "python": "Try it (Python)",
+        "javascript": "Try it (JavaScript)",
         "responseHeaders": "Response headers",
         "errors": "Errors",
         "bodySchema": "Body schema"

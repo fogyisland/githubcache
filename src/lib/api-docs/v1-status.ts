@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db/client';
 import { poolSize } from '@/lib/github/pool';
 import { isPaused } from '@/lib/scheduler/state';
+import { checkDrift, DRIFT_CHECK_TABLES } from '@/lib/database/drift-check';
 import type { z } from 'zod';
 import type { v1StatusSchema } from './schemas/v1-status';
 
@@ -29,20 +30,29 @@ export async function collectV1Status(): Promise<V1Status | null> {
   }
   if (!dbUp) return null;
 
-  const [repoGroups, queueGroups, tokens, doneLast24h] = await Promise.all([
-    prisma.repository.groupBy({ by: ['fetchStatus'], _count: true }),
-    prisma.refreshJob.groupBy({ by: ['status'], _count: true }),
-    prisma.githubToken.findMany({
-      where: { status: 'active' },
-      select: { requestsUsed: true, requestsLimit: true, resetAt: true },
-    }),
-    prisma.refreshJob.count({
-      where: {
-        status: 'done',
-        updatedAt: { gte: new Date(Date.now() - 24 * 60 * 60_000) },
-      },
-    }),
-  ]);
+  // Run drift check and DB schema lookup in parallel with the rest of the
+  // stat collection — they're independent queries.
+  const driftPromise = checkDrift().catch(() => null);
+
+  const [repoGroups, queueGroups, tokens, doneLast24h, drift, dbName] =
+    await Promise.all([
+      prisma.repository.groupBy({ by: ['fetchStatus'], _count: true }),
+      prisma.refreshJob.groupBy({ by: ['status'], _count: true }),
+      prisma.githubToken.findMany({
+        where: { status: 'active' },
+        select: { requestsUsed: true, requestsLimit: true, resetAt: true },
+      }),
+      prisma.refreshJob.count({
+        where: {
+          status: 'done',
+          updatedAt: { gte: new Date(Date.now() - 24 * 60 * 60_000) },
+        },
+      }),
+      driftPromise,
+      prisma.$queryRawUnsafe<{ db: string }[]>(
+        'SELECT DATABASE() AS db',
+      ).then((r) => r[0]?.db ?? null),
+    ]);
 
   const repoCount = (s: string): number =>
     repoGroups.find((g) => g.fetchStatus === s)?._count ?? 0;
@@ -60,6 +70,19 @@ export async function collectV1Status(): Promise<V1Status | null> {
   return {
     ok: true,
     db: 'up',
+    database: dbName,
+    drift:
+      drift === null
+        ? null
+        : {
+            ok: drift.ok,
+            lastMigration: drift.lastFinishedAt?.toISOString() ?? null,
+            graceMin: drift.graceMin,
+            tablesScanned: drift.tablesScanned,
+            tablesExpected: DRIFT_CHECK_TABLES.length,
+            drifted: drift.drifted.map((d) => d.name),
+            missing: drift.missing,
+          },
     tokens: { active: poolSize(), exhausted, total: tokens.length, source: 'db' as const },
     queue: {
       pending: queueCount('pending'),

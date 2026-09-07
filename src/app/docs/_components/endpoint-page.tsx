@@ -2,12 +2,15 @@ import type { ReactElement } from 'react';
 import { getTranslations } from 'next-intl/server';
 import type { EndpointDoc } from '@/lib/api-docs/types';
 import { CurlExample } from './curl-example';
+import { PythonExample } from './python-example';
+import { JavaScriptExample } from './javascript-example';
 import { SchemaViewer } from './schema-viewer';
 import { ResponseExample } from './response-example';
 import { HeadersTable } from './headers-table';
 import { ErrorsTable } from './errors-table';
 import { queryBodySchema } from '@/lib/api-docs/schemas/query';
 import { slugToNs } from './_slug';
+import { buildPython, buildJavaScript } from '@/lib/api-docs/build-examples';
 
 interface EndpointPageProps {
   doc: EndpointDoc;
@@ -96,6 +99,13 @@ export async function EndpointPage({ doc }: EndpointPageProps): Promise<ReactEle
     ...(curlHasBody(doc) ? { body: curlBody(doc) } : {}),
   });
 
+  // M28.bug4e — generate Python and JavaScript examples for users who
+  // don't want to translate from curl. Both come from the same source
+  // data (path / method / request) so they stay in sync with the docs
+  // schema automatically.
+  const pythonCode = buildPython(doc);
+  const jsCode = buildJavaScript(doc);
+
   return (
     <article className="ghc-doc-endpoint">
       <p className="ghc-section-eyebrow">{t('eyebrow')}</p>
@@ -148,6 +158,16 @@ export async function EndpointPage({ doc }: EndpointPageProps): Promise<ReactEle
       <section className="ghc-doc-section">
         <h2 className="ghc-doc-h2">{t('sections.tryIt')}</h2>
         {curlExample}
+      </section>
+
+      <section className="ghc-doc-section">
+        <h2 className="ghc-doc-h2">{t('sections.python')}</h2>
+        <PythonExample code={pythonCode} filename={`${doc.slug.replace('/', '-')}.py`} />
+      </section>
+
+      <section className="ghc-doc-section">
+        <h2 className="ghc-doc-h2">{t('sections.javascript')}</h2>
+        <JavaScriptExample code={jsCode} filename={`${doc.slug.replace('/', '-')}.js`} />
       </section>
 
       {headersTable && (

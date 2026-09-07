@@ -47,19 +47,22 @@ export async function startupDatabaseChecks(): Promise<void> {
   const drift = await checkDrift();
   if (drift.error !== null) {
     logger.warn(
-      { err: drift.error },
+      { err: drift.error, database: drift.database },
       'schema-drift check could not run; DB may be unreachable. Run `npm run db:check-drift` for details.',
     );
   } else if (drift.noMigrations) {
     logger.warn(
-      {},
+      { database: drift.database },
       'schema-drift check found no applied migrations. Run `npx prisma migrate deploy` before serving traffic.',
     );
   } else if (!drift.ok) {
     logger.warn(
       {
+        database: drift.database,
         lastMigration: drift.lastFinishedAt?.toISOString(),
         graceMin: drift.graceMin,
+        tablesScanned: drift.tablesScanned,
+        missing: drift.missing,
         drifted: drift.drifted.map((d) => ({
           table: d.name,
           createTime: d.createTime.toISOString(),
@@ -72,9 +75,11 @@ export async function startupDatabaseChecks(): Promise<void> {
   } else {
     logger.info(
       {
+        database: drift.database,
         lastMigration: drift.lastFinishedAt?.toISOString(),
         graceMin: drift.graceMin,
-        tablesChecked: drift.healthy.length,
+        tablesScanned: drift.tablesScanned,
+        tablesHealthy: drift.healthy.length,
       },
       'schema-drift check passed',
     );

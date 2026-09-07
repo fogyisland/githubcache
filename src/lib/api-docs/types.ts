@@ -58,4 +58,18 @@ export interface EndpointDoc {
   responseSamples: Record<string, unknown>;
   headers?: HeaderDoc[];
   errors: ErrorDoc[];
+  /**
+   * M28.bug4e — language-specific code samples for users who don't want
+   * to translate from curl. The Python and JavaScript versions are
+   * generated from this field; curl is built separately.
+   *
+   * If absent, the docs page falls back to a templated example built
+   * from `path` / `method` / `request` / `body` — same shape curl uses.
+   * Override only when the default doesn't capture something important
+   * (e.g. paginating /api/query).
+   */
+  examples?: {
+    python?: string;
+    javascript?: string;
+  };
 }
