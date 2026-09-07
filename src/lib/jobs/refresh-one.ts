@@ -1,4 +1,4 @@
-import type { RefreshJob, Repository, RefreshJobKind } from '@prisma/client';
+import type { RefreshJob, Repository } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
 import { env } from '@/lib/config/env';
 import {
