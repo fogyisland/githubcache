@@ -6,6 +6,34 @@ import { initPool, shutdownPool } from '@/lib/github/pool';
 import { startScheduler, stopScheduler } from '@/lib/scheduler';
 import { startupDatabaseChecks } from '@/lib/database/startup';
 
+/**
+ * Custom server entry — `npm run dev:server` boots this directly with
+ * tsx (no `tsx watch`). Changes to most of `src/` are picked up by Next's
+ * built-in dev HMR, but a few kinds of edits need a manual Ctrl+C +
+ * restart:
+ *
+ *   1. `src/server.ts` itself (this file).
+ *   2. `src/lib/db/client.ts` — Prisma client is a process-level singleton
+ *      and the query engine DLL is loaded once at boot.
+ *   3. `src/lib/github/pool.ts` — pool Map is module-level singleton
+ *      (CLAUDE.md "Things that will trip you up" #4); changes won't
+ *      take effect on the running process.
+ *   4. `prisma/schema.prisma` or any new migration — `prisma generate`
+ *      reloads the generated client; the runtime needs a fresh process
+ *      to load it.
+ *   5. `src/lib/config/env.ts` — env parsing runs once at boot.
+ *
+ * For everything else (admin pages, server components, API routes,
+ * cache/, scheduler/ workers, github/ fetchers), Next's HMR rebuilds
+ * the affected route automatically — no restart needed.
+ *
+ * If you change one of (1)–(5) above, Ctrl+C the running dev:server
+ * and `npm run dev:server` again. There's intentionally no `watch` —
+ * the double-rebuild cost (tsx restarts server.ts → Next detects
+ * restart → recompiles middleware → full HMR cycle) outweighs the
+ * occasional manual step.
+ */
+
 interface ServerHandle {
   server: ReturnType<typeof createServer>;
   scheduler: { stop(): void };
