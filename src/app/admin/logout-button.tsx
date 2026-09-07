@@ -1,10 +1,7 @@
 'use client';
 
 import { useState, type ReactElement } from 'react';
-
-interface CsrfResponse {
-  csrfToken: string;
-}
+import { fetchCsrfToken } from '@/lib/csrf/client';
 
 /**
  * Logout button.
@@ -22,8 +19,7 @@ export function LogoutButton(): ReactElement {
   async function handleLogout(): Promise<void> {
     setLoading(true);
     try {
-      const csrfRes = await fetch('/api/admin/auth/csrf', { credentials: 'same-origin' });
-      const { csrfToken } = (await csrfRes.json()) as CsrfResponse;
+      const csrfToken = await fetchCsrfToken();
       const res = await fetch('/api/admin/auth/logout', {
         method: 'POST',
         credentials: 'same-origin',

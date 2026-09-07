@@ -2,6 +2,7 @@
 import { useEffect, useState, type ReactElement } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { fetchCsrfToken } from '@/lib/csrf/client';
 
 interface FormState {
   slug: string;
@@ -71,9 +72,7 @@ export function ProviderForm({
   const [previewError, setPreviewError] = useState<string | null>(null);
 
   useEffect(() => {
-    void fetch('/api/admin/auth/csrf')
-      .then((r) => r.json())
-      .then((d: { csrfToken: string }) => setCsrf(d.csrfToken));
+    void fetchCsrfToken().then(setCsrf).catch(() => undefined);
   }, []);
 
   const isEdit = mode === 'edit' && initial?.id !== undefined;

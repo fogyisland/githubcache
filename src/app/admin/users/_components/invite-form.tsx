@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, type ReactElement, type FormEvent as ReactFormEvent } from 'react';
 import { useTranslations } from 'next-intl';
+import { fetchCsrfToken } from '@/lib/csrf/client';
 
 /**
  * Client component: invite a new user (M13.4 i18n).
@@ -18,9 +19,7 @@ export function InviteForm(): ReactElement {
   const [inviteLink, setInviteLink] = useState<string | null>(null);
 
   useEffect(() => {
-    void fetch('/api/admin/auth/csrf')
-      .then((r) => r.json())
-      .then((d: { csrfToken: string }) => setCsrf(d.csrfToken));
+    void fetchCsrfToken().then(setCsrf).catch(() => undefined);
   }, []);
 
   async function onSubmit(e: ReactFormEvent): Promise<void> {

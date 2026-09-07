@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { ReactElement } from 'react';
+import { fetchCsrfToken } from '@/lib/csrf/client';
 
 /** Re-queue a dead or failed delivery so the worker picks it up immediately.
  *  Admin-only. */
@@ -18,9 +19,7 @@ export function RetryDeliveryButton({
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    void fetch('/api/admin/auth/csrf')
-      .then((r) => r.json())
-      .then((d: { csrfToken: string }) => setCsrf(d.csrfToken));
+    void fetchCsrfToken().then(setCsrf).catch(() => undefined);
   }, []);
 
   async function onRetry(): Promise<void> {

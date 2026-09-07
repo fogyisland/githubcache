@@ -2,6 +2,7 @@
 import { useEffect, useState, type ReactElement } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { fetchCsrfToken } from '@/lib/csrf/client';
 
 /**
  * Delete button — calls DELETE /api/admin/providers/[id] (admin-only)
@@ -20,9 +21,7 @@ export function ProviderDelete({
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    void fetch('/api/admin/auth/csrf')
-      .then((r) => r.json())
-      .then((d: { csrfToken: string }) => setCsrf(d.csrfToken));
+    void fetchCsrfToken().then(setCsrf).catch(() => undefined);
   }, []);
 
   async function onDelete(): Promise<void> {

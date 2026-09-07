@@ -33,6 +33,7 @@
     "test:e2e": "playwright test",
     "dev:fetch": "tsx scripts/dev-fetch.ts",
     "create:admin": "tsx --env-file=.env scripts/create-admin.ts",
+    "db:check-drift": "tsx --env-file=.env scripts/db-drift-check.ts",
     "init": "tsx --env-file=.env scripts/init.ts",
     "mint:key": "tsx --env-file=.env scripts/mint-local-api-key.ts",
     "smoke:session": "tsx --env-file=.env scripts/smoke-session.ts"

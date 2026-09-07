@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { fetchCsrfToken } from '@/lib/csrf/client';
 
 /**
  * M26 — account-center logout button.
@@ -19,8 +20,7 @@ export function AccountLogoutButton(): React.ReactElement {
   async function handleLogout(): Promise<void> {
     setLoading(true);
     try {
-      const csrfRes = await fetch('/api/admin/auth/csrf', { credentials: 'same-origin' });
-      const { csrfToken } = (await csrfRes.json()) as { csrfToken: string };
+      const csrfToken = await fetchCsrfToken();
       const res = await fetch('/api/admin/auth/logout', {
         method: 'POST',
         credentials: 'same-origin',

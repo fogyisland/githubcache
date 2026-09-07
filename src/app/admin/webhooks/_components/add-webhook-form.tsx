@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { ReactElement } from 'react';
+import { fetchCsrfToken } from '@/lib/csrf/client';
 
 interface CreatedResponse {
   id: string;
@@ -27,9 +28,7 @@ export function AddWebhookForm(): ReactElement {
   const [created, setCreated] = useState<CreatedResponse | null>(null);
 
   useEffect(() => {
-    void fetch('/api/admin/auth/csrf')
-      .then((r) => r.json())
-      .then((d: { csrfToken: string }) => setCsrf(d.csrfToken));
+    void fetchCsrfToken().then(setCsrf).catch(() => undefined);
   }, []);
 
   async function onSubmit(e: React.FormEvent): Promise<void> {

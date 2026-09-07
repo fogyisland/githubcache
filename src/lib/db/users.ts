@@ -51,10 +51,23 @@ export async function getUserById(id: bigint): Promise<User | null> {
  * through a single connection, so the session variable set in step 1
  * is visible to the UPDATE in step 2 — and to the trigger that fires
  * off that UPDATE.
+ *
+ * M28.bug4a — also `SET @app_actor` so the trigger can stamp
+ * `audit_log.actor_user_id`. Required: actorUserId > 0 (the route
+ * layer rejects anonymous disable, and the trigger stamps 0 for
+ * out-of-band writes so the NOT NULL constraint holds).
  */
-export async function updateUserStatus(id: bigint, status: 'active' | 'disabled'): Promise<void> {
+export async function updateUserStatus(
+  id: bigint,
+  status: 'active' | 'disabled',
+  actorUserId: bigint,
+): Promise<void> {
+  if (actorUserId <= 0n) {
+    throw new Error('updateUserStatus requires a positive actorUserId');
+  }
   await prisma.$transaction([
     prisma.$executeRawUnsafe("SET @app_source = 'application'"),
+    prisma.$executeRawUnsafe(`SET @app_actor = '${actorUserId.toString()}'`),
     prisma.user.update({ where: { id }, data: { status } }),
   ]);
 }

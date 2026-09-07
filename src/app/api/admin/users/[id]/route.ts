@@ -94,7 +94,7 @@ export async function PATCH(
     return apiError('bad_request', 'cannot disable self', {}, req);
   }
 
-  await updateUserStatus(id, parsed.data.status);
+  await updateUserStatus(id, parsed.data.status, auth.user.id);
 
   const fwdPatch = req.headers.get('x-forwarded-for');
   void writeAudit({

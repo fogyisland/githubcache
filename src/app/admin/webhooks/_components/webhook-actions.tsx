@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { ReactElement } from 'react';
+import { fetchCsrfToken } from '@/lib/csrf/client';
 
 /** Per-row actions on the webhooks list page. Disable / re-arm / rotate
  *  secret. Rotation surfaces the new secret inline like creation. */
@@ -21,9 +22,7 @@ export function WebhookActions({
   const [rotatedSecret, setRotatedSecret] = useState<string | null>(null);
 
   useEffect(() => {
-    void fetch('/api/admin/auth/csrf')
-      .then((r) => r.json())
-      .then((d: { csrfToken: string }) => setCsrf(d.csrfToken));
+    void fetchCsrfToken().then(setCsrf).catch(() => undefined);
   }, []);
 
   async function callDisable(): Promise<void> {

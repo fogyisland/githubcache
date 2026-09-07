@@ -3,7 +3,9 @@ import { listUsers, getUserById, updateUserStatus } from '@/lib/db/users';
 import { prisma } from '@/lib/db/client';
 
 const TEST_EMAIL_PREFIX = 'db-users-test-';
+const ACTOR_EMAIL_PREFIX = 'db-users-test-actor-';
 const testUserIds: bigint[] = [];
+let actorId: bigint;
 
 beforeAll(async () => {
   for (let i = 0; i < 3; i++) {
@@ -15,11 +17,23 @@ beforeAll(async () => {
     });
     testUserIds.push(u.id);
   }
+  // M28.bug4a — updateUserStatus requires a positive actorUserId. Create
+  // a long-lived admin actor used across the test suite.
+  const actor = await prisma.user.create({
+    data: {
+      email: `${ACTOR_EMAIL_PREFIX}${Date.now()}@example.test`,
+      role: 'admin',
+    },
+  });
+  actorId = actor.id;
 });
 
 afterAll(async () => {
   await prisma.user.deleteMany({
     where: { email: { startsWith: TEST_EMAIL_PREFIX } },
+  });
+  await prisma.user.deleteMany({
+    where: { email: { startsWith: ACTOR_EMAIL_PREFIX } },
   });
   await prisma.$disconnect();
 });
@@ -62,17 +76,25 @@ describe('getUserById', () => {
 describe('updateUserStatus', () => {
   it('updates status to disabled', async () => {
     const id = testUserIds[0]!;
-    await updateUserStatus(id, 'disabled');
+    await updateUserStatus(id, 'disabled', actorId);
     const user = await getUserById(id);
     expect(user!.status).toBe('disabled');
   });
 
   it('updates status back to active', async () => {
     const id = testUserIds[1]!;
-    await updateUserStatus(id, 'disabled');
-    await updateUserStatus(id, 'active');
+    await updateUserStatus(id, 'disabled', actorId);
+    await updateUserStatus(id, 'active', actorId);
     const user = await getUserById(id);
     expect(user!.status).toBe('active');
+  });
+
+  // M28.bug4a — updateUserStatus refuses to write without an actor.
+  it('throws when actorUserId is missing or non-positive', async () => {
+    const id = testUserIds[2]!;
+    await expect(updateUserStatus(id, 'disabled', 0n)).rejects.toThrow(
+      /positive actorUserId/,
+    );
   });
 
   // M27.7 — application writes must be auditable via the AFTER UPDATE
@@ -82,13 +104,13 @@ describe('updateUserStatus', () => {
   it('writes an audit_log row with source=application', async () => {
     const id = testUserIds[2]!;
     // Reset first (beforeEach already did active, but be explicit)
-    await updateUserStatus(id, 'active');
+    await updateUserStatus(id, 'active', actorId);
 
     const before = await prisma.auditLog.count({
       where: { targetType: 'user', targetId: id.toString() },
     });
 
-    await updateUserStatus(id, 'disabled');
+    await updateUserStatus(id, 'disabled', actorId);
 
     const rows = await prisma.auditLog.findMany({
       where: { targetType: 'user', targetId: id.toString() },
@@ -98,6 +120,8 @@ describe('updateUserStatus', () => {
     expect(rows.length).toBe(1);
     const row = rows[0]!;
     expect(row.action).toBe('disable_user');
+    // M28.bug4a — trigger now stamps actor_user_id from @app_actor.
+    expect(row.actorUserId).toBe(actorId);
     // MySQL JSON column round-trip -> JsonValue; assert via JSON.stringify
     // so this test doesn't depend on the runtime shape of the parsed object.
     const meta = JSON.stringify(row.metadata);

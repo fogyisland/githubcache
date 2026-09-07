@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { formatDateTime } from '@/lib/format/datetime';
 import type { TimezoneId } from '@/lib/timezone/registry';
+import { fetchCsrfToken } from '@/lib/csrf/client';
 
 interface Props {
   isPaused: boolean;
@@ -38,8 +39,7 @@ export function QueueControls({ isPaused, pausedAt, tz }: Props): ReactElement {
   }, [router]);
 
   async function postCsrf(): Promise<Response> {
-    const csrfRes = await fetch('/api/admin/auth/csrf', { credentials: 'same-origin' });
-    const { csrfToken } = (await csrfRes.json()) as { csrfToken: string };
+    const csrfToken = await fetchCsrfToken();
     return fetch('/api/admin/queue/tick', {
       method: 'POST',
       credentials: 'same-origin',

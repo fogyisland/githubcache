@@ -2,10 +2,7 @@
 
 import { useEffect, useState, type FormEvent, type ReactElement } from 'react';
 import { useTranslations } from 'next-intl';
-
-interface CsrfResponse {
-  csrfToken: string;
-}
+import { fetchCsrfToken } from '@/lib/csrf/client';
 
 interface LoginResponse {
   ok?: boolean;
@@ -89,12 +86,9 @@ export function LoginForm(): ReactElement {
     let cancelled = false;
     void (async (): Promise<void> => {
       try {
-        const res = await fetch('/api/admin/auth/csrf', {
-          credentials: 'same-origin',
-        });
-        const body = (await res.json()) as CsrfResponse;
+        const token = await fetchCsrfToken();
         if (!cancelled) {
-          setCsrfToken(body.csrfToken);
+          setCsrfToken(token);
           setCsrfLoading(false);
         }
       } catch {
