@@ -36,7 +36,8 @@
     "db:check-drift": "tsx --env-file=.env scripts/db-drift-check.ts",
     "init": "tsx --env-file=.env scripts/init.ts",
     "mint:key": "tsx --env-file=.env scripts/mint-local-api-key.ts",
-    "smoke:session": "tsx --env-file=.env scripts/smoke-session.ts"
+    "smoke:session": "tsx --env-file=.env scripts/smoke-session.ts",
+    "release": "tsx scripts/release.ts"
   },
   "dependencies": {
     "@octokit/rest": "^22.0.1",
