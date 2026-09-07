@@ -26,7 +26,7 @@
  *   npm run release -- --version 0.2.0     # override
  *
  * Output (single directory, no tarball — ship as-is):
- *   dist/release/v0.1.0/githubcache-v0.1.0/      (clean source tree, copy to server)
+ *   dist/release/githubcache-v0.1.0/      (clean source tree, copy to server)
  *
  * Deploy flow the recipient follows (in RELEASE.md):
  *   1. Copy githubcache-v0.1.0/ to the server (rsync, scp, USB, ...)
@@ -246,7 +246,7 @@ restores the affected columns / tables — there is no automatic reverse.
 
 function main(): void {
   const releaseDirName = `githubcache-v${VERSION}`;
-  const releaseDir = join(DIST, `v${VERSION}`, releaseDirName);
+  const releaseDir = join(DIST, releaseDirName);
 
   console.log(`Building release v${VERSION}`);
   console.log(`  → ${releaseDir}`);
@@ -274,7 +274,7 @@ function main(): void {
   console.log(`  wrote RELEASE.md`);
 
   console.log(`\nRelease ready. Ship the directory:`);
-  console.log(`  rsync -av --delete dist/release/v${VERSION}/${releaseDirName}/  user@server:/opt/${releaseDirName}/`);
+  console.log(`  rsync -av --delete dist/release/${releaseDirName}/  user@server:/opt/${releaseDirName}/`);
   console.log(`\nOn the server:`);
   console.log(`  cd ${releaseDirName}`);
   console.log(`  npm ci --omit=dev`);
