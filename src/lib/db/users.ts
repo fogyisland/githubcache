@@ -44,7 +44,17 @@ export async function getUserById(id: bigint): Promise<User | null> {
  * Update a user's status (active / disabled). No cascade — does not
  * invalidate sessions. The caller is responsible for that (e.g., the
  * logout-all endpoint invalidates sessions explicitly).
+ *
+ * M27.7 — wraps the UPDATE in a `$transaction` with a `SET @app_source`
+ * so the AFTER UPDATE trigger on `users` can distinguish application
+ * writes from manual SQL. Prisma 5 routes a `$transaction([])` array
+ * through a single connection, so the session variable set in step 1
+ * is visible to the UPDATE in step 2 — and to the trigger that fires
+ * off that UPDATE.
  */
 export async function updateUserStatus(id: bigint, status: 'active' | 'disabled'): Promise<void> {
-  await prisma.user.update({ where: { id }, data: { status } });
+  await prisma.$transaction([
+    prisma.$executeRawUnsafe("SET @app_source = 'application'"),
+    prisma.user.update({ where: { id }, data: { status } }),
+  ]);
 }

@@ -74,4 +74,37 @@ describe('updateUserStatus', () => {
     const user = await getUserById(id);
     expect(user!.status).toBe('active');
   });
+
+  // M27.7 — application writes must be auditable via the AFTER UPDATE
+  // trigger on `users`. We verify both the row gets written AND that
+  // the source is tagged 'application' (distinguishes from manual SQL
+  // which the trigger tags 'sql').
+  it('writes an audit_log row with source=application', async () => {
+    const id = testUserIds[2]!;
+    // Reset first (beforeEach already did active, but be explicit)
+    await updateUserStatus(id, 'active');
+
+    const before = await prisma.auditLog.count({
+      where: { targetType: 'user', targetId: id.toString() },
+    });
+
+    await updateUserStatus(id, 'disabled');
+
+    const rows = await prisma.auditLog.findMany({
+      where: { targetType: 'user', targetId: id.toString() },
+      orderBy: { id: 'desc' },
+      take: 1,
+    });
+    expect(rows.length).toBe(1);
+    const row = rows[0]!;
+    expect(row.action).toBe('disable_user');
+    // MySQL JSON column round-trip -> JsonValue; assert via JSON.stringify
+    // so this test doesn't depend on the runtime shape of the parsed object.
+    const meta = JSON.stringify(row.metadata);
+    expect(meta).toContain('"source":"application"');
+    expect(meta).toContain('"from":"active"');
+    expect(meta).toContain('"to":"disabled"');
+    expect(meta).toContain('"trigger":"users_status_audit"');
+    expect(rows.length + before).toBeGreaterThan(0);
+  });
 });
