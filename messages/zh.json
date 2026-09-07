@@ -1873,7 +1873,8 @@
       "eyebrow": "端点",
       "auth": {
         "none": "无需认证,公开端点。",
-        "required": "需要在请求头携带 {header} 以及一个有效的 API 密钥。"
+        "requiredBefore": "需要在请求头携带 ",
+        "requiredAfter": " 以及一个有效的 API 密钥。"
       },
       "sections": {
         "authentication": "认证",

@@ -29,6 +29,11 @@ vi.mock('next-intl/server', () => ({
         'docs.landing.rateLimits.tier.auth.per': '{limit} req/min/key',
         'docs.landing.rateLimits.tier.auth.body': 'apiKey.rateLimitPerMin default {limit}.',
         'docs.landing.rateLimits.tier.auth.headers': 'On 429: Retry-After.',
+        'docs.landing.rateLimits.tier.authRepo.title': 'Authenticated single-repo lookup',
+        'docs.landing.rateLimits.tier.authRepo.endpoint': 'GET /api/v1/repos/{owner}/{name}',
+        'docs.landing.rateLimits.tier.authRepo.per': '{limit} req/hour/key',
+        'docs.landing.rateLimits.tier.authRepo.body': 'PUBLIC_REPO_RATE_PER_HOUR default {limit}.',
+        'docs.landing.rateLimits.tier.authRepo.headers': 'On 429: Retry-After.',
         // M14.3 — live status widget
         'docs.landing.liveStatus.heading': 'Live status',
         'docs.landing.liveStatus.body': 'Snapshot rendered on this page.',
@@ -43,13 +48,16 @@ vi.mock('next-intl/server', () => ({
         'docs.landing.liveStatus.values.down': 'down',
         'docs.endpointPage.eyebrow': 'Endpoint',
         'docs.endpointPage.auth.none': 'No authentication required. Public endpoint.',
-        'docs.endpointPage.auth.required': 'Requires the {header} header with an active API key.',
+        'docs.endpointPage.auth.requiredBefore': 'Requires the ',
+        'docs.endpointPage.auth.requiredAfter': ' header with an active API key.',
         'docs.endpointPage.sections.authentication': 'Authentication',
         'docs.endpointPage.sections.rateLimit': 'Rate limit',
         'docs.endpointPage.sections.request': 'Request',
         'docs.endpointPage.sections.response': 'Response',
         'docs.endpointPage.sections.exampleResponse': 'Example response',
-        'docs.endpointPage.sections.tryIt': 'Try it',
+        'docs.endpointPage.sections.tryIt': 'Try it (curl)',
+        'docs.endpointPage.sections.python': 'Try it (Python)',
+        'docs.endpointPage.sections.javascript': 'Try it (JavaScript)',
         'docs.endpointPage.sections.responseHeaders': 'Response headers',
         'docs.endpointPage.sections.errors': 'Errors',
         'docs.endpointPage.bodySchemaSummary': 'Body schema',
@@ -116,6 +124,9 @@ vi.mock('next-intl/server', () => ({
         'docs.landing.errorCodes.codes.rate_limited': 'Rate limit exceeded.',
         'docs.landing.errorCodes.codes.internal_error': 'Server-side failure.',
         'docs.landing.errorCodes.codes.unavailable': 'Service is down or dependency unreachable.',
+        'docs.landing.errorCodes.codes.payload_too_large': 'Request body exceeds the configured size limit.',
+        'docs.landing.developmentLink': 'Development guide',
+        'docs.landing.developmentLinkBody': 'Local development, fork, PR',
       };
       let s = dict[`${ns}.${key}`];
       if (s === undefined) {
@@ -187,7 +198,7 @@ describe('docs i18n', () => {
     expect(html).toContain('Rate limit');
     expect(html).toContain('Response');
     expect(html).toContain('Example response');
-    expect(html).toContain('Try it');
+    expect(html).toContain('Try it (curl)');
     expect(html).toContain('Errors');
     expect(html).toContain('No authentication required. Public endpoint.');
   });

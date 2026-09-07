@@ -1873,7 +1873,8 @@
       "eyebrow": "Endpoint",
       "auth": {
         "none": "No authentication required. Public endpoint.",
-        "required": "Requires the {header} header with an active API key."
+        "requiredBefore": "Requires the ",
+        "requiredAfter": " header with an active API key."
       },
       "sections": {
         "authentication": "Authentication",

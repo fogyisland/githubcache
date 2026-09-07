@@ -122,7 +122,16 @@ export async function EndpointPage({ doc }: EndpointPageProps): Promise<ReactEle
           {doc.auth === 'none' ? (
             t('auth.none')
           ) : (
-            t.rich('auth.required', { header: (chunks) => <code>{chunks}</code> })
+            // Composed from 2 i18n fragments instead of t.rich: next-intl 4
+            // stringifies the callback to "{function transformed}" instead
+            // of invoking it during SSR, which then 500s the RSC boundary
+            // with "Functions are not valid as a child of Client Components".
+            // See memory: feedback_next_intl_rich_callbacks.
+            <>
+              {t('auth.requiredBefore')}
+              <code>X-API-Key</code>
+              {t('auth.requiredAfter')}
+            </>
           )}
         </p>
       </section>
