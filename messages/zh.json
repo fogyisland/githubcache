@@ -337,6 +337,9 @@
         }
       },
       "detail": {
+        "common": {
+          "dash": "—"
+        },
         "ownedBy": "所有者：{email}（{role}）",
         "role": {
           "admin": "管理员",
