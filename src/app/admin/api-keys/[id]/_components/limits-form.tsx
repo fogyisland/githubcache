@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { ReactElement } from 'react';
+import { fetchCsrfToken } from '@/lib/csrf/client';
 
 export function LimitsForm({
   apiKeyId,
@@ -22,9 +23,7 @@ export function LimitsForm({
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    void fetch('/api/admin/auth/csrf')
-      .then((r) => r.json())
-      .then((d: { csrfToken: string }) => setCsrf(d.csrfToken));
+    void fetchCsrfToken().then(setCsrf).catch(() => undefined);
   }, []);
 
   const dirty = rateLimit !== currentRateLimit || dailyQuota !== currentDailyQuota;

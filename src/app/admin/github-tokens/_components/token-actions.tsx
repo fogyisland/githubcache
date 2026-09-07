@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { GithubTokenStatus } from '@prisma/client';
 import type { ReactElement } from 'react';
+import { fetchCsrfToken } from '@/lib/csrf/client';
 
 export function TokenActions({
   tokenId,
@@ -19,9 +20,7 @@ export function TokenActions({
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    void fetch('/api/admin/auth/csrf')
-      .then((r) => r.json())
-      .then((d: { csrfToken: string }) => setCsrf(d.csrfToken));
+    void fetchCsrfToken().then(setCsrf).catch(() => undefined);
   }, []);
 
   async function patchStatus(status: GithubTokenStatus): Promise<void> {

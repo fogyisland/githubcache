@@ -2,6 +2,7 @@
 
 import { useState, useTransition, type ReactElement } from 'react';
 import { useTranslations } from 'next-intl';
+import { fetchCsrfToken } from '@/lib/csrf/client';
 
 interface BackupRow {
   filename: string;
@@ -38,10 +39,7 @@ export function RestoreSection({ backups }: Props): ReactElement {
   >(null);
 
   async function getCsrf(): Promise<string> {
-    const r = await fetch('/api/admin/auth/csrf', { credentials: 'include' });
-    const j = (await r.json()) as { csrf?: string };
-    if (!j.csrf) throw new Error('csrf init failed');
-    return j.csrf;
+    return fetchCsrfToken();
   }
 
   const canSubmit =

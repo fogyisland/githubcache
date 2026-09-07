@@ -2,6 +2,7 @@
 import { useEffect, useState, type ReactElement } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { fetchCsrfToken } from '@/lib/csrf/client';
 
 interface ProviderRow {
   id: string;
@@ -67,11 +68,11 @@ export function RunViaProvider(): ReactElement {
   useEffect(() => {
     void Promise.all([
       fetch('/api/admin/providers?enabled=true').then((r) => r.json() as Promise<{ providers: ProviderRow[] }>),
-      fetch('/api/admin/auth/csrf').then((r) => r.json() as Promise<{ csrfToken: string }>),
+      fetchCsrfToken(),
     ])
-      .then(([prov, csrfData]) => {
+      .then(([prov, csrfToken]) => {
         setProviders(prov.providers);
-        setCsrf(csrfData.csrfToken);
+        setCsrf(csrfToken);
       })
       .catch(() => setLoadError({ status: 0 }));
   }, []);

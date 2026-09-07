@@ -4,6 +4,7 @@ import { useState, useTransition, type ReactElement } from 'react';
 import { useTranslations } from 'next-intl';
 import { formatDateTime } from '@/lib/format/datetime';
 import type { TimezoneId } from '@/lib/timezone/registry';
+import { fetchCsrfToken } from '@/lib/csrf/client';
 
 interface BackupRow {
   filename: string;
@@ -50,10 +51,7 @@ export function BackupSection({ initialBackups, keepN, tz }: Props): ReactElemen
   >(null);
 
   async function getCsrf(): Promise<string> {
-    const r = await fetch('/api/admin/auth/csrf', { credentials: 'include' });
-    const j = (await r.json()) as { csrf?: string };
-    if (!j.csrf) throw new Error('csrf init failed');
-    return j.csrf;
+    return fetchCsrfToken();
   }
 
   function refresh(): void {
