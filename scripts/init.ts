@@ -6,24 +6,50 @@
  *   npm run init -- --reset-admin      # also reset the existing admin's password
  *
  * What it does (idempotent — safe to run multiple times):
- *   1. Verifies DATABASE_URL is set and the MySQL connection works
- *   2. Confirms prisma migrations are up to date (no pending)
- *   3. Creates / promotes the bootstrap admin user
- *   4. Optionally registers a GitHub PAT (skipped if pool already has 1+ active)
- *   5. Optionally seeds a starter ingestion provider (skipped if any exist)
- *   6. Prints a summary: URL, login creds, next steps
+ *   1. Ensures .env exists (copies .env.example), writes a fresh random
+ *      SESSION_SECRET if it's missing or still on the placeholder default
+ *   2. Verifies DATABASE_URL is set and the MySQL connection works
+ *   3. Auto-runs `npx prisma migrate deploy` so a fresh DB lands on the
+ *      latest schema (replaces the prior "check + warn" behavior — the
+ *      deploy script needs the schema to exist before step 4 queries it)
+ *   4. Creates / promotes the bootstrap admin user
+ *   5. Optionally registers a GitHub PAT (skipped if pool already has 1+ active)
+ *   6. Optionally seeds a starter ingestion provider (skipped if any exist)
+ *   7. Optionally seeds a starter repository (M27 demo) so the cache isn't empty
+ *   8. Prints a summary: URL, login creds, next steps
  *
- * This complements `scripts/create-admin.ts` (which only handles step 3) and
+ * This complements `scripts/create-admin.ts` (which only handles step 4) and
  * `scripts/mint-local-api-key.ts` (API key only). Use this when you need the
  * whole server up — fresh VM, new clone, post-disaster rebuild.
  */
-import { prisma } from '@/lib/db/client';
-import { hashPassword } from '@/lib/auth/password';
-import { createHash } from 'crypto';
-import { readFileSync, writeFileSync } from 'node:fs';
-import { logger } from '@/lib/logger';
+import { createHash, randomBytes } from 'node:crypto';
+import { readFileSync, writeFileSync, existsSync, copyFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import * as readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
+
+// M28.bug5 — these imports depend on @/lib/config/env which validates
+// process.env at module load. We MUST NOT load them before ensureEnvFile()
+// runs, otherwise a fresh deploy with no .env crashes on import with a
+// confusing ZodError instead of the friendly "DATABASE_URL not set".
+// `loadAppModules()` does the dynamic import after .env is in place, then
+// assigns the singletons to module-level `let`s so the rest of the script
+// can use them without changing every call site.
+let prisma!: import('@prisma/client').PrismaClient;
+let hashPassword!: (pw: string) => Promise<string>;
+let logger!: { error: (...args: unknown[]) => void };
+
+async function loadAppModules(): Promise<void> {
+  if (prisma) return;
+  const [db, auth, log] = await Promise.all([
+    import('@/lib/db/client'),
+    import('@/lib/auth/password'),
+    import('@/lib/logger'),
+  ]);
+  prisma = db.prisma;
+  hashPassword = auth.hashPassword;
+  logger = log.logger;
+}
 
 // -----------------------------------------------------------------------------
 // CLI flag parsing
@@ -81,6 +107,93 @@ async function promptYesNo(question: string, defaultYes: boolean): Promise<boole
 }
 
 // -----------------------------------------------------------------------------
+// Step 0: Ensure .env exists with a real SESSION_SECRET
+// -----------------------------------------------------------------------------
+//
+// M28.bug5 — init used to only check migrations; a fresh DB or empty `.env`
+// required manual setup before the app could boot. We now:
+//   - copy .env.example → .env if .env is missing
+//   - regenerate SESSION_SECRET if it's missing or still on the placeholder
+//     ('replace-with-32-chars-min-secret' / 'dev-secret-change-me-...')
+//
+// DATABASE_URL is intentionally NOT auto-filled — it's a per-environment
+// credential that the operator must provide (interactive prompt or env var).
+
+const PLACEHOLDER_SECRETS = new Set([
+  'replace-with-32-chars-min-secret',
+  'dev-secret-change-me-32-chars-min-aaaaa',
+]);
+
+function generateSessionSecret(): string {
+  // 48 hex chars (24 random bytes) — comfortably above the 32-char floor.
+  return randomBytes(24).toString('hex');
+}
+
+function upsertEnvLine(content: string, key: string, value: string): string {
+  const lines = content.split(/\r?\n/);
+  const idx = lines.findIndex((l) => new RegExp(`^${key}=`).test(l));
+  const newLine = `${key}=${value}`;
+  if (idx >= 0) {
+    lines[idx] = newLine;
+  } else {
+    // Insert before the first blank-line / comment block to keep .env.example's
+    // grouping (env vars on top, comments below).
+    const insertAt = lines.findIndex((l) => l.trim() === '' || l.trim().startsWith('#'));
+    if (insertAt >= 0) {
+      lines.splice(insertAt, 0, newLine);
+    } else {
+      lines.push(newLine);
+    }
+  }
+  return lines
+    .filter((l, i, arr) => !(l === '' && arr[i - 1] === '')) // dedupe trailing blanks
+    .join('\n')
+    .replace(/^\n+/, '')
+    .concat('\n');
+}
+
+function ensureEnvFile(): void {
+  section('0 · .env bootstrap');
+
+  if (!existsSync('.env')) {
+    if (existsSync('.env.example')) {
+      copyFileSync('.env.example', '.env');
+      console.log('✓ copied .env.example → .env');
+    } else {
+      throw new Error('.env.example is missing — cannot bootstrap .env');
+    }
+  } else {
+    console.log('✓ .env already exists');
+  }
+
+  // Reload .env so subsequent steps see the (possibly just-written) values.
+  // node --env-file=.env picks these up at process start, but process.env
+  // was already snapshotted before we wrote — patch it in by hand.
+  const content = readFileSync('.env', 'utf8');
+  for (const line of content.split(/\r?\n/)) {
+    const m = /^([A-Z_][A-Z0-9_]*)=(.*)$/.exec(line);
+    if (!m || !m[1] || m[2] === undefined) continue;
+    const key = m[1];
+    const rawValue = m[2];
+    if (process.env[key] === undefined) {
+      process.env[key] = rawValue;
+    }
+  }
+
+  // Regenerate SESSION_SECRET if it's the placeholder or missing.
+  const current = process.env['SESSION_SECRET'];
+  if (!current || PLACEHOLDER_SECRETS.has(current)) {
+    const fresh = generateSessionSecret();
+    process.env['SESSION_SECRET'] = fresh;
+    const updated = upsertEnvLine(content, 'SESSION_SECRET', fresh);
+    writeFileSync('.env', updated);
+    console.log(`✓ SESSION_SECRET was placeholder → wrote fresh (${fresh.length} chars)`);
+  } else {
+    console.log(`✓ SESSION_SECRET already set (${current.length} chars)`);
+  }
+}
+
+// -----------------------------------------------------------------------------
 // Step 1: DB connection
 // -----------------------------------------------------------------------------
 
@@ -98,31 +211,31 @@ async function checkDatabase(): Promise<void> {
 }
 
 // -----------------------------------------------------------------------------
-// Step 2: Migration status (informational; we don't auto-migrate here)
+// Step 2: Run pending Prisma migrations
 // -----------------------------------------------------------------------------
+//
+// M28.bug5 — replaces the old `checkMigrations()` which only warned. The
+// deploy pipeline needs the schema to exist before step 4 queries it, so
+// we now run `prisma migrate deploy` directly. If the DB is empty, this
+// creates _prisma_migrations and applies everything in order.
+//
+// Per CLAUDE.md: migrations still run as a separate step from app startup
+// (a failed migration here aborts the init — the app never starts), but
+// it's the deploy script's job to invoke this, not the application's.
 
-async function checkMigrations(): Promise<void> {
-  section('2 · Migration status');
-  try {
-    const rows = await prisma.$queryRaw<Array<{ migration_name: string; finished_at: Date | null }>>`
-      SELECT migration_name, finished_at FROM _prisma_migrations ORDER BY started_at DESC LIMIT 5
-    `;
-    const pending = rows.filter((r) => r.finished_at === null);
-    if (pending.length > 0) {
-      console.log(`! ${pending.length} pending migration(s) found:`);
-      for (const p of pending) console.log(`    - ${p.migration_name}`);
-      console.log('  Run: npx prisma migrate deploy');
-      throw new Error('pending migrations — refusing to continue');
-    }
-    const last = rows[0]?.migration_name ?? '(none)';
-    console.log(`✓ up to date — last applied: ${last}`);
-  } catch (e) {
-    if (e instanceof Error && e.message.includes('pending migrations')) throw e;
-    // Table might not exist yet (fresh DB); fall through to migration deploy hint.
-    console.log('! _prisma_migrations not found — DB may be empty');
-    console.log('  Run: npx prisma migrate deploy');
-    throw e;
+function runMigrations(): void {
+  section('2 · Prisma migrations');
+  // shell: true so Windows can resolve npx.cmd (npx is a .cmd shim on
+  // Windows; without shell, spawnSync returns exit=null with no output).
+  const result = spawnSync('npx prisma migrate deploy', {
+    stdio: 'inherit',
+    env: process.env,
+    shell: true,
+  });
+  if (result.status !== 0) {
+    throw new Error(`prisma migrate deploy failed (exit ${result.status})`);
   }
+  console.log('✓ migrations applied');
 }
 
 // -----------------------------------------------------------------------------
@@ -167,6 +280,12 @@ async function bootstrapAdmin(cfg: Config): Promise<void> {
 // -----------------------------------------------------------------------------
 // Step 4: GitHub PAT (optional)
 // -----------------------------------------------------------------------------
+//
+// M28.bug5 — leaving the auto-register behaviour unchanged: this step
+// only writes to github_tokens when INIT_GITHUB_TOKEN is in env AND the
+// pool is empty. Operators who manage tokens elsewhere (admin UI, vault
+// sync, external script) can simply not set INIT_GITHUB_TOKEN and this
+// step no-ops.
 
 async function ensureGithubToken(cfg: Config): Promise<void> {
   section('4 · GitHub PAT');
@@ -249,7 +368,7 @@ async function maybeSeedProvider(cfg: Config): Promise<void> {
 // DB keep their real data.
 
 async function seedM27DemoRepository(): Promise<void> {
-  section('6 · M27 demo repository');
+  section('7 · M27 demo repository');
 
   const existing = await prisma.repository.count();
   if (existing > 0) {
@@ -421,11 +540,14 @@ async function main(): Promise<void> {
   }
 
   // Persist SITE_NAME to .env so the running server picks it up on next boot.
-  // (No-op if already up to date — we only rewrite the line if it differs.)
+  // ensureEnvFile() runs FIRST — it materialises .env from .env.example
+  // when missing, so this siteName update appends to a real file instead
+  // of creating a bare one (which would lose the DATABASE_URL placeholder).
+  ensureEnvFile();
   writeSiteNameToEnv(cfg.siteName);
-
+  await loadAppModules();
   await checkDatabase();
-  await checkMigrations();
+  runMigrations();
   await bootstrapAdmin(cfg);
   await ensureGithubToken(cfg);
   await maybeSeedProvider(cfg);
@@ -436,12 +558,17 @@ async function main(): Promise<void> {
 
 main()
   .then(async () => {
-    await prisma.$disconnect();
+    if (prisma) await prisma.$disconnect();
     process.exit(0);
   })
   .catch(async (err: unknown) => {
-    logger.error({ err }, 'init failed');
+    // logger / prisma may be undefined if init failed BEFORE loadAppModules()
+    // ran (e.g. .env bootstrap couldn't write, or env validation threw).
+    // Fall back to console.error so we still surface the real cause.
+    if (logger) {
+      logger.error({ err }, 'init failed');
+    }
     console.error('\n✗ init failed:', err instanceof Error ? err.message : String(err));
-    await prisma.$disconnect();
+    if (prisma) await prisma.$disconnect();
     process.exit(1);
   });
