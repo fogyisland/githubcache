@@ -6,16 +6,11 @@ import { initPool, shutdownPool } from '@/lib/github/pool';
 import { startScheduler, stopScheduler } from '@/lib/scheduler';
 import { startupDatabaseChecks } from '@/lib/database/startup';
 
-// M28.bug16 — npm run start:server has no portable way to set NODE_ENV
-// inline (Windows cmd.exe doesn't accept `NODE_ENV=production cmd`).
-// Default the values here so the script works on every host without
-// shell-specific quoting. Shell-exported values still win.
-//
-// NODE_ENV is typed as `NodeJS.ProcessEnv['NODE_ENV']` (a literal type)
-// by @types/node, so the indexer assignment trips TS2540. Cast through
-// `any` for just this line.
-if (!process.env['NODE_ENV']) (process.env as Record<string, string>)['NODE_ENV'] = 'production';
-if (!process.env['PORT']) (process.env as Record<string, string>)['PORT'] = '5002';
+// M28.bug17 — NODE_ENV is now set by `src/bootstrap.ts`, which runs
+// BEFORE this module is dynamically imported. ES module imports are
+// hoisted, so any NODE_ENV default in this file would run too late
+// (Next.js reads NODE_ENV at module-load and ships
+// react.development.js into the prod build if it sees 'development').
 
 /**
  * Custom server entry — `npm run dev:server` boots this directly with
@@ -122,45 +117,14 @@ export function shutdownScheduler(): void {
   stopScheduler();
 }
 
-// Production entrypoint: only run when invoked directly (not when imported by tests).
-// Detect via comparing `import.meta.url` to `process.argv[1]`.
-const isMainModule = (() => {
-  try {
-    // Node 20+: import.meta.url is available
-    return import.meta.url === `file:///${process.argv[1]?.replace(/\\/g, '/')}`;
-  } catch {
-    return false;
-  }
-})();
-
-if (isMainModule) {
-  bootServer()
-    .then((handle) => {
-      const shutdown = async (signal: string) => {
-        logger.info({ signal }, 'received shutdown signal');
-        try {
-          await handle.shutdown();
-        } catch (e: unknown) {
-          logger.error({ err: e }, 'error during shutdown');
-        }
-        process.exit(0);
-      };
-      process.on('SIGTERM', () => {
-        void shutdown('SIGTERM');
-      });
-      process.on('SIGINT', () => {
-        void shutdown('SIGINT');
-      });
-
-      process.on('uncaughtException', (err: Error) => {
-        logger.error({ err }, 'uncaughtException');
-      });
-      process.on('unhandledRejection', (reason: unknown) => {
-        logger.error({ reason }, 'unhandledRejection');
-      });
-    })
-    .catch((err: unknown) => {
-      logger.error({ err }, 'failed to boot server');
-      process.exit(1);
-    });
-}
+// Production entrypoint: `src/bootstrap.ts` invokes bootServer() directly
+// after setting NODE_ENV. Tests still import bootServer from this module
+// without ever hitting the top-level block.
+//
+// (The previous version of this file had an `isMainModule` check that
+// called bootServer() when invoked directly via `tsx src/server.ts`.
+// That worked in dev but failed in prod — `next` reads NODE_ENV at
+// module-load time, and the inline `process.env.NODE_ENV ??= ...`
+// below it ran too late because ES module imports are hoisted. The
+// new bootstrap.ts sets the env FIRST, then dynamic-imports this file
+// and calls bootServer directly.)

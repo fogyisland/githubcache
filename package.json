@@ -23,7 +23,7 @@
     "dev:server": "tsx src/server.ts",
     "build": "next build",
     "start": "next start -p 5002",
-    "start:server": "tsx src/server.ts",
+    "start:server": "tsx src/bootstrap.ts",
     "lint": "eslint .",
     "format": "prettier --check .",
     "format:write": "prettier --write .",
