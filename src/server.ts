@@ -6,6 +6,13 @@ import { initPool, shutdownPool } from '@/lib/github/pool';
 import { startScheduler, stopScheduler } from '@/lib/scheduler';
 import { startupDatabaseChecks } from '@/lib/database/startup';
 
+// M28.bug16 — npm run start:server has no portable way to set NODE_ENV
+// inline (Windows cmd.exe doesn't accept `NODE_ENV=production cmd`).
+// Default the values here so the script works on every host without
+// shell-specific quoting. Shell-exported values still win.
+process.env['NODE_ENV'] ??= 'production';
+process.env['PORT'] ??= '5002';
+
 /**
  * Custom server entry — `npm run dev:server` boots this directly with
  * tsx (no `tsx watch`). Changes to most of `src/` are picked up by Next's
