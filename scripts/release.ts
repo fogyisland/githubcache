@@ -26,7 +26,7 @@
  *   npm run release -- --version 0.2.0     # override
  *
  * Output (single directory, no tarball — ship as-is):
- *   dist/release/githubcache-v0.1.0/      (clean source tree, copy to server)
+ *   release/githubcache-v0.1.0/      (clean source tree, copy to server)
  *
  * Deploy flow the recipient follows (in RELEASE.md):
  *   1. Copy githubcache-v0.1.0/ to the server (rsync, scp, USB, ...)
@@ -43,7 +43,7 @@ import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const DIST = join(ROOT, 'dist', 'release');
+const DIST = join(ROOT, 'release');
 
 // -----------------------------------------------------------------------------
 // CLI / version
@@ -274,7 +274,7 @@ function main(): void {
   console.log(`  wrote RELEASE.md`);
 
   console.log(`\nRelease ready. Ship the directory:`);
-  console.log(`  rsync -av --delete dist/release/${releaseDirName}/  user@server:/opt/${releaseDirName}/`);
+  console.log(`  rsync -av --delete release/${releaseDirName}/  user@server:/opt/${releaseDirName}/`);
   console.log(`\nOn the server:`);
   console.log(`  cd ${releaseDirName}`);
   console.log(`  npm ci --omit=dev`);
