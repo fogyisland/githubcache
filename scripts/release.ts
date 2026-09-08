@@ -82,6 +82,13 @@ const EXCLUDE_FILES = new Set([
   'verify.ts',
 ]);
 
+// M28.bug10 — `.env.production` IS shipped. It contains a syntactically
+// valid DATABASE_URL stub so `npm run build` can run as a code/package
+// sanity check on a freshly-extracted release, before `npm run init`
+// has had a chance to write the real .env. The stub values are placeholders;
+// no real credentials live in this file. The release script does NOT need
+// to special-case it because .env.production does NOT appear in EXCLUDE_FILES.
+
 const EXCLUDE_GLOBS_RE = [
   /\.log$/,
   /\.bak$/,
