@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { ENDPOINT_DOCS } from '@/lib/api-docs/registry';
-import { env } from '@/lib/config/env';
 
 /**
  * GET /api-docs.json
@@ -26,11 +25,18 @@ import { env } from '@/lib/config/env';
  * Cacheable for 5 minutes (the registry is static at runtime; only
  * `generatedAt` changes per request — clients only need it for drift
  * detection).
+ *
+ * M28.bug8: do NOT import `@/lib/config/env` here — the route is
+ * `force-static` and Next.js evaluates it during build's page-data
+ * collection phase, before DATABASE_URL is guaranteed to be present.
+ * The cadence fields below are static defaults; if you need them
+ * live, switch to `force-dynamic`.
  */
 export const dynamic = 'force-static';
-// Re-build on the same cadence as the schema. next-intl or env changes
-// require a process restart anyway, so force-static is safe.
 export const revalidate = 300;
+
+const DEFAULT_SCHEDULER_TICK_MS = 60_000;
+const DEFAULT_NIGHTLY_SWEEP_MS = 24 * 60 * 60 * 1000;
 
 export function GET(): Response {
   const generatedAt = new Date().toISOString();
@@ -39,10 +45,10 @@ export function GET(): Response {
     generatedAt,
     caching: {
       refresh_strategy: 'scheduler + on-miss',
-      scheduler_tick_ms: env.SCHEDULER_TICK_MS,
-      nightly_sweep_ms: env.NIGHTLY_SWEEP_INTERVAL_MS,
+      scheduler_tick_ms: DEFAULT_SCHEDULER_TICK_MS,
+      nightly_sweep_ms: DEFAULT_NIGHTLY_SWEEP_MS,
       default_freshness_window_seconds: Math.round(
-        env.NIGHTLY_SWEEP_INTERVAL_MS / 1000,
+        DEFAULT_NIGHTLY_SWEEP_MS / 1000,
       ),
       stale_path_on_github_down: 'serve',
     },
