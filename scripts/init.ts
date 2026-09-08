@@ -152,6 +152,25 @@ function upsertEnvLine(content: string, key: string, value: string): string {
     .concat('\n');
 }
 
+// Read the current value of `key` in `content`, or null if absent.
+function readEnvLine(content: string, key: string): string | null {
+  const m = new RegExp(`^${key}=(.*)$`, 'm').exec(content);
+  return m && m[1] !== undefined ? m[1] : null;
+}
+
+// Does the .env.example's DATABASE_URL placeholder count as a real
+// credential? `mysql://user:pass@...` is syntactically valid but not
+// routable; treat it as such so init flushes shell-supplied values in.
+function looksLikePlaceholder(key: string, value: string): boolean {
+  if (key === 'DATABASE_URL') {
+    return /^mysql:\/\/(user|root|admin):[^@]+@(localhost|127\.0\.0\.1|db):\d+\//.test(value);
+  }
+  if (key === 'SESSION_SECRET') {
+    return PLACEHOLDER_SECRETS.has(value);
+  }
+  return value === '';
+}
+
 function ensureEnvFile(): void {
   section('0 · .env bootstrap');
 
@@ -169,7 +188,7 @@ function ensureEnvFile(): void {
   // Reload .env so subsequent steps see the (possibly just-written) values.
   // node --env-file=.env picks these up at process start, but process.env
   // was already snapshotted before we wrote — patch it in by hand.
-  const content = readFileSync('.env', 'utf8');
+  let content = readFileSync('.env', 'utf8');
   for (const line of content.split(/\r?\n/)) {
     const m = /^([A-Z_][A-Z0-9_]*)=(.*)$/.exec(line);
     if (!m || !m[1] || m[2] === undefined) continue;
@@ -178,6 +197,35 @@ function ensureEnvFile(): void {
     if (process.env[key] === undefined) {
       process.env[key] = rawValue;
     }
+  }
+
+  // M28.bug11: also flush any shell-supplied values (notably DATABASE_URL
+  // in --non-interactive mode) BACK to .env so the running server picks
+  // them up on next boot. .env.example's DATABASE_URL is a syntactically
+  // valid placeholder but doesn't actually point anywhere; build + start
+  // would fail with a ZodError on DATABASE_URL if init left it untouched.
+  const FLUSH_TO_ENV: ReadonlyArray<string> = [
+    'DATABASE_URL',
+    'INIT_ADMIN_EMAIL',
+    'INIT_ADMIN_PASSWORD',
+    'INIT_SITE_NAME',
+  ];
+  let flushed = content;
+  let didFlush = false;
+  for (const k of FLUSH_TO_ENV) {
+    const v = process.env[k];
+    if (v && v !== '' && process.env[`${k}_FROM_FILE`] !== '1') {
+      // Skip if .env already has a non-placeholder value.
+      const fromFile = readEnvLine(content, k);
+      if (fromFile === null || fromFile === '' || looksLikePlaceholder(k, fromFile)) {
+        flushed = upsertEnvLine(flushed, k, v);
+        didFlush = true;
+      }
+    }
+  }
+  if (didFlush) {
+    writeFileSync('.env', flushed);
+    content = flushed;
   }
 
   // Regenerate SESSION_SECRET if it's the placeholder or missing.
