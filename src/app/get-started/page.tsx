@@ -2,7 +2,6 @@ import type { ReactElement } from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { CurlExample } from '@/app/docs/_components/curl-example';
 
 /**
  * `/get-started` — public-facing walkthrough for a brand-new visitor.
@@ -20,6 +19,37 @@ import { CurlExample } from '@/app/docs/_components/curl-example';
  * The .ghc-getstarted-step / -num / -callout CSS classes are defined in
  * globals.css.
  */
+
+// --- inline curl-example (was extracted to docs/_components in M17, but the
+// docs site is no longer shipped and get-started is the only consumer) ---
+interface CurlExampleProps {
+  method: string;
+  url: string;
+  headers?: Record<string, string>;
+  body?: unknown;
+}
+function buildCurlCommand({ method, url, headers, body }: CurlExampleProps): string {
+  const parts = ['curl', '-X', method, shellQuote(url)];
+  for (const [k, v] of Object.entries(headers ?? {})) {
+    parts.push('-H', shellQuote(`${k}: ${v}`));
+  }
+  if (body !== undefined) {
+    parts.push('-H', shellQuote('Content-Type: application/json'));
+    parts.push('--data', shellQuote(JSON.stringify(body)));
+  }
+  return parts.join(' ');
+}
+function shellQuote(s: string): string {
+  return `'${s.replace(/'/g, `'\\''`)}'`;
+}
+async function CurlExample(props: CurlExampleProps): Promise<ReactElement> {
+  const cmd = buildCurlCommand(props);
+  return (
+    <pre className="ghc-getstarted-curl">
+      <code>{cmd}</code>
+    </pre>
+  );
+}
 
 const ERROR_ROWS = [
   { code: 'unauthorized', http: '401', meaningKey: 'step4.errors.unauthorized' },
