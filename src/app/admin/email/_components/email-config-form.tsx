@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useState } from 'react';
+import { useFormState } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import {
   saveEmailConfigAction,
@@ -32,7 +33,7 @@ const initialState: SaveEmailConfigState = { status: 'idle' };
  */
 export function EmailConfigForm({ initial, csrfToken }: Props): React.ReactElement {
   const t = useTranslations('admin.email.form');
-  const [state, formAction, pending] = useActionState(saveEmailConfigAction, initialState);
+  const [state, formAction, pending] = useFormState(saveEmailConfigAction, initialState);
   const [showPass, setShowPass] = useState(false);
   const [secure, setSecure] = useState<boolean>(initial.smtpSecure);
 
