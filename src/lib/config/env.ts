@@ -75,5 +75,46 @@ const schema = z.object({
   EMAIL_FROM_DEFAULT: z.string().email().optional(),
 });
 
-export const env = schema.parse(process.env);
-export type Env = z.infer<typeof schema>;
+type ParsedEnv = z.infer<typeof schema>;
+
+/**
+ * M28.bug9: validation is LAZY. Route files transitively pull `@/lib/config/env`
+ * even when they don't actually read any field at request time — Next.js's
+ * build-time page-data collection step then triggers the Zod parse, which
+ * throws ZodError on DATABASE_URL before init has had a chance to write .env.
+ *
+ * The previous `schema.parse(process.env)` at module top fired the moment any
+ * module imported `env`. Replacing it with a Proxy defers parsing until the
+ * first property access (i.e. the moment the running code actually needs the
+ * value). Routes that never touch `env.DATABASE_URL` build fine; routes that
+ * do touch it still get the same validation guarantee at runtime.
+ *
+ * Trade-off: the parsed object is cached after the first parse, so process.env
+ * changes at runtime are NOT picked up. That's the same as before — restart
+ * for env changes.
+ */
+let cached: ParsedEnv | null = null;
+function parse(): ParsedEnv {
+  if (cached) return cached;
+  cached = schema.parse(process.env);
+  return cached;
+}
+
+export const env = new Proxy({} as ParsedEnv, {
+  get(_t, prop: string | symbol) {
+    const value = parse();
+    return value[prop as keyof ParsedEnv];
+  },
+  has(_t, prop: string | symbol) {
+    return prop in parse();
+  },
+  ownKeys() {
+    return Reflect.ownKeys(parse());
+  },
+  getOwnPropertyDescriptor(_t, prop) {
+    const value = parse();
+    return Object.getOwnPropertyDescriptor(value, prop);
+  },
+}) as ParsedEnv & { [k: string]: unknown };
+
+export type Env = ParsedEnv;
