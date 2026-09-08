@@ -21,11 +21,34 @@ import { applyRequestId } from '@/lib/api/request-id';
  *    `ghc_csrf` cookie value must match `X-CSRF-Token` header). GETs
  *    are exempt (idempotent reads).
  *
+ * 4. **M28.bug12 — setup wizard gate**: when the `ghc_setup_done=1` cookie
+ *    is absent (fresh deploy that hasn't run `/init` yet), redirect every
+ *    non-`/init` request to `/init` so the operator is forced through DB
+ *    config + admin bootstrap. The wizard sets the cookie via a Server
+ *    Action at the very end, after migrations + admin creation succeed.
+ *
  * CSRF failure body intentionally stays as `{error: 'csrf'}` (legacy
  * shape) — admin CSRF failures are not part of the M15 OpenAPI surface.
  */
 export async function middleware(req: NextRequest): Promise<NextResponse> {
   const path = req.nextUrl.pathname;
+
+  // --- M28.bug12: setup wizard gate ----------------------------------------
+  // Cookie-not-set = fresh deploy. PinYinCharacter uses a DB flag for this,
+  // which we can't (DB isn't set up yet). A long-lived cookie is the
+  // cheapest Edge-runtime-safe signal. Set when the wizard finishes.
+  const setupDone = req.cookies.get('ghc_setup_done')?.value === '1';
+  if (!setupDone && !path.startsWith('/init') && !path.startsWith('/api/init')) {
+    const initUrl = new URL('/init', req.url);
+    const redirectRes = NextResponse.redirect(initUrl);
+    return applyRequestId(req, redirectRes);
+  }
+  // Once setup is done, /init and /api/init become inaccessible — middleware
+  // bounces back to / so a stale browser bookmark can't re-enter the wizard.
+  if (setupDone && (path === '/init' || path.startsWith('/init/') || path.startsWith('/api/init'))) {
+    const homeRes = NextResponse.redirect(new URL('/', req.url));
+    return applyRequestId(req, homeRes);
+  }
 
   // Page-level admin auth: redirect to /login if no session cookie
   if (path.startsWith('/admin')) {

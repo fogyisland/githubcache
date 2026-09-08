@@ -1,13 +1,23 @@
 /**
- * Bootstrap script — runs the full first-time setup in one command.
+ * Bootstrap script — DEPRECATED for fresh setups; kept for operational use.
+ *
+ * M28.bug12: first-time setup is now done via the /init web wizard (see
+ * `src/app/init/`). That page collects DB credentials + admin email/password
+ * through the browser, writes .env, runs prisma migrate deploy, creates the
+ * bootstrap user, then sets `ghc_setup_done=1` cookie to lock itself out.
+ *
+ * This CLI script is still useful for:
+ *   - Operational tasks: resetting the admin password in CI
+ *   - Environments where browser access isn't available
  *
  *   npm run init                       # interactive
- *   npm run init -- --non-interactive   # CI/automation: admin@example.com / auto PAT from env
- *   npm run init -- --reset-admin      # also reset the existing admin's password
+ *   npm run init -- --non-interactive  # CI/automation (DATABASE_URL must be in shell)
+ *   npm run init -- --reset-admin     # also reset the existing admin's password
  *
  * What it does (idempotent — safe to run multiple times):
- *   1. Ensures .env exists (copies .env.example), writes a fresh random
- *      SESSION_SECRET if it's missing or still on the placeholder default
+ *   1. Ensures .env exists (copies .env.example), flushes shell-supplied
+ *      DATABASE_URL into .env, writes a fresh random SESSION_SECRET if it's
+ *      missing or still on the placeholder default
  *   2. Verifies DATABASE_URL is set and the MySQL connection works
  *   3. Auto-runs `npx prisma migrate deploy` so a fresh DB lands on the
  *      latest schema (replaces the prior "check + warn" behavior — the

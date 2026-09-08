@@ -33,10 +33,9 @@
  *   2. cd githubcache
  *   3. npm ci --omit=dev
  *   4. npx prisma generate
- *   5. npm run init -- --non-interactive
- *      (writes .env from .env.example, fresh SESSION_SECRET, runs migrate deploy,
- *       bootstraps admin — see scripts/init.ts)
- *   6. NODE_ENV=production npm run start:server
+ *   5. NODE_ENV=production npm run start:server
+ *   6. Visit https://<your-domain>/init in a browser — collect DB credentials,
+ *      admin email/password; runs migrate deploy + bootstraps admin + locks /init
  */
 import { readFileSync, writeFileSync, mkdirSync, statSync, readdirSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
@@ -168,15 +167,22 @@ USB — whatever you have), then run:
 \`\`\`bash
 cd githubcache
 npm ci --omit=dev
-npm run init -- --non-interactive    # writes .env + runs migrations + bootstraps admin
 NODE_ENV=production npm run start:server
 \`\`\`
 
-That's it — \`npm run init\` does the rest:
-  - copies \`.env.example → .env\` if \`.env\` is missing
-  - regenerates \`SESSION_SECRET\` if it's still on the placeholder default
-  - runs \`prisma migrate deploy\` against \`DATABASE_URL\`
-  - creates / promotes the bootstrap admin user
+Then open the service in a browser. The middleware redirects every
+request to \`/init\` until the wizard completes. The wizard (3 steps):
+
+  1. **DB credentials** — host / port / user / password / database name.
+     Server probes the TCP port to confirm a MySQL daemon is listening,
+     then writes \`DATABASE_URL\` to \`.env\`. The schema is auto-created
+     if missing.
+  2. **Admin account** — email + password (≥ 8 chars). Server hashes the
+     password (bcrypt) and upserts the user with role=admin.
+  3. **Run migrations** — \`prisma migrate deploy\` creates all tables,
+     then \`ghc_setup_done=1\` cookie is set for 10 years. \`/init\` is
+     locked from this point on; the middleware bounces any future hit
+     to \`/\`.
 
 The service listens on \`PORT\` (default \`5002\`).
 
@@ -285,8 +291,8 @@ function main(): void {
   console.log(`\nOn the server:`);
   console.log(`  cd ${releaseDirName}`);
   console.log(`  npm ci --omit=dev`);
-  console.log(`  npm run init -- --non-interactive`);
   console.log(`  NODE_ENV=production npm run start:server`);
+  console.log(`  # then visit /init in a browser`);
 }
 
 main();
