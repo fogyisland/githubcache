@@ -65,6 +65,8 @@ const EXCLUDE_DIRS = new Set([
   'coverage',
   'test-results',
   '.superpowers',
+  '.claude',
+  '.github',
   'tests',
   'docs',
   'dist',
