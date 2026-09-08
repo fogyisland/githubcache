@@ -175,9 +175,22 @@ export function writeSetupEnv(databaseUrl: string): WriteResult {
   writeFileSync(ENV_PATH, content);
 
   // Reload process.env so subsequent steps in this request see new values.
+  //
+  // M28.bug12 follow-up: writeSetupEnv runs BEFORE Prisma instantiates
+  // its client in the next request. Prisma reads process.env.DATABASE_URL
+  // at module-load time and snapshots it. If a stale stub URL leaked in
+  // earlier (e.g. from a leftover .env.production, a shell export, or the
+  // dev server's --env-file=.env on a previous boot), it WINS over the
+  // .env value because the original write loop only fills undefined keys.
+  //
+  // Fix: always overwrite DATABASE_URL (the wizard is the source of truth
+  // for it), keep the missing-key fill behavior for other vars so we don't
+  // clobber unrelated shell config like LOG_LEVEL.
+  process.env['DATABASE_URL'] = databaseUrl;
   for (const line of content.split(/\r?\n/)) {
     const mm = /^([A-Z_][A-Z0-9_]*)=(.*)$/.exec(line);
     if (!mm || !mm[1] || mm[2] === undefined) continue;
+    if (mm[1] === 'DATABASE_URL') continue; // already set
     if (process.env[mm[1]] === undefined) {
       process.env[mm[1]] = mm[2];
     }
