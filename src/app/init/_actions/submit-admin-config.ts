@@ -1,10 +1,9 @@
 'use server';
 
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { z } from 'zod';
-import { PrismaClient } from '@prisma/client';
 import { hashPassword } from '@/lib/auth/password';
+import { ENV_PATH, upsertEnvLine } from '@/lib/setup';
 import { logger } from '@/lib/logger';
 
 const AdminSchema = z.object({
@@ -18,21 +17,22 @@ export interface SubmitAdminResult {
 }
 
 /**
- * Server action: create (or promote) the bootstrap admin user.
+ * Server action: stash the bootstrap admin email + bcrypt hash in .env.
  *
- * M28.bug12: used by /init wizard step 2. The wizard's step 1 wrote a fresh
- * DATABASE_URL to .env via writeSetupEnv, which ALSO updates
- * process.env.DATABASE_URL — but the shared `@/lib/db/client` PrismaClient
- * is constructed once at module-load with whatever DATABASE_URL was at boot.
- * If the server was started with no DATABASE_URL (placeholder / undefined /
- * stale stub from a previous test), the shared client is permanently locked
- * to that URL and step 2 fails with Prisma auth errors.
+ * M28.bug13: this step NO LONGER writes to the database. The user's flow is:
+ *   step 1 — write DATABASE_URL to .env
+ *   step 2 — stash admin email + password hash in .env temp keys (THIS fn)
+ *   step 3 — run prisma migrate deploy, then read the stashed values back
+ *            and create the user, then strip the temp keys from .env
  *
- * Fix: create a one-shot PrismaClient scoped to this single server action,
- * reading the current process.env.DATABASE_URL. The client connects to the
- * real DB, writes the admin user, then disconnects. The shared client
- * catches up on the next request — by then, the user has restarted the
- * server (or HMR reloaded modules in dev).
+ * Why: step 2 previously called prisma.user.create(), which requires the
+ * schema to already exist. The schema is created by step 3's migrate
+ * deploy — a chicken-and-egg that fails on a fresh DB. Stashing in .env
+ * sidesteps the ordering entirely.
+ *
+ * The temp keys (INIT_ADMIN_EMAIL, INIT_ADMIN_PASSWORD_HASH) are removed
+ * by finalizeSetup once the user is created. If finalizeSetup never
+ * runs, an init-restart picks them up — same as the CLI init.ts flow.
  */
 export async function submitAdminConfig(input: unknown): Promise<SubmitAdminResult> {
   const parsed = AdminSchema.safeParse(input);
@@ -49,86 +49,24 @@ export async function submitAdminConfig(input: unknown): Promise<SubmitAdminResu
     return { ok: false, error: '密码哈希失败' };
   }
 
-  /**
- * Read DATABASE_URL directly from .env on disk — NOT from process.env.
- *
- * M28.bug12 follow-up: Next.js dev mode watches .env and re-merges with
- * process.env on each request, with shell-exported values winning over
- * file values. So if the operator started the server with
- * `DATABASE_URL=stub npm run dev`, our writeSetupEnv's update to
- * process.env.DATABASE_URL gets clobbered back to "stub" on the next
- * request by Next.js's env loader. Reading from the file directly
- * bypasses this race.
- *
- * In production (`next start`), Next.js loads .env once at boot and
- * doesn't reload it. process.env would work there but reading from disk
- * is consistent across dev/prod and only costs one fs read.
- */
-function readDbUrlFromEnv(): string | null {
-  const envPath = join(process.cwd(), '.env');
+  // Write to .env so the wizard's step 3 (finalizeSetup) can read them
+  // back. ENV_PATH comes from @/lib/setup so we don't drift on path casing.
+  let content: string;
   try {
-    const content = readFileSync(envPath, 'utf8');
-    const m = /^DATABASE_URL=(.+)$/m.exec(content);
-    return m && m[1] ? m[1].trim() : null;
+    content = readFileSync(ENV_PATH, 'utf8');
   } catch {
-    return null;
+    return {
+      ok: false,
+      error: '.env 不存在——请先完成 /init/db 步骤写入 DATABASE_URL',
+    };
   }
-}
-
-  const dbUrl = readDbUrlFromEnv();
-  if (!dbUrl) {
-    return { ok: false, error: 'DATABASE_URL 未设置——请先完成 /init/db 步骤' };
-  }
-
-  // One-shot client — see comment above. Mirrors @/lib/db/client's connection
-  // tuning so production behavior matches.
-  const oneShot = new PrismaClient({
-    datasources: { db: { url: appendConnectionParams(dbUrl) } },
-    log: ['error'],
-  });
-
+  content = upsertEnvLine(content, 'INIT_ADMIN_EMAIL', email);
+  content = upsertEnvLine(content, 'INIT_ADMIN_PASSWORD_HASH', passwordHash);
   try {
-    const existing = await oneShot.user.findUnique({ where: { email } });
-    if (existing) {
-      // Promote to admin/active if a user with this email already exists.
-      await oneShot.user.update({
-        where: { id: existing.id },
-        data: { passwordHash, role: 'admin', status: 'active' },
-      });
-    } else {
-      await oneShot.user.create({
-        data: {
-          email,
-          passwordHash,
-          role: 'admin',
-          status: 'active',
-          theme: 'terminal',
-          adminVariant: 'mission_control',
-          lang: 'zh',
-        },
-      });
-    }
-    return { ok: true };
+    writeFileSync(ENV_PATH, content);
   } catch (e) {
-    logger.error({ err: (e as Error).message, email }, 'init: admin upsert failed');
-    return { ok: false, error: `数据库写入失败：${(e as Error).message}` };
-  } finally {
-    await oneShot.$disconnect().catch(() => undefined);
+    logger.error({ err: (e as Error).message }, 'init: stash admin in .env failed');
+    return { ok: false, error: `写入 .env 失败：${(e as Error).message}` };
   }
-}
-
-/** Append connection_limit + connect_timeout like @/lib/db/client does. */
-function appendConnectionParams(raw: string): string {
-  try {
-    const url = new URL(raw);
-    if (!url.searchParams.has('connection_limit')) {
-      url.searchParams.set('connection_limit', '32');
-    }
-    if (!url.searchParams.has('connect_timeout')) {
-      url.searchParams.set('connect_timeout', '30');
-    }
-    return url.toString();
-  } catch {
-    return raw;
-  }
+  return { ok: true };
 }

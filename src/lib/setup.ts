@@ -20,6 +20,7 @@ import { randomBytes } from 'node:crypto';
 import { createConnection } from 'node:net';
 
 const ENV_PATH = join(process.cwd(), '.env');
+export { ENV_PATH };
 
 /** Generate a cryptographically random secret (≥32 chars). */
 export function generateSecret(): string {
