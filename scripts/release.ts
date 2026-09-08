@@ -302,7 +302,7 @@ function main(): void {
   console.log(`  cd ${releaseDirName}`);
   console.log(`  npm ci --omit=dev`);
   console.log(`  npm run build`);
-  console.log(`  NODE_ENV=production npm run start:server`);
+  console.log(`  npm run start:server`);
   console.log(`  # then visit /init in a browser`);
 }
 
