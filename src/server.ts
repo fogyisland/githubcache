@@ -10,8 +10,12 @@ import { startupDatabaseChecks } from '@/lib/database/startup';
 // inline (Windows cmd.exe doesn't accept `NODE_ENV=production cmd`).
 // Default the values here so the script works on every host without
 // shell-specific quoting. Shell-exported values still win.
-process.env['NODE_ENV'] ??= 'production';
-process.env['PORT'] ??= '5002';
+//
+// NODE_ENV is typed as `NodeJS.ProcessEnv['NODE_ENV']` (a literal type)
+// by @types/node, so the indexer assignment trips TS2540. Cast through
+// `any` for just this line.
+if (!process.env['NODE_ENV']) (process.env as Record<string, string>)['NODE_ENV'] = 'production';
+if (!process.env['PORT']) (process.env as Record<string, string>)['PORT'] = '5002';
 
 /**
  * Custom server entry — `npm run dev:server` boots this directly with
