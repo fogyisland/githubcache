@@ -81,7 +81,7 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   try {
-    const result = await createBackup(env.DATABASE_URL);
+    const result = await createBackup(env.DATABASE_URL!);
     const fwd = req.headers.get('x-forwarded-for');
     void writeAudit({
       action: 'database_backup',

@@ -1,7 +1,17 @@
 import { z } from 'zod';
 
 const schema = z.object({
-  DATABASE_URL: z.string().url(),
+  // M28.bug16 — DATABASE_URL is OPTIONAL in the schema so the build
+  // (`next build` page-data collection) can succeed before the wizard
+  // has written the real value to .env. Validation happens at Prisma
+  // client construction time (@/lib/db/client) where a missing URL throws
+  // a clear "DATABASE_URL is required" message instead of a confusing
+  // ZodError during a random route's page-data collection step.
+  //
+  // No format validation here either — empty / placeholder strings pass
+  // (build needs to succeed with no .env), and Prisma's actual connect
+  // call surfaces the real connection error at request time.
+  DATABASE_URL: z.string().optional(),
   PORT: z.coerce.number().int().positive().default(3000),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),

@@ -44,7 +44,7 @@ const TARGET_TABLES = [
  * columns + indexes (information_schema queries — no DDL needed).
  */
 export async function getTableDetails(): Promise<TableDetail[]> {
-  const dbName = parseDbName(env.DATABASE_URL);
+  const dbName = parseDbName(env.DATABASE_URL ?? '');
   if (!dbName) return [];
 
   // Fetch stats + columns + indexes in parallel per table. With 13

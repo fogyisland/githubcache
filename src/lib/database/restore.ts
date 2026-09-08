@@ -70,7 +70,7 @@ export async function performRestore(opts: RestoreOptions): Promise<RestoreResul
   const now = Date.now();
   const shadow = SHADOW_SCHEMA_PREFIX + now;
   const rollbackSuffix = `__rb_${now}`;
-  const databaseUrl = env.DATABASE_URL;
+  const databaseUrl = env.DATABASE_URL ?? '';
   const dbName = parseDbName(databaseUrl);
   if (!dbName) throw new Error('DATABASE_URL missing database segment');
 
@@ -145,7 +145,7 @@ async function resolveSourcePath(
 async function snapshotTo(_sourceAbs: string, filename: string): Promise<void> {
   // _sourceAbs is unused here — we always snapshot the LIVE DB before
   // restoring over it, regardless of where the restore source came from.
-  await createBackup(env.DATABASE_URL, filename);
+  await createBackup(env.DATABASE_URL ?? '', filename);
 }
 
 async function importToShadow(

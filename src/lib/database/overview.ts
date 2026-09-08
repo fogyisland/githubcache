@@ -35,9 +35,9 @@ export interface TableStat {
 export async function getDatabaseOverview(): Promise<DatabaseOverview> {
   const versionRows = await prisma.$queryRaw<Array<{ v: string }>>`SELECT VERSION() AS v`;
   const version = versionRows[0]?.v ?? 'unknown';
-  const dbName = parseDbName(env.DATABASE_URL) ?? 'unknown';
-  const host = parseHost(env.DATABASE_URL);
-  const port = Number(parsePort(env.DATABASE_URL));
+  const dbName = parseDbName(env.DATABASE_URL ?? '') ?? 'unknown';
+  const host = parseHost(env.DATABASE_URL ?? '');
+  const port = Number(parsePort(env.DATABASE_URL ?? ''));
 
   // Sum across all tables in the current DB
   const agg = await prisma.$queryRaw<Array<{ total: bigint | null; tables: bigint }>>`
@@ -84,7 +84,7 @@ const MODEL_TO_TABLE: ReadonlyArray<{ model: string; table: string }> = [
 ];
 
 export async function getTableStats(): Promise<TableStat[]> {
-  const dbName = parseDbName(env.DATABASE_URL);
+  const dbName = parseDbName(env.DATABASE_URL ?? '');
   if (!dbName) return [];
   const rows = await prisma.$queryRaw<
     Array<{ TABLE_NAME: string; TABLE_ROWS: bigint | null; DATA_LENGTH: bigint; INDEX_LENGTH: bigint }>

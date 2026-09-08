@@ -59,16 +59,26 @@ export async function bootServer(): Promise<ServerHandle> {
   const handle = app.getRequestHandler();
   await app.prepare();
 
-  await initPool();
+  // M28.bug16 — fresh deploys have no DATABASE_URL until /init runs.
+  // Start the HTTP handler so the wizard is reachable, but skip the
+  // scheduler + token pool (both need DB). After the operator runs
+  // /init and restarts the process, full boot resumes.
+  const dbReady = !!process.env.DATABASE_URL;
+  if (dbReady) {
+    await initPool();
+    await startupDatabaseChecks();
+  } else {
+    logger.warn(
+      'DATABASE_URL not set — starting in setup mode. Run /init, then restart the server.',
+    );
+  }
 
-  await startupDatabaseChecks();
-
-  const scheduler = startScheduler();
+  const scheduler = dbReady ? startScheduler() : { stop: () => undefined };
 
   const server = createServer((req, res) => handle(req, res));
   await new Promise<void>((resolve) => {
     server.listen(env.PORT, () => {
-      logger.info({ port: env.PORT }, 'listening');
+      logger.info({ port: env.PORT, mode: dbReady ? 'full' : 'setup' }, 'listening');
       resolve();
     });
   });
@@ -85,10 +95,12 @@ export async function bootServer(): Promise<ServerHandle> {
       // 2. Stop scheduler (no new refresh jobs)
       scheduler.stop();
       // 3. Flush + shutdown token pool
-      await shutdownPool();
-      // 4. Close Prisma connection pool (imported lazily to avoid circular deps)
-      const { prisma } = await import('@/lib/db/client');
-      await prisma.$disconnect();
+      if (dbReady) {
+        await shutdownPool();
+        // 4. Close Prisma connection pool (imported lazily to avoid circular deps)
+        const { prisma } = await import('@/lib/db/client');
+        await prisma.$disconnect();
+      }
       logger.info('shutdown complete');
     },
   };
