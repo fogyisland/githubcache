@@ -33,24 +33,12 @@ export interface FinalizeResult {
  *   6. set ghc_setup_done cookie (10y) → middleware locks /init from now on
  */
 export async function finalizeSetup(): Promise<FinalizeResult> {
-  // --- 1. prisma migrate deploy -----------------------------------------
-  const result = spawnSync('npx prisma migrate deploy', {
-    stdio: 'pipe',
-    env: process.env,
-    shell: true,
-  });
-  if (result.status !== 0) {
-    const stdout = (result.stdout ?? Buffer.alloc(0)).toString();
-    const stderr = (result.stderr ?? Buffer.alloc(0)).toString();
-    const detail = (stderr || stdout).slice(-2000) || 'prisma migrate deploy 失败';
-    logger.error(
-      { exit: result.status, stdout, stderr },
-      'init: prisma migrate deploy failed',
-    );
-    return { ok: false, error: detail };
-  }
-
-  // --- 2. read DATABASE_URL from .env + admin stash from cookie ---------
+  // --- 1. read DATABASE_URL from .env BEFORE spawning migrate ---------
+  // Reason: spawnSync inherits process.env, which carries the .env.production
+  // stub DATABASE_URL (mysql://stub:stub@stub.invalid:3306/stub). Without
+  // override, prisma migrate deploy would try to connect to that and fail.
+  // Override DATABASE_URL via env so the child prisma process uses the
+  // URL the operator typed in step 1, not the build-time stub.
   let envContent: string;
   try {
     envContent = readFileSync(ENV_PATH, 'utf8');
@@ -71,6 +59,23 @@ export async function finalizeSetup(): Promise<FinalizeResult> {
     };
   }
   const { email, passwordHash } = stash;
+
+  // --- 2. prisma migrate deploy (with explicit DATABASE_URL override) --
+  const result = spawnSync('npx prisma migrate deploy', {
+    stdio: 'pipe',
+    env: { ...process.env, DATABASE_URL: dbUrl },
+    shell: true,
+  });
+  if (result.status !== 0) {
+    const stdout = (result.stdout ?? Buffer.alloc(0)).toString();
+    const stderr = (result.stderr ?? Buffer.alloc(0)).toString();
+    const detail = (stderr || stdout).slice(-2000) || 'prisma migrate deploy 失败';
+    logger.error(
+      { exit: result.status, stdout, stderr },
+      'init: prisma migrate deploy failed',
+    );
+    return { ok: false, error: detail };
+  }
 
   // --- 3. one-shot prisma client (see submit-admin-config note for why
   //        we don't share @/lib/db/client — same env-merge race in dev mode)
