@@ -26,11 +26,11 @@
  *   npm run release -- --version 0.2.0     # override
  *
  * Output (single directory, no tarball — ship as-is):
- *   release/githubcache-v0.1.0/      (clean source tree, copy to server)
+ *   release/githubcache/      (clean source tree, copy to server)
  *
  * Deploy flow the recipient follows (in RELEASE.md):
- *   1. Copy githubcache-v0.1.0/ to the server (rsync, scp, USB, ...)
- *   2. cd githubcache-v0.1.0
+ *   1. Copy githubcache/ to the server (rsync, scp, USB, ...)
+ *   2. cd githubcache
  *   3. npm ci --omit=dev
  *   4. npx prisma generate
  *   5. npm run init -- --non-interactive
@@ -155,11 +155,11 @@ ready to initialise and start on a fresh server.
 
 ## TL;DR
 
-Copy the \`githubcache-v${VERSION}/\` directory to the server (rsync, scp,
+Copy the \`githubcache/\` directory to the server (rsync, scp,
 USB — whatever you have), then run:
 
 \`\`\`bash
-cd githubcache-v${VERSION}
+cd githubcache
 npm ci --omit=dev
 npm run init -- --non-interactive    # writes .env + runs migrations + bootstraps admin
 NODE_ENV=production npm run start:server
@@ -245,7 +245,7 @@ restores the affected columns / tables — there is no automatic reverse.
 // -----------------------------------------------------------------------------
 
 function main(): void {
-  const releaseDirName = `githubcache-v${VERSION}`;
+  const releaseDirName = 'githubcache';
   const releaseDir = join(DIST, releaseDirName);
 
   console.log(`Building release v${VERSION}`);
