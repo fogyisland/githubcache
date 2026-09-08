@@ -1,11 +1,12 @@
 'use server';
 
 import { spawnSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { cookies } from 'next/headers';
 import { PrismaClient } from '@prisma/client';
 import { redirect } from 'next/navigation';
 import { ENV_PATH } from '@/lib/setup';
+import { readAdminStash, clearAdminStash } from './submit-admin-config';
 import { logger } from '@/lib/logger';
 
 export interface FinalizeResult {
@@ -15,20 +16,20 @@ export interface FinalizeResult {
 
 /**
  * Server action: run prisma migrate deploy, then create the bootstrap admin
- * from the stashed INIT_ADMIN_EMAIL + INIT_ADMIN_PASSWORD_HASH keys, then
- * strip those temp keys from .env, then set ghc_setup_done=1 cookie.
+ * from the stashed email + bcrypt hash (held in the ghc_init_admin cookie
+ * set by step 2), then delete that cookie, then set ghc_setup_done=1.
  *
- * M28.bug13 ordering: this is the only step that touches the database.
- * Stash-in-step-2 keeps step 2 free of any DB schema dependency.
+ * M28.bug14 ordering: this is the only step that touches the database.
+ * Cookie stash in step 2 keeps step 2 free of any DB schema dependency
+ * AND keeps .env clean of temporary keys.
  *
  * Process:
- *   1. spawnSync 'npx prisma migrate deploy' (creates all tables; shell:true
- *      for Windows npx.cmd resolution)
- *   2. read INIT_ADMIN_EMAIL + INIT_ADMIN_PASSWORD_HASH from .env
+ *   1. spawnSync 'npx prisma migrate deploy' (creates all tables)
+ *   2. read ghc_init_admin cookie for { email, passwordHash }
  *   3. one-shot PrismaClient with the URL from .env (NOT process.env —
  *      Next.js dev mode clobbers process.env with shell values per request)
  *   4. upsert the user with role=admin, status=active
- *   5. strip the two stash keys from .env so they don't linger forever
+ *   5. delete the stash cookie
  *   6. set ghc_setup_done cookie (10y) → middleware locks /init from now on
  */
 export async function finalizeSetup(): Promise<FinalizeResult> {
@@ -49,7 +50,7 @@ export async function finalizeSetup(): Promise<FinalizeResult> {
     return { ok: false, error: detail };
   }
 
-  // --- 2. read stashed admin from .env ----------------------------------
+  // --- 2. read DATABASE_URL from .env + admin stash from cookie ---------
   let envContent: string;
   try {
     envContent = readFileSync(ENV_PATH, 'utf8');
@@ -57,20 +58,19 @@ export async function finalizeSetup(): Promise<FinalizeResult> {
     return { ok: false, error: '.env 不存在 — 请先完成 /init/db 步骤' };
   }
   const dbMatch = /^DATABASE_URL=(.+)$/m.exec(envContent);
-  const emailMatch = /^INIT_ADMIN_EMAIL=(.+)$/m.exec(envContent);
-  const hashMatch = /^INIT_ADMIN_PASSWORD_HASH=(.+)$/m.exec(envContent);
   if (!dbMatch || !dbMatch[1]) {
     return { ok: false, error: '.env 缺少 DATABASE_URL' };
   }
-  if (!emailMatch || !emailMatch[1] || !hashMatch || !hashMatch[1]) {
+  const dbUrl = dbMatch[1].trim();
+
+  const stash = await readAdminStash();
+  if (!stash) {
     return {
       ok: false,
-      error: '.env 缺少 INIT_ADMIN_EMAIL / INIT_ADMIN_PASSWORD_HASH — 请先完成 /init/admin 步骤',
+      error: '管理员 cookie 缺失或已过期（10 分钟）— 请重新填写 /init/admin',
     };
   }
-  const dbUrl = dbMatch[1].trim();
-  const email = emailMatch[1].trim();
-  const passwordHash = hashMatch[1].trim();
+  const { email, passwordHash } = stash;
 
   // --- 3. one-shot prisma client (see submit-admin-config note for why
   //        we don't share @/lib/db/client — same env-merge race in dev mode)
@@ -107,17 +107,8 @@ export async function finalizeSetup(): Promise<FinalizeResult> {
   }
   await oneShot.$disconnect().catch(() => undefined);
 
-  // --- 5. strip stash keys from .env ------------------------------------
-  let updated = envContent;
-  updated = updated.replace(/^INIT_ADMIN_EMAIL=.*\r?\n/m, '');
-  updated = updated.replace(/^INIT_ADMIN_PASSWORD_HASH=.*\r?\n/m, '');
-  try {
-    writeFileSync(ENV_PATH, updated);
-  } catch (e) {
-    // Non-fatal: leaving the keys doesn't break anything, just leaves a
-    // password hash on disk. Surface a warning.
-    logger.warn({ err: (e as Error).message }, 'init: failed to strip stash keys');
-  }
+  // --- 5. clear the stash cookie ---------------------------------------
+  await clearAdminStash();
 
   // --- 6. lock the wizard via cookie ------------------------------------
   const jar = await cookies();
