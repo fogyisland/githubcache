@@ -37,7 +37,8 @@
  *   6. Visit https://<your-domain>/init in a browser — collect DB credentials,
  *      admin email/password; runs migrate deploy + bootstraps admin + locks /init
  */
-import { readFileSync, writeFileSync, mkdirSync, statSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, statSync, readdirSync, existsSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -58,9 +59,21 @@ const VERSION = versionOverrideIdx >= 0 && args[versionOverrideIdx + 1]
 // Excludes — never ship these
 // -----------------------------------------------------------------------------
 
+// M28.bug15 — root-cause fix for the recurring .env.production DATABASE_URL
+// conflicts: the release is built on the dev machine (where DATABASE_URL
+// is real) and the .next/ directory is shipped as part of the release.
+// The server never runs `npm run build`, so it never needs a stub DATABASE_URL,
+// so .env.production is removed entirely.
+//
+// What ships:
+//   - .next/ (excluding the 245MB webpack cache — see walkSubtree)
+//   - .env.example (template; init copies this to .env on first run)
+//
+// What does NOT ship:
+//   - .env (secrets)
+//   - .env.production, .env.local, etc. (any .env.* variants)
 const EXCLUDE_DIRS = new Set([
   '.git',
-  '.next',
   'node_modules',
   'coverage',
   'test-results',
@@ -75,20 +88,17 @@ const EXCLUDE_DIRS = new Set([
 
 const EXCLUDE_FILES = new Set([
   '.env',
+  '.env.production',
+  '.env.production.local',
+  '.env.development',
+  '.env.development.local',
+  '.env.local',
   '.env.backup',
   '.env.test',
   '.env.tmp',
-  '.env.local',
   'tsconfig.tsbuildinfo',
   'verify.ts',
 ]);
-
-// M28.bug10 — `.env.production` IS shipped. It contains a syntactically
-// valid DATABASE_URL stub so `npm run build` can run as a code/package
-// sanity check on a freshly-extracted release, before `npm run init`
-// has had a chance to write the real .env. The stub values are placeholders;
-// no real credentials live in this file. The release script does NOT need
-// to special-case it because .env.production does NOT appear in EXCLUDE_FILES.
 
 const EXCLUDE_GLOBS_RE = [
   /\.log$/,
@@ -113,6 +123,9 @@ const SCRIPT_EXCLUDE = new Set([
 function shouldExclude(absPath: string, name: string): boolean {
   if (EXCLUDE_DIRS.has(name)) return true;
   if (EXCLUDE_FILES.has(name)) return true;
+  // .next/cache is the webpack build cache (~245MB) — not needed at runtime.
+  // .next/standalone, .next/server, .next/static DO ship.
+  if (name === 'cache' && absPath.includes(`${'\\'}.next${'\\'}`)) return true;
   if (SCRIPT_EXCLUDE.has(name) && absPath.includes(`${'\\'}scripts${'\\'}`)) return true;
   return EXCLUDE_GLOBS_RE.some((re) => re.test(name));
 }
@@ -263,6 +276,19 @@ function main(): void {
   const releaseDirName = 'githubcache';
   const releaseDir = join(DIST, releaseDirName);
 
+  // M28.bug15 — pre-bake the build on the dev machine. The recipient's
+  // server never runs `npm run build` (and shouldn't — it needs no DB
+  // credentials, no .env.production stub, nothing). We pass through .next/
+  // minus the 245MB webpack cache.
+  if (!existsSync(join(ROOT, '.next'))) {
+    console.log('No .next/ found — running npm run build first...');
+    const r = spawnSync('npm run build', { stdio: 'inherit', env: process.env, shell: true });
+    if (r.status !== 0) {
+      console.error('npm run build failed; aborting release');
+      process.exit(1);
+    }
+  }
+
   console.log(`Building release v${VERSION}`);
   console.log(`  → ${releaseDir}`);
 
@@ -290,7 +316,7 @@ function main(): void {
 
   console.log(`\nRelease ready. Ship the directory:`);
   console.log(`  rsync -av --delete release/${releaseDirName}/  user@server:/opt/${releaseDirName}/`);
-  console.log(`\nOn the server:`);
+  console.log(`\nOn the server (no build needed):`);
   console.log(`  cd ${releaseDirName}`);
   console.log(`  npm ci --omit=dev`);
   console.log(`  NODE_ENV=production npm run start:server`);
