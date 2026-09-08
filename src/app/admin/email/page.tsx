@@ -87,7 +87,7 @@ export default async function AdminEmailPage(): Promise<ReactElement> {
 
       <section>
         <h2 className="ghc-admin-section-title">{t('test.heading')}</h2>
-        <p className="ghc-admin-hint">{t('toHelp', { email: user?.email ?? '?' })}</p>
+        <p className="ghc-admin-hint">{t('test.toHelp', { email: user?.email ?? '?' })}</p>
         <TestSendButton csrfToken={csrfToken} />
       </section>
 

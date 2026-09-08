@@ -1788,6 +1788,7 @@
           "forbidden": "Credentials are valid but the caller lacks permission (e.g. inactive API key).",
           "not_found": "The requested resource does not exist (e.g. GitHub returned 404 for that repo).",
           "conflict": "The request conflicts with the current state of the resource.",
+          "payload_too_large": "Request body exceeds the server's size limit (typically 10 MB).",
           "rate_limited": "Rate limit exceeded. Honor the Retry-After header.",
           "internal_error": "Server-side failure. Safe to retry with exponential backoff.",
           "unavailable": "Service is down or a dependency is unreachable. Try again later."
