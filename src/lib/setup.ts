@@ -40,6 +40,10 @@ export interface DbTestResult {
   // echoes back the candidate DATABASE_URL the server would write, so the UI
   // can show "we'd persist this" for verification before commit
   wouldWrite: string;
+  // MySQL server version string parsed from the handshake greeting — used
+  // for the success log so the operator sees "MySQL 5.7.44" instead of just
+  // "connected"
+  version?: string;
 }
 
 /** Test a candidate DB config without polluting Prisma's shared client.
@@ -67,19 +71,33 @@ export async function testDbConnection(cfg: DbConfig): Promise<DbTestResult> {
     }, 10_000);
 
     sock.once('data', (chunk) => {
-      // MySQL handshake: byte 0 = protocol version (0x0a), then null-terminated version string.
-      // We only need to confirm we got *something* that looks like a MySQL handshake.
-      const versionByte = chunk[0];
+      // MySQL handshake packet format:
+      //   byte 0..2 = payload length (little endian 3-byte int)
+      //   byte 3    = sequence id (always 0 for server greeting)
+      //   byte 4    = protocol version (0x0a for MySQL 5/8)
+      //   byte 5..  = null-terminated version string ("5.7.44", "8.0.32", ...)
+      //
+      // We need at least 5 bytes to confirm a MySQL greeting; anything shorter
+      // or with a non-0x0a protocol byte is some other service answering.
       clearTimeout(timer);
       sock.destroy();
-      if (versionByte !== 0x0a) {
+      if (chunk.length < 5) {
         resolve({
           ok: false,
-          error: `端口 ${cfg.port} 响应不是 MySQL 协议（首字节 0x${versionByte?.toString(16) ?? '00'}，期望 0x0a）`,
+          error: `端口 ${cfg.port} 响应太短（${chunk.length} 字节），不是 MySQL 握手`,
+          wouldWrite: url,
+        });
+      } else if (chunk[4] !== 0x0a) {
+        resolve({
+          ok: false,
+          error: `端口 ${cfg.port} 响应不是 MySQL 协议（协议字节 0x${chunk[4]?.toString(16)}，期望 0x0a）`,
           wouldWrite: url,
         });
       } else {
-        resolve({ ok: true, wouldWrite: url });
+        // Read the null-terminated version string for the success log.
+        const end = chunk.indexOf(0, 5);
+        const version = end > 5 ? chunk.slice(5, end).toString('ascii') : 'unknown';
+        resolve({ ok: true, wouldWrite: url, version });
       }
     });
     sock.once('error', (e) => {
