@@ -1,8 +1,6 @@
-import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
 import type { ReactElement } from 'react';
 import { getTranslations } from 'next-intl/server';
-import { validateSession } from '@/lib/auth/session';
+import { requireAdmin } from '@/lib/auth/require-admin';
 import { listUsers } from '@/lib/db/users';
 import { listInvitations } from '@/lib/db/invitations';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
@@ -38,18 +36,7 @@ export default async function AdminUsersPage({
   searchParams: Promise<{ role?: string; status?: string; source?: string; limit?: string; offset?: string }>;
 }): Promise<ReactElement> {
   const sp = await searchParams;
-  const cookieStore = await cookies();
-  const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
-  const user = await validateSession({
-    headers: new Headers(),
-    cookies: {
-      get: (name: string) =>
-        cookieMap[name] !== undefined ? { value: cookieMap[name]! } : undefined,
-    },
-  });
-  if (!user || user.role !== 'admin') {
-    redirect('/admin');
-  }
+  const { user } = await requireAdmin();
 
   const userTz = await resolveRequestTimezone({ dbValue: user.timezone });
 

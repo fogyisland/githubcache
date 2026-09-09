@@ -1,8 +1,6 @@
-import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
 import type { ReactElement } from 'react';
 import { getTranslations } from 'next-intl/server';
-import { validateSession } from '@/lib/auth/session';
+import { requireAdmin } from '@/lib/auth/require-admin';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { ProviderForm } from '../_components/provider-form';
 
@@ -12,23 +10,7 @@ import { ProviderForm } from '../_components/provider-form';
  * Admin-only. Renders the create-mode provider form.
  */
 export default async function NewProviderPage(): Promise<ReactElement> {
-  const cookieStore = await cookies();
-  const cookieMap = Object.fromEntries(
-    cookieStore.getAll().map((c) => [c.name, c.value]),
-  );
-  const user = await validateSession({
-    headers: new Headers(),
-    cookies: {
-      get: (name: string) =>
-        cookieMap[name] !== undefined ? { value: cookieMap[name]! } : undefined,
-    },
-  });
-  if (!user) {
-    redirect('/login');
-  }
-  if (user.role !== 'admin') {
-    redirect('/admin');
-  }
+  await requireAdmin();
 
   const t = await getTranslations('admin.providers');
 

@@ -7,6 +7,7 @@ vi.mock('next/headers', () => ({
   cookies: () => ({
     getAll: () => [],
   }),
+  headers: () => ({ get: () => null }),
 }));
 
 vi.mock('@/lib/auth/session', () => ({
@@ -27,13 +28,13 @@ vi.mock('next/navigation', () => ({
 }));
 
 describe('page-level admin role check', () => {
-  it('redirects to /admin when no session is present (AdminUsersPage)', async () => {
+  it('redirects to /login when no session is present (AdminUsersPage)', async () => {
     mockValidateSession.mockResolvedValueOnce(null);
     const AdminUsersPage = (await import('@/app/admin/users/page')).default;
     await expect(AdminUsersPage({ searchParams: {} })).rejects.toThrow(
-      '__redirect_to__/admin',
+      '__redirect_to__/login',
     );
-    expect(mockRedirect).toHaveBeenCalledWith('/admin');
+    expect(mockRedirect).toHaveBeenCalledWith('/login');
   });
 
   it('redirects to /admin when the user is an operator (AdminUsersPage)', async () => {

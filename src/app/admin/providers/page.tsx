@@ -1,9 +1,7 @@
-import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
 import type { ReactElement } from 'react';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { validateSession } from '@/lib/auth/session';
+import { requireAdmin } from '@/lib/auth/require-admin';
 import { listProviders } from '@/lib/ingestion/providers/db';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { AdminTable, type AdminColumn } from '@/app/admin/_components/admin-table';
@@ -22,23 +20,7 @@ import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
 type ProviderRow = NonNullable<Awaited<ReturnType<typeof listProviders>>>[number];
 
 export default async function AdminProvidersPage(): Promise<ReactElement> {
-  const cookieStore = await cookies();
-  const cookieMap = Object.fromEntries(
-    cookieStore.getAll().map((c) => [c.name, c.value]),
-  );
-  const user = await validateSession({
-    headers: new Headers(),
-    cookies: {
-      get: (name: string) =>
-        cookieMap[name] !== undefined ? { value: cookieMap[name]! } : undefined,
-    },
-  });
-  if (!user) {
-    redirect('/login');
-  }
-  if (user.role !== 'admin') {
-    redirect('/admin');
-  }
+  await requireAdmin();
 
   const t = await getTranslations('admin.providers');
   const rows = await listProviders();

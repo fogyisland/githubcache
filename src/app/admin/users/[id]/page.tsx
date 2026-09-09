@@ -1,8 +1,7 @@
-import { notFound, redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
+import { notFound } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { getTranslations } from 'next-intl/server';
-import { validateSession } from '@/lib/auth/session';
+import { requireAdmin } from '@/lib/auth/require-admin';
 import { getUserById } from '@/lib/db/users';
 import { prisma } from '@/lib/db/client';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
@@ -43,20 +42,9 @@ export default async function AdminUserDetailPage({
   params: Promise<{ id: string }>;
 }): Promise<ReactElement> {
   const p = await params;
-  const cookieStore = await cookies();
-  const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
-  const session = await validateSession({
-    headers: new Headers(),
-    cookies: {
-      get: (name: string) =>
-        cookieMap[name] !== undefined ? { value: cookieMap[name]! } : undefined,
-    },
-  });
-  if (!session || session.role !== 'admin') {
-    redirect('/admin');
-  }
+  const { user: adminUser } = await requireAdmin();
 
-  const userTz = await resolveRequestTimezone({ dbValue: session.timezone });
+  const userTz = await resolveRequestTimezone({ dbValue: adminUser.timezone });
 
   const t = await getTranslations('admin.users.detail');
 
@@ -196,7 +184,7 @@ export default async function AdminUserDetailPage({
         <UserActions
           userId={user.id.toString()}
           currentStatus={user.status}
-          isSelf={user.id === session.id}
+          isSelf={user.id === adminUser.id}
         />
       </section>
 

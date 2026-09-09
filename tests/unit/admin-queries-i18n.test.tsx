@@ -83,6 +83,7 @@ vi.mock('next-intl/server', () => ({
 
 vi.mock('next/headers', () => ({
   cookies: () => ({ getAll: () => [] }),
+  headers: () => ({ get: () => null }),
 }));
 
 vi.mock('@/lib/auth/session', () => ({

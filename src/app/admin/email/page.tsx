@@ -1,8 +1,7 @@
 import type { ReactElement } from 'react';
-import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { getTranslations } from 'next-intl/server';
-import { validateSession } from '@/lib/auth/session';
+import { requireAdmin } from '@/lib/auth/require-admin';
 import { getEmailConfig, publicConfigForUi } from '@/lib/email/config';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { EmailConfigForm } from './_components/email-config-form';
@@ -37,20 +36,7 @@ export default async function AdminEmailPage(): Promise<ReactElement> {
   const cookieStore = await cookies();
   const csrfToken = cookieStore.get('ghc_csrf')?.value ?? '';
 
-  const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
-  const user = await validateSession({
-    headers: new Headers(),
-    cookies: {
-      get: (name: string) =>
-        cookieMap[name] !== undefined ? { value: cookieMap[name]! } : undefined,
-    },
-  });
-  if (!user) {
-    redirect('/login');
-  }
-  if (user.role !== 'admin') {
-    redirect('/admin');
-  }
+  const { user } = await requireAdmin();
 
   const [cfg, sentLast24h, failedLast24h, lastSuccessRow] = await Promise.all([
     getEmailConfig(),

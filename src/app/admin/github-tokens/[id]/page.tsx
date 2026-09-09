@@ -1,10 +1,9 @@
-import { notFound, redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
+import { notFound } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import type { ReactElement } from 'react';
 import { getTokenById } from '@/lib/db/github-tokens';
 import { poolHasId } from '@/lib/github/pool';
-import { validateSession } from '@/lib/auth/session';
+import { requireAdmin } from '@/lib/auth/require-admin';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
 import { AdminTable, type AdminColumn } from '@/app/admin/_components/admin-table';
@@ -35,20 +34,9 @@ export default async function AdminGithubTokenDetailPage({
   params: Promise<{ id: string }>;
 }): Promise<ReactElement> {
   const p = await params;
-  const cookieStore = await cookies();
-  const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
-  const session = await validateSession({
-    headers: new Headers(),
-    cookies: {
-      get: (name: string) =>
-        cookieMap[name] !== undefined ? { value: cookieMap[name]! } : undefined,
-    },
-  });
-  if (!session || session.role !== 'admin') {
-    redirect('/admin');
-  }
+  const { user } = await requireAdmin();
 
-  const userTz = await resolveRequestTimezone({ dbValue: session.timezone });
+  const userTz = await resolveRequestTimezone({ dbValue: user.timezone });
 
   const t = await getTranslations('admin.githubTokens.detail');
 

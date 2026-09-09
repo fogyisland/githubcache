@@ -1,8 +1,6 @@
 import type { ReactElement } from 'react';
-import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
 import { getTranslations } from 'next-intl/server';
-import { validateSession } from '@/lib/auth/session';
+import { requireAdmin } from '@/lib/auth/require-admin';
 import { languageDistribution } from '@/lib/reports/insights';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 
@@ -21,23 +19,7 @@ const TOP_N = 20;
 export default async function AdminInsightsLanguagesPage(): Promise<ReactElement> {
   const t = await getTranslations('insights');
 
-  const cookieStore = await cookies();
-  const cookieMap = Object.fromEntries(
-    cookieStore.getAll().map((c) => [c.name, c.value]),
-  );
-  const user = await validateSession({
-    headers: new Headers(),
-    cookies: {
-      get: (name: string) =>
-        cookieMap[name] !== undefined ? { value: cookieMap[name]! } : undefined,
-    },
-  });
-  if (!user) {
-    redirect('/login');
-  }
-  if (user.role !== 'admin') {
-    redirect('/admin');
-  }
+  await requireAdmin();
 
   const buckets = await languageDistribution(TOP_N);
   const maxShare = buckets.reduce((acc, b) => Math.max(acc, b.sharePct), 0);

@@ -1,8 +1,7 @@
 import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
 import type { ReactElement } from 'react';
 import { getTranslations } from 'next-intl/server';
-import { validateSession } from '@/lib/auth/session';
+import { requireAdmin } from '@/lib/auth/require-admin';
 import { getProviderById } from '@/lib/ingestion/providers/db';
 import { ProviderConfigSchema, type ProviderConfig } from '@/lib/ingestion/providers/schema';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
@@ -30,23 +29,7 @@ export default async function ProviderDetailPage({
   params: Promise<{ id: string }>;
 }): Promise<ReactElement> {
   const p = await params;
-  const cookieStore = await cookies();
-  const cookieMap = Object.fromEntries(
-    cookieStore.getAll().map((c) => [c.name, c.value]),
-  );
-  const user = await validateSession({
-    headers: new Headers(),
-    cookies: {
-      get: (name: string) =>
-        cookieMap[name] !== undefined ? { value: cookieMap[name]! } : undefined,
-    },
-  });
-  if (!user) {
-    redirect('/login');
-  }
-  if (user.role !== 'admin') {
-    redirect('/admin');
-  }
+  await requireAdmin();
 
   const id = parseId(p.id);
   if (!id) {

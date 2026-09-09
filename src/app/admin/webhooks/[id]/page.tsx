@@ -1,8 +1,7 @@
-import { notFound, redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
+import { notFound } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { getTranslations } from 'next-intl/server';
-import { validateSession } from '@/lib/auth/session';
+import { requireAdmin } from '@/lib/auth/require-admin';
 import {
   getSubscriptionById,
   listDeliveriesForSubscription,
@@ -33,20 +32,7 @@ export default async function AdminWebhookDetailPage({
   searchParams,
 }: PageProps): Promise<ReactElement> {
   const p = await params;
-  const cookieStore = await cookies();
-  const cookieMap = Object.fromEntries(
-    cookieStore.getAll().map((c) => [c.name, c.value]),
-  );
-  const user = await validateSession({
-    headers: new Headers(),
-    cookies: {
-      get: (name: string) =>
-        cookieMap[name] !== undefined ? { value: cookieMap[name]! } : undefined,
-    },
-  });
-  if (!user || user.role !== 'admin') {
-    redirect('/admin');
-  }
+  const { user } = await requireAdmin();
 
   const userTz = await resolveRequestTimezone({ dbValue: user.timezone });
 

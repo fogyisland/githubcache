@@ -1,8 +1,6 @@
 import type { ReactElement } from 'react';
-import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
 import { getTranslations } from 'next-intl/server';
-import { validateSession } from '@/lib/auth/session';
+import { requireAdmin } from '@/lib/auth/require-admin';
 import { isPaused, getPausedAt } from '@/lib/scheduler';
 import {
   ingestionSummary,
@@ -38,21 +36,7 @@ export default async function AdminIngestionPage({
   const sp = await searchParams;
   const t = await getTranslations('admin.ingestion');
 
-  const cookieStore = await cookies();
-  const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
-  const user = await validateSession({
-    headers: new Headers(),
-    cookies: {
-      get: (name: string) =>
-        cookieMap[name] !== undefined ? { value: cookieMap[name]! } : undefined,
-    },
-  });
-  if (!user) {
-    redirect('/login');
-  }
-  if (user.role !== 'admin') {
-    redirect('/admin');
-  }
+  const { user } = await requireAdmin();
 
   const userTz = await resolveRequestTimezone({ dbValue: user.timezone });
 
