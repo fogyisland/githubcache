@@ -35,7 +35,7 @@ export default async function AdminInsightsHealthPage({
   const t = await getTranslations('insights');
   const tPag = await getTranslations('admin.common.pagination');
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(
     cookieStore.getAll().map((c) => [c.name, c.value]),
   );
@@ -53,7 +53,7 @@ export default async function AdminInsightsHealthPage({
     redirect('/admin');
   }
 
-  const userTz = resolveRequestTimezone({ dbValue: user.timezone });
+  const userTz = await resolveRequestTimezone({ dbValue: user.timezone });
 
   const rawLimit = Number(searchParams.limit ?? PAGE_SIZE_DEFAULT);
   const rawOffset = Number(searchParams.offset ?? 0);

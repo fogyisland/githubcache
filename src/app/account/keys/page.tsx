@@ -34,7 +34,7 @@ export default async function AccountKeysPage({
 }: {
   searchParams: { status?: string };
 }): Promise<ReactElement> {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
   const user = await validateSession({
     headers: new Headers(),
@@ -47,7 +47,7 @@ export default async function AccountKeysPage({
 
   const t = await getTranslations('account.keys');
   const tList = await getTranslations('admin.common.pagination');
-  const userTz = resolveRequestTimezone({ dbValue: user.timezone });
+  const userTz = await resolveRequestTimezone({ dbValue: user.timezone });
 
   const filter = parseStatusFilter(searchParams.status);
   const where: { userId: bigint; status?: ApiKeyStatus } = { userId: user.id };

@@ -30,7 +30,7 @@ export default async function AdminDatabasePage(): Promise<ReactElement> {
 
   // Layout already gates auth; this page also re-validates as defense
   // in depth (the file is force-dynamic so the cookie lookup is fresh).
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(
     cookieStore.getAll().map((c) => [c.name, c.value]),
   );
@@ -53,7 +53,7 @@ export default async function AdminDatabasePage(): Promise<ReactElement> {
     Promise.resolve(getBinaryStatus()),
   ]);
 
-  const pathname = headers().get('x-pathname') ?? '/admin/database';
+  const pathname = (await headers()).get('x-pathname') ?? '/admin/database';
 
   return (
     <div className="ghc-admin-page">

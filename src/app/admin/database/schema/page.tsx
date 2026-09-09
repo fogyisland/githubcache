@@ -29,7 +29,7 @@ interface MigrationRowForClient {
 export default async function AdminDatabaseSchemaPage(): Promise<ReactElement> {
   const t = await getTranslations('admin.database');
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(
     cookieStore.getAll().map((c) => [c.name, c.value]),
   );
@@ -62,7 +62,7 @@ export default async function AdminDatabaseSchemaPage(): Promise<ReactElement> {
     finishedAt: m.finishedAt ? m.finishedAt.toISOString() : null,
   }));
 
-  const pathname = headers().get('x-pathname') ?? '/admin/database/schema';
+  const pathname = (await headers()).get('x-pathname') ?? '/admin/database/schema';
 
   return (
     <div className="ghc-admin-page">

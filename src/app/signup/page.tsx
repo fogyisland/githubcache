@@ -14,7 +14,7 @@ import { SignupForm } from './_components/signup-form';
  * tagline + card + back link.
  */
 export default async function SignupPage(): Promise<ReactElement> {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
   const user = await validateSession({
     headers: new Headers(),

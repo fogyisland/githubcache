@@ -32,7 +32,7 @@ export default async function AdminWebhookDetailPage({
   params,
   searchParams,
 }: PageProps): Promise<ReactElement> {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(
     cookieStore.getAll().map((c) => [c.name, c.value]),
   );
@@ -47,7 +47,7 @@ export default async function AdminWebhookDetailPage({
     redirect('/admin');
   }
 
-  const userTz = resolveRequestTimezone({ dbValue: user.timezone });
+  const userTz = await resolveRequestTimezone({ dbValue: user.timezone });
 
   let id: bigint;
   try {

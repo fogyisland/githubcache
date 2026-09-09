@@ -53,7 +53,7 @@ export async function setAdminVariantAction(
   }
 
   // 1. Always set the cookie.
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   cookieStore.set({
     name: ADMIN_VARIANT_COOKIE,
     value: variant,

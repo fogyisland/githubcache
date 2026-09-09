@@ -26,7 +26,7 @@ import { readTunables } from '@/lib/config/settings-store';
 export default async function AdminApiSettingsPage(): Promise<ReactElement> {
   const t = await getTranslations('admin.apiSettings');
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(
     cookieStore.getAll().map((c) => [c.name, c.value]),
   );

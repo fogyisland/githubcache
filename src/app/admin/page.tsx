@@ -28,7 +28,7 @@ export default async function AdminDashboardPage(): Promise<ReactElement> {
 
   // Dashboard doesn't validate its own session (layout.tsx gates auth),
   // so we read timezone from cookie/default only — no DB roundtrip.
-  const userTz = resolveRequestTimezone({});
+  const userTz = await resolveRequestTimezone({});
 
   const [repoCount, userCount, apiKeyCount, tokenCount, recentAudit] = await Promise.all([
     prisma.repository.count(),

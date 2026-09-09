@@ -38,7 +38,7 @@ export default async function AdminIngestionPage({
 }): Promise<ReactElement> {
   const t = await getTranslations('admin.ingestion');
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
   const user = await validateSession({
     headers: new Headers(),
@@ -54,7 +54,7 @@ export default async function AdminIngestionPage({
     redirect('/admin');
   }
 
-  const userTz = resolveRequestTimezone({ dbValue: user.timezone });
+  const userTz = await resolveRequestTimezone({ dbValue: user.timezone });
 
   const limit = Math.min(PAGE_SIZE_MAX, Math.max(1, Number(searchParams.limit ?? PAGE_SIZE_DEFAULT)));
   const offset = Math.max(0, Number(searchParams.offset ?? 0));

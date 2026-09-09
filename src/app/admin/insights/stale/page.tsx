@@ -35,7 +35,7 @@ export default async function AdminInsightsStalePage({
   const t = await getTranslations('insights');
   const tPag = await getTranslations('admin.common.pagination');
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(
     cookieStore.getAll().map((c) => [c.name, c.value]),
   );
@@ -53,7 +53,7 @@ export default async function AdminInsightsStalePage({
     redirect('/admin');
   }
 
-  const userTz = resolveRequestTimezone({ dbValue: user.timezone });
+  const userTz = await resolveRequestTimezone({ dbValue: user.timezone });
 
   const rawThreshold = Number(searchParams.threshold ?? DEFAULT_THRESHOLD_DAYS);
   const thresholdDays = Number.isFinite(rawThreshold)

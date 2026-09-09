@@ -83,7 +83,7 @@ export async function signupAction(
   _prev: SignupState,
   formData: FormData,
 ): Promise<SignupState> {
-  const headersList = headers();
+  const headersList = await headers();
   const ip = getClientIp(headersList);
 
   // 1. Rate limit per IP (default 50000/hour). We do this before
@@ -206,7 +206,7 @@ export async function signupAction(
   //    follows our `redirect()`.
   const responseHeaders = new Headers();
   await createSession(user.id, { headers: responseHeaders }, ip);
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   for (const [name, value] of Object.entries(extractSetCookies(responseHeaders))) {
     cookieStore.set({
       name,

@@ -77,10 +77,10 @@ export async function requestKeyAction(
   _prev: RequestKeyState,
   formData: FormData,
 ): Promise<RequestKeyState> {
-  const headersList = headers();
+  const headersList = await headers();
   const ip = getClientIp(headersList);
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
   const session = await validateSession({
     headers: new Headers(),

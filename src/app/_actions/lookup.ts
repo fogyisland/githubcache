@@ -79,7 +79,7 @@ export async function lookupAction(
   // 2. Per-IP rate limit
   let hdrs: Headers;
   try {
-    hdrs = headers();
+    hdrs = await headers();
   } catch {
     hdrs = new Headers();
   }

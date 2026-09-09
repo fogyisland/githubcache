@@ -22,7 +22,7 @@ import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
 type ProviderRow = NonNullable<Awaited<ReturnType<typeof listProviders>>>[number];
 
 export default async function AdminProvidersPage(): Promise<ReactElement> {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(
     cookieStore.getAll().map((c) => [c.name, c.value]),
   );

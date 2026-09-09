@@ -208,7 +208,8 @@ describe('setTimezoneAction', () => {
       },
     });
     // Mock cookie store must include the session cookie for validateSession to find it
-    cookies().set({ name: 'ghc_admin_sid', value: sessionId });
+    const cookieStore = await cookies();
+    cookieStore.set({ name: 'ghc_admin_sid', value: sessionId });
 
     const { setTimezoneAction: action } = await import('@/app/_actions/set-timezone');
     const fd = new FormData();

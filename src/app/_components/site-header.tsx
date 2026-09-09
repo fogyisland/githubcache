@@ -29,7 +29,7 @@ import { validateSession } from '@/lib/auth/session';
  * complexity of a middleware-based redirect here.
  */
 export async function SiteHeader() {
-  const headerStore = headers();
+  const headerStore = await headers();
   const cookieHeader = headerStore.get('cookie') ?? null;
   const currentTheme = readThemeFromCookieHeader(cookieHeader);
   const currentLang = resolveLocale({
@@ -38,7 +38,7 @@ export async function SiteHeader() {
   });
   const t = await getTranslations('nav');
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
   const session = await validateSession({
     headers: new Headers(),

@@ -22,7 +22,7 @@ import { prisma } from '@/lib/db/client';
  * "one element blue, one element white" drift between pages.
  */
 export default async function AccountOverviewPage(): Promise<ReactElement> {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
   const user = await validateSession({
     headers: new Headers(),
@@ -37,7 +37,7 @@ export default async function AccountOverviewPage(): Promise<ReactElement> {
   }
 
   const t = await getTranslations('account.overview');
-  const userTz = resolveRequestTimezone({ dbValue: user.timezone });
+  const userTz = await resolveRequestTimezone({ dbValue: user.timezone });
 
   // Pull a quick key count for the "your activity" tile.
   const keyCount = await prisma.apiKey.count({ where: { userId: user.id } });

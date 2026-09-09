@@ -50,7 +50,7 @@ export async function saveEmailConfigAction(
   formData: FormData,
 ): Promise<SaveEmailConfigState> {
   // Auth — admin only
-  const reqHeaders = headers();
+  const reqHeaders = await headers();
   const cookieHeader = reqHeaders.get('cookie') ?? '';
   const fwd = reqHeaders.get('x-forwarded-for') ?? undefined;
   const csrf = formData.get('csrf');

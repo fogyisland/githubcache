@@ -52,7 +52,7 @@ export async function FetchHistory({
   repositoryId,
 }: FetchHistoryProps): Promise<ReactElement> {
   const t = await getTranslations('repo.fetchHistory');
-  const tz = resolveRequestTimezone({});
+  const tz = await resolveRequestTimezone({});
 
   if (!repositoryId) {
     return (

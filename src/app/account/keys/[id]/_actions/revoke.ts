@@ -38,8 +38,8 @@ export async function revokeOwnKeyAction(formData: FormData): Promise<void> {
   }
   const keyId = BigInt(parsed.data.keyId);
 
-  const headersList = headers();
-  const cookieStore = cookies();
+  const headersList = await headers();
+  const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
   const session = await validateSession({
     headers: new Headers(),

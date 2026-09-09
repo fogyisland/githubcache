@@ -48,7 +48,7 @@ export async function setThemeAction(
   }
 
   // 1. Always set the cookie (works for anon + logged-in alike)
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   cookieStore.set({
     name: THEME_COOKIE,
     value: theme,

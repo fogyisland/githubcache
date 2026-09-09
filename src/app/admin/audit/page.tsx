@@ -31,7 +31,7 @@ export default async function AdminAuditPage({
   const t = await getTranslations('admin.audit');
 
   // Admin-only gate (per spec §9.1)
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(
     cookieStore.getAll().map((c) => [c.name, c.value]),
   );
@@ -49,7 +49,7 @@ export default async function AdminAuditPage({
     redirect('/admin');
   }
 
-  const userTz = resolveRequestTimezone({ dbValue: user.timezone });
+  const userTz = await resolveRequestTimezone({ dbValue: user.timezone });
 
   const limit = Math.min(200, Math.max(1, Number(searchParams.limit ?? 50)));
   const offset = Math.max(0, Number(searchParams.offset ?? 0));

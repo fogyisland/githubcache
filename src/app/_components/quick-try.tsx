@@ -1,6 +1,6 @@
 'use client';
 
-import { useTransition } from 'react';
+import { useTransition, type JSX } from 'react';
 import { useRouter } from 'next/navigation';
 import { lookupAction, type LookupFormState } from '@/app/_actions/lookup';
 

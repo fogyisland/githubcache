@@ -34,7 +34,7 @@ const DEFAULT_FROM = '';
 export default async function AdminEmailPage(): Promise<ReactElement> {
   const t = await getTranslations('admin.email');
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const csrfToken = cookieStore.get('ghc_csrf')?.value ?? '';
 
   const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));

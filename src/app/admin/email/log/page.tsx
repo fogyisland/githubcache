@@ -46,7 +46,7 @@ export default async function AdminEmailLogPage({
 }: {
   searchParams: { status?: string; templateKey?: string; limit?: string; offset?: string };
 }): Promise<ReactElement> {
-  const userTz = resolveRequestTimezone({});
+  const userTz = await resolveRequestTimezone({});
 
   const t = await getTranslations('admin.emailLog');
   const tPag = await getTranslations('admin.common.pagination');

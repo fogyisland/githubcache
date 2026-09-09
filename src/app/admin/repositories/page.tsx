@@ -47,7 +47,7 @@ export default async function AdminRepositoriesPage({
   // M28 — admin tables use the user's TZ via the shared formatter
   // (CLAUDE.md: do NOT use `d.toISOString().slice(...)` for
   // user-facing dates — that pattern is reserved for machine APIs).
-  const userTz = resolveRequestTimezone({});
+  const userTz = await resolveRequestTimezone({});
 
   const filterStatus: FetchStatus | undefined =
     searchParams.status === 'ok' ||

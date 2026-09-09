@@ -35,7 +35,7 @@ export default async function AdminApiKeyDetailPage({
 }): Promise<ReactElement> {
   // api-keys detail doesn't validate its own session (layout.tsx gates auth);
   // read timezone from cookie/default only — no DB roundtrip.
-  const userTz = resolveRequestTimezone({});
+  const userTz = await resolveRequestTimezone({});
 
   const id = BigInt(params.id);
   const key = await getApiKeyById(id);

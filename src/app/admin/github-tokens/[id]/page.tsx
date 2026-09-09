@@ -34,7 +34,7 @@ export default async function AdminGithubTokenDetailPage({
 }: {
   params: { id: string };
 }): Promise<ReactElement> {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
   const session = await validateSession({
     headers: new Headers(),
@@ -47,7 +47,7 @@ export default async function AdminGithubTokenDetailPage({
     redirect('/admin');
   }
 
-  const userTz = resolveRequestTimezone({ dbValue: session.timezone });
+  const userTz = await resolveRequestTimezone({ dbValue: session.timezone });
 
   const t = await getTranslations('admin.githubTokens.detail');
 

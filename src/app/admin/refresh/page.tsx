@@ -27,7 +27,7 @@ export default async function AdminRefreshPage(): Promise<ReactElement> {
   const t = await getTranslations('admin.refresh');
 
   // Auth gate — admin only (per spec §9.1)
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
   const user = await validateSession({
     headers: new Headers(),
@@ -43,7 +43,7 @@ export default async function AdminRefreshPage(): Promise<ReactElement> {
     redirect('/admin');
   }
 
-  const userTz = resolveRequestTimezone({ dbValue: user.timezone });
+  const userTz = await resolveRequestTimezone({ dbValue: user.timezone });
 
   const [pendingJobs, repos] = await Promise.all([
     listPendingJobs(20),

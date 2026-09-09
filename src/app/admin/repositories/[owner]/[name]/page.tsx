@@ -89,7 +89,7 @@ export default async function AdminRepositoryDetailPage({
   const name = decodeURIComponent(params.name);
 
   // Layout already validated the session; we don't gate again here.
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(
     cookieStore.getAll().map((c) => [c.name, c.value]),
   );
@@ -100,7 +100,7 @@ export default async function AdminRepositoryDetailPage({
         cookieMap[key] !== undefined ? { value: cookieMap[key]! } : undefined,
     },
   });
-  const userTz = resolveRequestTimezone({ dbValue: session?.timezone ?? null });
+  const userTz = await resolveRequestTimezone({ dbValue: session?.timezone ?? null });
 
   const repo = await findRepoByCanonical(owner, name);
   if (!repo) notFound();

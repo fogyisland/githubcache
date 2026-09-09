@@ -29,7 +29,7 @@ export default async function ProviderDetailPage({
 }: {
   params: { id: string };
 }): Promise<ReactElement> {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(
     cookieStore.getAll().map((c) => [c.name, c.value]),
   );

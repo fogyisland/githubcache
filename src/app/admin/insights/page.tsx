@@ -31,7 +31,7 @@ const STALE_THRESHOLD_DAYS = 7;
 export default async function AdminInsightsHubPage(): Promise<ReactElement> {
   const t = await getTranslations('insights');
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(
     cookieStore.getAll().map((c) => [c.name, c.value]),
   );

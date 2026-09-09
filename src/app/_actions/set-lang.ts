@@ -42,7 +42,7 @@ export async function setLangAction(
   }
   const locale = parsed.data.locale;
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   cookieStore.set({
     name: LANG_COOKIE_NAME,
     value: locale,

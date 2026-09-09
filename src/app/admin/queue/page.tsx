@@ -28,7 +28,7 @@ const WINDOW_24H_MS = 24 * 60 * 60 * 1000;
  */
 export default async function AdminQueuePage(_props: object = {}): Promise<ReactElement> {
   // Auth gate — admin only (per spec).
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
   const user = await validateSession({
     headers: new Headers(),
@@ -44,7 +44,7 @@ export default async function AdminQueuePage(_props: object = {}): Promise<React
     redirect('/admin');
   }
 
-  const userTz = resolveRequestTimezone({ dbValue: user.timezone });
+  const userTz = await resolveRequestTimezone({ dbValue: user.timezone });
 
   const t = await getTranslations('admin.queue');
 

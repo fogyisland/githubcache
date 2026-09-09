@@ -46,7 +46,7 @@ export async function setTimezoneAction(
     return { status: 'invalid', message: 'unknown timezone' };
   }
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   cookieStore.set({
     name: TIMEZONE_COOKIE_NAME,
     value: tz,

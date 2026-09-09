@@ -49,7 +49,8 @@ export async function setAdminModeAction(
     return { status: 'invalid', message: 'unknown mode' };
   }
 
-  cookies().set({
+  const cookieStore = await cookies();
+  await cookieStore.set({
     name: ADMIN_MODE_COOKIE,
     value: mode,
     path: '/',

@@ -19,10 +19,10 @@ import { resolveTimezone, type TimezoneId } from './registry';
  * from `next/headers`'s `cookies()` API which Next.js guarantees to
  * match the request that triggered this render.
  */
-export function resolveRequestTimezone(opts: {
+export async function resolveRequestTimezone(opts: {
   dbValue?: string | null;
-}): TimezoneId {
-  const cookieStore = cookies();
+}): Promise<TimezoneId> {
+  const cookieStore = await cookies();
   const cookieHeader = cookieStore
     .getAll()
     .map((c) => `${c.name}=${c.value}`)

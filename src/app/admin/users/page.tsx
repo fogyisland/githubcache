@@ -37,7 +37,7 @@ export default async function AdminUsersPage({
 }: {
   searchParams: { role?: string; status?: string; source?: string; limit?: string; offset?: string };
 }): Promise<ReactElement> {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
   const user = await validateSession({
     headers: new Headers(),
@@ -50,7 +50,7 @@ export default async function AdminUsersPage({
     redirect('/admin');
   }
 
-  const userTz = resolveRequestTimezone({ dbValue: user.timezone });
+  const userTz = await resolveRequestTimezone({ dbValue: user.timezone });
 
   const t = await getTranslations('admin.users');
   const tPag = await getTranslations('admin.common.pagination');

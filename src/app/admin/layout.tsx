@@ -76,7 +76,7 @@ export default async function AdminLayout({
 }: {
   children: ReactNode;
 }): Promise<ReactElement> {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
   const user = await validateSession({
     headers: new Headers(),
@@ -106,7 +106,7 @@ export default async function AdminLayout({
 
   // Pathname header set by middleware (so the server component knows the
   // active route without a client roundtrip).
-  const headerStore = headers();
+  const headerStore = await headers();
   const pathname = headerStore.get('x-pathname') ?? '/admin';
   const currentSection = sectionForPath(pathname);
 

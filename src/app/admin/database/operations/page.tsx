@@ -35,7 +35,7 @@ const SLOW_QUERY_LIMIT = 20;
 export default async function AdminDatabaseOperationsPage(): Promise<ReactElement> {
   const t = await getTranslations('admin.database');
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(
     cookieStore.getAll().map((c) => [c.name, c.value]),
   );
@@ -53,7 +53,7 @@ export default async function AdminDatabaseOperationsPage(): Promise<ReactElemen
     redirect('/admin');
   }
 
-  const userTz = resolveRequestTimezone({ dbValue: user.timezone });
+  const userTz = await resolveRequestTimezone({ dbValue: user.timezone });
 
   const [backupsRaw, slow, binaryStatus] = await Promise.all([
     listBackups(),
@@ -68,7 +68,7 @@ export default async function AdminDatabaseOperationsPage(): Promise<ReactElemen
     mtime: b.mtime.toISOString(),
   }));
 
-  const pathname = headers().get('x-pathname') ?? '/admin/database/operations';
+  const pathname = (await headers()).get('x-pathname') ?? '/admin/database/operations';
 
   return (
     <div className="ghc-admin-page">

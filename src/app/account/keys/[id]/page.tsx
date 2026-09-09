@@ -26,7 +26,7 @@ export default async function AccountKeyDetailPage({
 }: {
   params: { id: string };
 }): Promise<ReactElement> {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
   const user = await validateSession({
     headers: new Headers(),
@@ -51,7 +51,7 @@ export default async function AccountKeyDetailPage({
   }
 
   const t = await getTranslations('account.keys.detail');
-  const userTz = resolveRequestTimezone({ dbValue: user.timezone });
+  const userTz = await resolveRequestTimezone({ dbValue: user.timezone });
 
   const audit = await queryAuditLog({
     targetType: 'api_key',

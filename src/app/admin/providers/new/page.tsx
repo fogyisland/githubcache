@@ -12,7 +12,7 @@ import { ProviderForm } from '../_components/provider-form';
  * Admin-only. Renders the create-mode provider form.
  */
 export default async function NewProviderPage(): Promise<ReactElement> {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(
     cookieStore.getAll().map((c) => [c.name, c.value]),
   );

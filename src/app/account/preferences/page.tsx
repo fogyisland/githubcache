@@ -22,7 +22,7 @@ import { isThemeId } from '@/lib/theme/themes';
  * looks distinct from the top-bar pill switchers.
  */
 export default async function AccountPreferencesPage(): Promise<ReactElement> {
-  const headersList = cookies();
+  const headersList = await cookies();
   const cookieMap = Object.fromEntries(headersList.getAll().map((c) => [c.name, c.value]));
   const cookieHeader = headersList
     .getAll()

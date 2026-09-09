@@ -51,9 +51,9 @@ export async function changePasswordAction(
   _prev: ChangePasswordState,
   formData: FormData,
 ): Promise<ChangePasswordState> {
-  const headersList = headers();
+  const headersList = await headers();
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
   const session = await validateSession({
     headers: new Headers(),

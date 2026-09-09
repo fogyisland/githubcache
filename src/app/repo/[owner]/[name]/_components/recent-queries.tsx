@@ -46,7 +46,7 @@ export async function RecentQueries({
   name,
 }: RecentQueriesProps): Promise<ReactElement> {
   const t = await getTranslations('repo.recentQueries');
-  const tz = resolveRequestTimezone({});
+  const tz = await resolveRequestTimezone({});
 
   const repoKey = `${owner}/${name}`;
 

@@ -40,7 +40,7 @@ export default async function AdminReportsPage(): Promise<ReactElement> {
   const t = await getTranslations('admin.reports');
 
   // Auth gate — admin OR operator (per spec §9.1)
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
   const user = await validateSession({
     headers: new Headers(),
@@ -53,7 +53,7 @@ export default async function AdminReportsPage(): Promise<ReactElement> {
     redirect('/login');
   }
 
-  const userTz = resolveRequestTimezone({ dbValue: user.timezone });
+  const userTz = await resolveRequestTimezone({ dbValue: user.timezone });
 
   const to = new Date();
   const from = new Date(to.getTime() - 24 * 60 * 60 * 1000);

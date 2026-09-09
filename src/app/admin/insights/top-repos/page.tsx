@@ -38,7 +38,7 @@ export default async function AdminInsightsTopReposPage({
   const t = await getTranslations('insights');
   const tPag = await getTranslations('admin.common.pagination');
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(
     cookieStore.getAll().map((c) => [c.name, c.value]),
   );
@@ -56,7 +56,7 @@ export default async function AdminInsightsTopReposPage({
     redirect('/admin');
   }
 
-  const userTz = resolveRequestTimezone({ dbValue: user.timezone });
+  const userTz = await resolveRequestTimezone({ dbValue: user.timezone });
 
   const sortBy: InsightsSortKey = isInsightsSortKey(searchParams.sort)
     ? searchParams.sort
