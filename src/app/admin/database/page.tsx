@@ -1,52 +1,35 @@
 import type { ReactElement } from 'react';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { getTranslations } from 'next-intl/server';
 import { validateSession } from '@/lib/auth/session';
-import { getDatabaseOverview, getTableStats } from '@/lib/database/overview';
-import { getTableDetails } from '@/lib/database/tables';
-import { topSlowQueries } from '@/lib/database/slow-queries';
-import { listBackups } from '@/lib/database/backup';
+import { getDatabaseOverview } from '@/lib/database/overview';
 import { getBinaryStatus, binariesReady } from '@/lib/database/binary-check';
-import { env } from '@/lib/config/env';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
-import { BinaryWarning } from './_components/binary-warning';
+import { AdminKpiCard } from '@/app/admin/_components/admin-kpi-card';
 import { Overview } from './_components/overview';
-import { BackupSection } from './_components/backup-section';
-import { resolveRequestTimezone } from '@/lib/timezone/resolve';
-
-interface BackupRowForClient {
-  filename: string;
-  size: number;
-  mtime: string;
-}
-import { RestoreSection } from './_components/restore-section';
-import { TablesSection } from './_components/tables-section';
-import { SlowQueriesSection } from './_components/slow-queries-section';
-import { PrismaStudioLink } from './_components/prisma-studio-link';
-import { SchemaUpgrade } from './_components/schema-upgrade';
-import { getMigrationStatus } from '@/lib/database/migrations';
-
-const SLOW_QUERY_LIMIT = 20;
+import { BinaryWarning } from './_components/binary-warning';
+import { AdminDatabaseTabs } from './_components/admin-database-tabs';
 
 /**
- * Admin → Database (M17).
+ * Admin → Database overview (M28.bug28).
  *
- * Single page that surfaces everything an operator needs to:
- *   - see DB version / host / total disk usage
- *   - back up the live DB to ./backups/
- *   - restore from a backup file (with blue/green RENAME swap +
- *     automatic pre-restore snapshot + RESTORE confirmation)
- *   - browse table schemas (columns + indexes)
- *   - see top 20 slow queries (when DB user has PROCESS privilege)
- *   - jump to Prisma Studio instructions
+ * Landing page. Loads only the data the overview card needs
+ * (DB version + table count + disk usage + binary status) and
+ * forwards operators to the dedicated sub-pages:
+ *   - /admin/database/schema     → tables, indexes, migrations
+ *   - /admin/database/operations → backups, restore, slow queries
  *
- * Admin-only because the page exposes hashes, secrets, and live row
- * counts. Operators do not act on any of these signals.
+ * Each sub-page does its own scoped data fetch — opening
+ * /admin/database/schema no longer pulls the slow-query log
+ * or backup directory like the old single-page version did.
  */
 export default async function AdminDatabasePage(): Promise<ReactElement> {
   const t = await getTranslations('admin.database');
 
+  // Layout already gates auth; this page also re-validates as defense
+  // in depth (the file is force-dynamic so the cookie lookup is fresh).
   const cookieStore = cookies();
   const cookieMap = Object.fromEntries(
     cookieStore.getAll().map((c) => [c.name, c.value]),
@@ -65,36 +48,12 @@ export default async function AdminDatabasePage(): Promise<ReactElement> {
     redirect('/admin');
   }
 
-  const userTz = resolveRequestTimezone({ dbValue: user.timezone });
+  const [overview, binaryStatus] = await Promise.all([
+    getDatabaseOverview(),
+    Promise.resolve(getBinaryStatus()),
+  ]);
 
-  const [overview, tableStats, tableDetails, slow, backupsRaw, binaryStatus, migrations] =
-    await Promise.all([
-      getDatabaseOverview(),
-      getTableStats(),
-      getTableDetails(),
-      topSlowQueries(SLOW_QUERY_LIMIT),
-      listBackups(),
-      Promise.resolve(getBinaryStatus()),
-      getMigrationStatus(),
-    ]);
-
-  // Normalize Date → ISO string for the client island (it's a server→client boundary).
-  const migrationRows = migrations.map((m) => ({
-    name: m.name,
-    timestamp: m.timestamp,
-    slug: m.slug,
-    applied: m.applied,
-    finishedAt: m.finishedAt ? m.finishedAt.toISOString() : null,
-  }));
-
-  // Server-side BackupFileInfo has mtime: Date; the client component
-  // wants mtime: ISO string for serialization. Normalize here so the
-  // type contract stays narrow in both directions.
-  const backups: BackupRowForClient[] = backupsRaw.map((b) => ({
-    filename: b.filename,
-    size: b.size,
-    mtime: b.mtime.toISOString(),
-  }));
+  const pathname = headers().get('x-pathname') ?? '/admin/database';
 
   return (
     <div className="ghc-admin-page">
@@ -106,6 +65,8 @@ export default async function AdminDatabasePage(): Promise<ReactElement> {
         title={t('title')}
         description={t('description')}
       />
+
+      <AdminDatabaseTabs pathname={pathname} />
 
       {!binariesReady() ? (
         <BinaryWarning
@@ -125,12 +86,19 @@ export default async function AdminDatabasePage(): Promise<ReactElement> {
         totalBytes={overview.totalBytes}
       />
 
-      <BackupSection initialBackups={backups} keepN={env.BACKUP_KEEP_N} tz={userTz} />
-      <RestoreSection backups={backups} />
-      <SchemaUpgrade initialMigrations={migrationRows} />
-      <TablesSection stats={tableStats} details={tableDetails} />
-      <SlowQueriesSection result={slow} limit={SLOW_QUERY_LIMIT} />
-      <PrismaStudioLink />
+      <section>
+        <h2 className="ghc-admin-section-title">{t('landing.quickHeading')}</h2>
+        <div className="ghc-admin-card-grid">
+          <Link href="/admin/database/schema" className="ghc-admin-card ghc-admin-card-link">
+            <h3 className="ghc-admin-card-title">{t('landing.schemaCardTitle')}</h3>
+            <p className="ghc-admin-card-desc">{t('landing.schemaCardDesc')}</p>
+          </Link>
+          <Link href="/admin/database/operations" className="ghc-admin-card ghc-admin-card-link">
+            <h3 className="ghc-admin-card-title">{t('landing.operationsCardTitle')}</h3>
+            <p className="ghc-admin-card-desc">{t('landing.operationsCardDesc')}</p>
+          </Link>
+        </div>
+      </section>
     </div>
   );
 }

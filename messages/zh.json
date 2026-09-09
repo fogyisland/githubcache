@@ -1008,7 +1008,30 @@
       "description": "查看数据库版本与容量、生成本地备份、从备份还原、浏览表结构、查看慢查询 TOP。",
       "breadcrumb": {
         "admin": "管理员",
-        "database": "数据库"
+        "database": "数据库",
+        "schema": "结构",
+        "operations": "运维"
+      },
+      "tabs": {
+        "label": "数据库分区",
+        "overview": "概览",
+        "schema": "结构",
+        "operations": "运维"
+      },
+      "landing": {
+        "quickHeading": "跳转到",
+        "schemaCardTitle": "结构",
+        "schemaCardDesc": "查看所有表、列、已应用/待应用的迁移记录。",
+        "operationsCardTitle": "运维",
+        "operationsCardDesc": "创建备份、从备份文件或上传恢复、查看慢查询 TOP 列表。"
+      },
+      "schema": {
+        "title": "结构",
+        "description": "所有表的列和索引，以及 Prisma 完整迁移历史。"
+      },
+      "operations": {
+        "title": "运维",
+        "description": "创建备份、从备份文件或上传恢复、查看慢查询 TOP 列表。"
       },
       "binaryWarning": {
         "heading": "备份二进制缺失",

@@ -1008,7 +1008,30 @@
       "description": "Inspect DB version + size, take local backups, restore from a backup file, browse table schemas, and view top slow queries.",
       "breadcrumb": {
         "admin": "Admin",
-        "database": "Database"
+        "database": "Database",
+        "schema": "Schema",
+        "operations": "Operations"
+      },
+      "tabs": {
+        "label": "Database sections",
+        "overview": "Overview",
+        "schema": "Schema",
+        "operations": "Operations"
+      },
+      "landing": {
+        "quickHeading": "Jump to",
+        "schemaCardTitle": "Schema",
+        "schemaCardDesc": "Browse all tables, their columns, and the applied/pending migration history.",
+        "operationsCardTitle": "Operations",
+        "operationsCardDesc": "Create backups, restore from a backup file or upload, and review top slow queries."
+      },
+      "schema": {
+        "title": "Schema",
+        "description": "Every table's columns and indexes, plus the full Prisma migration history."
+      },
+      "operations": {
+        "title": "Operations",
+        "description": "Create backups, restore from a backup file or upload, and review top slow queries."
       },
       "binaryWarning": {
         "heading": "Backup binaries missing",
