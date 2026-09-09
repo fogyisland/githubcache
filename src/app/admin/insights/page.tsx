@@ -29,7 +29,7 @@ const STALE_THRESHOLD_DAYS = 7;
  * Admin-only because all four pages expose live cache contents.
  */
 export default async function AdminInsightsHubPage(): Promise<ReactElement> {
-  const t = await getTranslations('admin.insights');
+  const t = await getTranslations('insights');
 
   const cookieStore = cookies();
   const cookieMap = Object.fromEntries(

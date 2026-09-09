@@ -4,21 +4,8 @@ import type { ReactElement, ReactNode } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { validateSession } from '@/lib/auth/session';
 import { LogoutButton } from '@/app/admin/logout-button';
-import { ThemeSwitcher } from '@/app/_components/theme-switcher';
-import { AdminVariantSwitcher } from '@/app/_components/admin-variant-switcher';
 import { AdminModeSwitcher } from '@/app/_components/admin-mode-switcher';
-import { LangSwitcher } from '@/app/_components/lang-switcher';
-import { TimezoneSwitcher } from '@/app/_components/timezone-switcher';
 import { AdminClock } from '@/app/_components/admin-clock';
-import { LOCALES } from '@/i18n/config';
-import { LANG_COOKIE } from '@/lib/lang/cookie';
-import { resolveLocale } from '@/lib/lang/registry';
-import {
-  DEFAULT_THEME,
-  isThemeId,
-  type ThemeId,
-} from '@/lib/theme/themes';
-import { THEME_COOKIE } from '@/lib/theme/cookie';
 import {
   ADMIN_VARIANT_COOKIE,
   ADMIN_MODE_COOKIE,
@@ -29,7 +16,6 @@ import {
   type AdminVariantId,
 } from '@/lib/admin/variant';
 import { resolveAdminMode, type AdminModeId } from '@/lib/admin/mode';
-import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 import { AdminShell } from '@/app/admin/_components/admin-shell';
 import { CommandPalette } from '@/app/admin/_components/command-palette';
 import {
@@ -94,9 +80,6 @@ export default async function AdminLayout({
     redirect('/login');
   }
 
-  const currentTheme: ThemeId = isThemeId(cookieStore.get(THEME_COOKIE)?.value)
-    ? (cookieStore.get(THEME_COOKIE)!.value as ThemeId)
-    : DEFAULT_THEME;
   const currentAdminVariant: AdminVariantId = isAdminVariant(
     cookieStore.get(ADMIN_VARIANT_COOKIE)?.value,
   )
@@ -108,18 +91,6 @@ export default async function AdminLayout({
   const currentAdminMode: AdminModeId = resolveAdminMode(
     cookieStore.get(ADMIN_MODE_COOKIE)?.value,
   );
-
-  const currentLang = resolveLocale({
-    cookieValue: cookieStore.get(LANG_COOKIE)?.value ?? null,
-    dbValue: user.lang,
-  });
-
-  // M23 — resolve the effective timezone for this render. The cookie wins
-  // over the DB value (most-recent user choice), DB wins over the default.
-  // Resolved here so the <TimezoneSwitcher> renders with the correct default
-  // and child pages can call `resolveRequestTimezone({ dbValue: user.timezone })`
-  // themselves if they need to format dates in user-local time.
-  const currentTz = resolveRequestTimezone({ dbValue: user.timezone });
 
   const tShell = await getTranslations('admin.shell');
 
@@ -169,9 +140,12 @@ export default async function AdminLayout({
   return (
     <div>
       {/* Top utility bar — slim 56px chrome.
-          Left: user identity pill. Right: settings cluster (mode, lang, tz, theme, clock, logout). */}
+          Left: UTC + local clock. Right: user identity pill (avatar + email + role + logout). */}
       <div className="ghc-admin-utility">
         <div className="ghc-admin-utility-left">
+          <AdminClock />
+        </div>
+        <div className="ghc-admin-utility-right">
           <span className="ghc-admin-user-pill">
             <span className="ghc-admin-user-avatar" aria-hidden="true">
               {user.email.slice(0, 1).toUpperCase()}
@@ -179,14 +153,7 @@ export default async function AdminLayout({
             <span className="ghc-admin-user-email">{user.email}</span>
             <span className="ghc-admin-user-role">{tShell(`role.${user.role}`)}</span>
           </span>
-          <AdminVariantSwitcher current={currentAdminVariant} />
-          <AdminClock />
-        </div>
-        <div className="ghc-admin-utility-right">
           <AdminModeSwitcher current={currentAdminMode} />
-          <LangSwitcher current={currentLang} locales={LOCALES} />
-          <TimezoneSwitcher current={currentTz} />
-          <ThemeSwitcher current={currentTheme} />
           <LogoutButton />
         </div>
       </div>

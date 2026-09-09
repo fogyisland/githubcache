@@ -32,7 +32,7 @@ export default async function AdminInsightsHealthPage({
 }: {
   searchParams: { limit?: string; offset?: string };
 }): Promise<ReactElement> {
-  const t = await getTranslations('admin.insights');
+  const t = await getTranslations('insights');
   const tPag = await getTranslations('admin.common.pagination');
 
   const cookieStore = cookies();

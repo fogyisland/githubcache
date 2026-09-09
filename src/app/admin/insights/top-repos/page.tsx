@@ -35,7 +35,7 @@ export default async function AdminInsightsTopReposPage({
 }: {
   searchParams: { language?: string; sort?: string; limit?: string; offset?: string };
 }): Promise<ReactElement> {
-  const t = await getTranslations('admin.insights');
+  const t = await getTranslations('insights');
   const tPag = await getTranslations('admin.common.pagination');
 
   const cookieStore = cookies();

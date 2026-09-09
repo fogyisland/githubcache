@@ -19,7 +19,7 @@ const TOP_N = 20;
  * screen of data.
  */
 export default async function AdminInsightsLanguagesPage(): Promise<ReactElement> {
-  const t = await getTranslations('admin.insights');
+  const t = await getTranslations('insights');
 
   const cookieStore = cookies();
   const cookieMap = Object.fromEntries(
