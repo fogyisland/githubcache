@@ -201,12 +201,17 @@ export interface DistributionBucket {
  */
 export async function languageDistribution(limit: number): Promise<DistributionBucket[]> {
   type RawBucket = { language: string; count: bigint };
+  // Derived table wrapper avoids MySQL only_full_group_by rejection: the
+  // outer GROUP BY language then sees a real column, not a JSON expression
+  // that's only functionally dependent on `metadata`.
   const rows = await prisma.$queryRaw<RawBucket[]>`
-    SELECT JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.language')) AS language, COUNT(*) AS count
-    FROM repositories
-    WHERE fetch_status = 'ok'
-      AND metadata IS NOT NULL
-      AND JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.language')) <> ''
+    SELECT language, COUNT(*) AS count
+    FROM (
+      SELECT JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.language')) AS language
+      FROM repositories
+      WHERE fetch_status = 'ok' AND metadata IS NOT NULL
+    ) t
+    WHERE language <> ''
     GROUP BY language
     ORDER BY count DESC
     LIMIT ${limit}

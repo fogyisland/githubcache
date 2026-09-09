@@ -1,7 +1,6 @@
 'use server';
 
 import { spawnSync } from 'node:child_process';
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { logger } from '@/lib/logger';
 
