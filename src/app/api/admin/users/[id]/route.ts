@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { validateSession } from '@/lib/auth/session';
-import { cookiesFromRequest } from '@/lib/auth/cookies-from-request';
+import { requireAdminFromRequest } from '@/lib/auth/require-admin';
 import { verifyCsrf } from '@/lib/auth/csrf';
 import { getUserById, updateUserStatus } from '@/lib/db/users';
 import { invalidateAllSessionsForUser } from '@/lib/db/sessions';
@@ -12,34 +11,6 @@ const PatchBody = z.object({
   status: z.enum(['active', 'disabled']),
   csrf: z.string().min(1),
 });
-
-interface AuthOk {
-  ok: true;
-  user: { id: bigint; role: string };
-}
-interface AuthFail {
-  ok: false;
-  res: Response;
-}
-
-/**
- * Verify the requester is an authenticated admin.
- *
- * The cookieMap / validateSession pattern is the same as in /api/admin/users/invite.
- */
-async function requireAdmin(req: Request): Promise<AuthOk | AuthFail> {
-  const user = await validateSession({
-    headers: req.headers,
-    cookies: cookiesFromRequest(req),
-  });
-  if (!user || user.role !== 'admin') {
-    return {
-      ok: false,
-      res: apiError('forbidden', 'forbidden', {}, req),
-    };
-  }
-  return { ok: true, user };
-}
 
 /**
  * PATCH /api/admin/users/[id]
@@ -62,8 +33,8 @@ export async function PATCH(
   req: Request,
   { params }: { params: { id: string } },
 ): Promise<Response> {
-  const auth = await requireAdmin(req);
-  if (!auth.ok) return auth.res;
+  const auth = await requireAdminFromRequest(req);
+  if (!auth.ok) return auth.response;
 
   let id: bigint;
   try {
@@ -133,8 +104,8 @@ export async function DELETE(
   req: Request,
   { params }: { params: { id: string } },
 ): Promise<Response> {
-  const auth = await requireAdmin(req);
-  if (!auth.ok) return auth.res;
+  const auth = await requireAdminFromRequest(req);
+  if (!auth.ok) return auth.response;
 
   let id: bigint;
   try {
