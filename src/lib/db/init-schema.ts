@@ -93,7 +93,7 @@ const CREATE_TABLE_STATEMENTS: ReadonlyArray<string> = [
     PRIMARY KEY (\`id\`)
   ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 
-  // sessions — M6
+  // sessions — M6 (FK to users)
   `CREATE TABLE IF NOT EXISTS \`sessions\` (
     \`id\` CHAR(43) NOT NULL,
     \`user_id\` BIGINT NOT NULL,
@@ -101,10 +101,11 @@ const CREATE_TABLE_STATEMENTS: ReadonlyArray<string> = [
     \`created_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     \`ip\` VARCHAR(45) NULL,
     INDEX \`sessions_user_id_idx\`(\`user_id\`),
-    PRIMARY KEY (\`id\`)
+    PRIMARY KEY (\`id\`),
+    CONSTRAINT \`sessions_user_id_fkey\` FOREIGN KEY (\`user_id\`) REFERENCES \`users\`(\`id\`) ON DELETE RESTRICT ON UPDATE CASCADE
   ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 
-  // invitations — M6
+  // invitations — M6 (FK to users for inviter)
   `CREATE TABLE IF NOT EXISTS \`invitations\` (
     \`id\` CHAR(32) NOT NULL,
     \`email\` VARCHAR(255) NOT NULL,
@@ -114,10 +115,11 @@ const CREATE_TABLE_STATEMENTS: ReadonlyArray<string> = [
     \`consumed_at\` DATETIME(3) NULL,
     \`created_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     INDEX \`invitations_email_idx\`(\`email\`),
-    PRIMARY KEY (\`id\`)
+    PRIMARY KEY (\`id\`),
+    CONSTRAINT \`invitations_invited_by_fkey\` FOREIGN KEY (\`invited_by\`) REFERENCES \`users\`(\`id\`) ON DELETE RESTRICT ON UPDATE CASCADE
   ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 
-  // api_keys — M3
+  // api_keys — M3 (FK to users + self-referencing approver)
   `CREATE TABLE IF NOT EXISTS \`api_keys\` (
     \`id\` BIGINT NOT NULL AUTO_INCREMENT,
     \`user_id\` BIGINT NOT NULL,
@@ -134,7 +136,9 @@ const CREATE_TABLE_STATEMENTS: ReadonlyArray<string> = [
     \`last_used_at\` DATETIME(3) NULL,
     UNIQUE INDEX \`api_keys_key_hash_key\`(\`key_hash\`),
     INDEX \`api_keys_status_idx\`(\`status\`),
-    PRIMARY KEY (\`id\`)
+    PRIMARY KEY (\`id\`),
+    CONSTRAINT \`api_keys_user_id_fkey\` FOREIGN KEY (\`user_id\`) REFERENCES \`users\`(\`id\`) ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT \`api_keys_approved_by_fkey\` FOREIGN KEY (\`approved_by\`) REFERENCES \`users\`(\`id\`) ON DELETE SET NULL ON UPDATE CASCADE
   ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 
   // audit_log — M3
@@ -186,7 +190,7 @@ const CREATE_TABLE_STATEMENTS: ReadonlyArray<string> = [
     PRIMARY KEY (\`id\`)
   ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 
-  // refresh_jobs — M5 + M27 facet kind
+  // refresh_jobs — M5 + M27 facet kind (FK to repositories)
   `CREATE TABLE IF NOT EXISTS \`refresh_jobs\` (
     \`id\` BIGINT NOT NULL AUTO_INCREMENT,
     \`repository_id\` BIGINT NOT NULL,
@@ -201,10 +205,11 @@ const CREATE_TABLE_STATEMENTS: ReadonlyArray<string> = [
     \`updated_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
     INDEX \`refresh_jobs_status_scheduled_for_idx\`(\`status\`, \`scheduled_for\`),
     INDEX \`refresh_jobs_status_priority_idx\`(\`status\`, \`priority\`),
-    PRIMARY KEY (\`id\`)
+    PRIMARY KEY (\`id\`),
+    CONSTRAINT \`refresh_jobs_repository_id_fkey\` FOREIGN KEY (\`repository_id\`) REFERENCES \`repositories\`(\`id\`) ON DELETE RESTRICT ON UPDATE CASCADE
   ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 
-  // rate_limit_buckets — M8
+  // rate_limit_buckets — M8 (FK to api_keys, CASCADE on api-key delete)
   `CREATE TABLE IF NOT EXISTS \`rate_limit_buckets\` (
     \`id\` BIGINT NOT NULL AUTO_INCREMENT,
     \`api_key_id\` BIGINT NOT NULL,
@@ -214,7 +219,8 @@ const CREATE_TABLE_STATEMENTS: ReadonlyArray<string> = [
     \`created_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     UNIQUE INDEX \`rate_limit_buckets_api_key_id_key\`(\`api_key_id\`),
     INDEX \`rate_limit_buckets_window_start_idx\`(\`window_start\`),
-    PRIMARY KEY (\`id\`)
+    PRIMARY KEY (\`id\`),
+    CONSTRAINT \`rate_limit_buckets_api_key_id_fkey\` FOREIGN KEY (\`api_key_id\`) REFERENCES \`api_keys\`(\`id\`) ON DELETE CASCADE ON UPDATE CASCADE
   ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 
   // ip_rate_limit_buckets — M9
@@ -245,7 +251,7 @@ const CREATE_TABLE_STATEMENTS: ReadonlyArray<string> = [
     PRIMARY KEY (\`id\`)
   ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 
-  // webhook_deliveries — M14.6
+  // webhook_deliveries — M14.6 (FK to webhook_subscriptions, CASCADE)
   `CREATE TABLE IF NOT EXISTS \`webhook_deliveries\` (
     \`id\` BIGINT NOT NULL AUTO_INCREMENT,
     \`subscription_id\` BIGINT NOT NULL,
@@ -264,7 +270,8 @@ const CREATE_TABLE_STATEMENTS: ReadonlyArray<string> = [
     \`updated_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
     INDEX \`webhook_deliveries_status_next_retry_at_idx\`(\`status\`, \`next_retry_at\`),
     INDEX \`webhook_deliveries_subscription_id_created_at_idx\`(\`subscription_id\`, \`created_at\`),
-    PRIMARY KEY (\`id\`)
+    PRIMARY KEY (\`id\`),
+    CONSTRAINT \`webhook_deliveries_subscription_id_fkey\` FOREIGN KEY (\`subscription_id\`) REFERENCES \`webhook_subscriptions\`(\`id\`) ON DELETE CASCADE ON UPDATE CASCADE
   ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 
   // ingestion_providers — M19
@@ -315,7 +322,7 @@ const CREATE_TABLE_STATEMENTS: ReadonlyArray<string> = [
     PRIMARY KEY (\`id\`)
   ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 
-  // repo_releases — M27
+  // repo_releases — M27 (FK to repositories, CASCADE)
   `CREATE TABLE IF NOT EXISTS \`repo_releases\` (
     \`id\` BIGINT NOT NULL AUTO_INCREMENT,
     \`repository_id\` BIGINT NOT NULL,
@@ -327,10 +334,11 @@ const CREATE_TABLE_STATEMENTS: ReadonlyArray<string> = [
     \`fetched_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     UNIQUE INDEX \`repo_releases_repository_id_tag_key\`(\`repository_id\`, \`tag\`),
     INDEX \`repo_releases_repository_id_published_at_idx\`(\`repository_id\`, \`published_at\`),
-    PRIMARY KEY (\`id\`)
+    PRIMARY KEY (\`id\`),
+    CONSTRAINT \`repo_releases_repository_id_fkey\` FOREIGN KEY (\`repository_id\`) REFERENCES \`repositories\`(\`id\`) ON DELETE CASCADE ON UPDATE CASCADE
   ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 
-  // repo_branches — M27
+  // repo_branches — M27 (FK to repositories, CASCADE)
   `CREATE TABLE IF NOT EXISTS \`repo_branches\` (
     \`id\` BIGINT NOT NULL AUTO_INCREMENT,
     \`repository_id\` BIGINT NOT NULL,
@@ -339,7 +347,8 @@ const CREATE_TABLE_STATEMENTS: ReadonlyArray<string> = [
     \`last_commit_sha\` VARCHAR(64) NULL,
     \`fetched_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     UNIQUE INDEX \`repo_branches_repository_id_name_key\`(\`repository_id\`, \`name\`),
-    PRIMARY KEY (\`id\`)
+    PRIMARY KEY (\`id\`),
+    CONSTRAINT \`repo_branches_repository_id_fkey\` FOREIGN KEY (\`repository_id\`) REFERENCES \`repositories\`(\`id\`) ON DELETE CASCADE ON UPDATE CASCADE
   ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 ];
 
