@@ -1,5 +1,5 @@
 /**
- * Build a release artifact under `dist/release/vX.Y.Z/githubcache-vX.Y.Z/`.
+ * Build a release artifact under `release/githubcache/`.
  *
  * What gets shipped (clean source tree, no dev artefacts):
  *   - package.json + package-lock.json
@@ -19,7 +19,10 @@
  *   - tests/, docs/, .superpowers/, tsconfig.tsbuildinfo
  *   - *.log, *.bak, *.tmp
  *   - .env  (secrets — never ship)
- *   - dist/  (this output directory)
+ *   - dist/  (legacy dist/ output dir, if any)
+ *   - release/  (this script's own output — MUST be excluded, otherwise
+ *                each run copies the previous release tree into itself,
+ *                nesting `release/githubcache/release/githubcache/...`)
  *
  * Usage:
  *   npm run release                        # uses package.json version
@@ -81,6 +84,8 @@ const EXCLUDE_DIRS = new Set([
   'tests',
   'docs',
   'dist',
+  'release',     // M28.bug27 — exclude this script's own output to prevent
+                 // the matryoshka (release/githubcache/release/githubcache/...)
   'backups',
 ]);
 
