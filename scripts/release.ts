@@ -301,9 +301,12 @@ function main(): void {
   console.log(`\nOn the server:`);
   console.log(`  cd ${releaseDirName}`);
   console.log(`  npm ci --omit=dev`);
-  console.log(`  npm run build`);
+  console.log(`  npm run build       # ALWAYS delete .next first if upgrading:`);
+  console.log(`                     #   rm -rf .next && npm run build`);
+  console.log(`                     # Stale .next/ chunks can ship react-dom.development`);
+  console.log(`                     # and cause React 'startTime' render errors in the browser.`);
   console.log(`  npm run start:server`);
-  console.log(`  # then visit /init in a browser`);
+  console.log(`  # Browser: hard-refresh (Ctrl+Shift+R) to clear stale chunks`);
 }
 
 main();
