@@ -1,0 +1,28 @@
+--- a/node_modules/next/dist/client/dev/hot-reloader/app/use-websocket.js
++++ b/node_modules/next/dist/client/dev/hot-reloader/app/use-websocket.js
+@@ -78,6 +78,13 @@
+             return;
+         }
+         initCurrent.init = true;
++        // PATCH (githubcache): swallow the missing-turbopack rejection.
++        // Next 15.5 dynamically imports @vercel/turbopack-.../hmr-client
++        // unconditionally, but the module only exists in turbopack builds.
++        // Without this catch the unhandled rejection surfaces in the
++        // browser console as `Module is not available (weak dependency)`
++        // and in some browsers aborts the pending idle frame, which
++        // breaks App Router soft-navigations (sidebar highlight stalls).
+         import(// @ts-expect-error requires "moduleResolution": "node16" in tsconfig.json and not .ts extension
+         '@vercel/turbopack-ecmascript-runtime/browser/dev/hmr-client/hmr-client.ts').then((param)=>{
+             let { connect } = param;
+@@ -94,7 +101,10 @@
+                 sendMessage,
+                 onUpdateError
+             });
+-        });
++        // PATCH (githubcache): see comment above the import() — also
++        // catch synchronous errors thrown by `import()` and ignore
++        // them (we already gave up before the .then() ran).
++        }).catch(() => {});
+     }, [
+         sendMessage,
+         onUpdateError

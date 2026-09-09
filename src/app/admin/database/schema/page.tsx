@@ -1,11 +1,9 @@
 import type { ReactElement } from 'react';
-import { redirect } from 'next/navigation';
-import { cookies, headers } from 'next/headers';
 import { getTranslations } from 'next-intl/server';
-import { validateSession } from '@/lib/auth/session';
 import { getTableStats } from '@/lib/database/overview';
 import { getTableDetails } from '@/lib/database/tables';
 import { getMigrationStatus } from '@/lib/database/migrations';
+import { requireAdmin } from '@/lib/auth/require-admin';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { AdminDatabaseTabs } from '../_components/admin-database-tabs';
 import { TablesSection } from '../_components/tables-section';
@@ -28,24 +26,7 @@ interface MigrationRowForClient {
  */
 export default async function AdminDatabaseSchemaPage(): Promise<ReactElement> {
   const t = await getTranslations('admin.database');
-
-  const cookieStore = await cookies();
-  const cookieMap = Object.fromEntries(
-    cookieStore.getAll().map((c) => [c.name, c.value]),
-  );
-  const user = await validateSession({
-    headers: new Headers(),
-    cookies: {
-      get: (name: string) =>
-        cookieMap[name] !== undefined ? { value: cookieMap[name]! } : undefined,
-    },
-  });
-  if (!user) {
-    redirect('/login');
-  }
-  if (user.role !== 'admin') {
-    redirect('/admin');
-  }
+  const { pathname } = await requireAdmin();
 
   const [tableStats, tableDetails, migrations] = await Promise.all([
     getTableStats(),
@@ -61,8 +42,6 @@ export default async function AdminDatabaseSchemaPage(): Promise<ReactElement> {
     applied: m.applied,
     finishedAt: m.finishedAt ? m.finishedAt.toISOString() : null,
   }));
-
-  const pathname = (await headers()).get('x-pathname') ?? '/admin/database/schema';
 
   return (
     <div className="ghc-admin-page">

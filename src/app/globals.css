@@ -3284,6 +3284,135 @@ a {
   gap: 1rem;
 }
 
+/* ghc-db-health — M28 health card on /admin/database landing. Dark
+   on light, status-tinted via [data-tone]. Mirrors the SMTP status
+   card pattern. */
+.ghc-db-health {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+}
+.ghc-db-health[data-tone='ok'] {
+  border-color: color-mix(in srgb, #10B981 35%, var(--border));
+  background: color-mix(in srgb, #10B981 4%, var(--surface));
+}
+.ghc-db-health[data-tone='warn'] {
+  border-color: color-mix(in srgb, #F59E0B 40%, var(--border));
+  background: color-mix(in srgb, #F59E0B 4%, var(--surface));
+}
+.ghc-db-health[data-tone='danger'] {
+  border-color: color-mix(in srgb, #EF4444 40%, var(--border));
+  background: color-mix(in srgb, #EF4444 4%, var(--surface));
+}
+.ghc-db-health-row {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr auto;
+  align-items: center;
+  gap: 1.5rem;
+}
+@media (max-width: 768px) {
+  .ghc-db-health-row { grid-template-columns: 1fr; }
+}
+.ghc-db-health-marker {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--surface-raised);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ghc-db-health-dot {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  display: inline-block;
+}
+.ghc-db-health-dot-ok {
+  background: #10B981;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #10B981 25%, transparent);
+}
+.ghc-db-health-dot-warn {
+  background: #F59E0B;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #F59E0B 25%, transparent);
+}
+.ghc-db-health-dot-danger {
+  background: #EF4444;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #EF4444 25%, transparent);
+}
+.ghc-db-health-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+.ghc-db-health-value {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  margin-top: 0.125rem;
+}
+.ghc-db-health-filename {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+.ghc-db-health-actions {
+  display: flex;
+}
+
+/* ghc-admin-quick-nav — replacement for the old `ghc-admin-card-link`
+   pair on /admin/database landing. Two side-by-side nav cards, not
+   a card grid. */
+.ghc-admin-quick-nav {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.75rem;
+}
+.ghc-admin-quick-link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  text-decoration: none;
+  transition: border-color 120ms ease, transform 80ms ease;
+  position: relative;
+}
+.ghc-admin-quick-link:hover,
+.ghc-admin-quick-link:focus-visible {
+  border-color: var(--brand);
+}
+.ghc-admin-quick-link-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+.ghc-admin-quick-link-desc {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+.ghc-admin-quick-link-arrow {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  color: var(--text-tertiary);
+  font-size: 0.875rem;
+  transition: transform 120ms ease, color 120ms ease;
+}
+.ghc-admin-quick-link:hover .ghc-admin-quick-link-arrow,
+.ghc-admin-quick-link:focus-visible .ghc-admin-quick-link-arrow {
+  color: var(--brand);
+  transform: translateX(2px);
+}
+
 .ghc-admin-card {
   /* M28 — unified with ghc-api-settings-card. Same chrome (white
      surface, 1px border, 8px radius, 1.5rem padding) so cards look

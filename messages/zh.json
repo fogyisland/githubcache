@@ -1040,6 +1040,12 @@
         "operationsCardTitle": "运维",
         "operationsCardDesc": "创建备份、从备份文件或上传恢复、查看慢查询 TOP 列表。"
       },
+      "health": {
+        "lastBackup": "最近备份",
+        "never": "暂无",
+        "diskUsage": "磁盘占用",
+        "backUpNow": "立即备份"
+      },
       "schema": {
         "title": "结构",
         "description": "所有表的列和索引，以及 Prisma 完整迁移历史。"

@@ -1,12 +1,10 @@
 import type { ReactElement } from 'react';
-import { redirect } from 'next/navigation';
-import { cookies, headers } from 'next/headers';
 import { getTranslations } from 'next-intl/server';
-import { validateSession } from '@/lib/auth/session';
 import { listBackups } from '@/lib/database/backup';
 import { topSlowQueries } from '@/lib/database/slow-queries';
 import { getBinaryStatus, binariesReady } from '@/lib/database/binary-check';
 import { env } from '@/lib/config/env';
+import { requireAdmin } from '@/lib/auth/require-admin';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { AdminDatabaseTabs } from '../_components/admin-database-tabs';
 import { BinaryWarning } from '../_components/binary-warning';
@@ -34,25 +32,7 @@ const SLOW_QUERY_LIMIT = 20;
  */
 export default async function AdminDatabaseOperationsPage(): Promise<ReactElement> {
   const t = await getTranslations('admin.database');
-
-  const cookieStore = await cookies();
-  const cookieMap = Object.fromEntries(
-    cookieStore.getAll().map((c) => [c.name, c.value]),
-  );
-  const user = await validateSession({
-    headers: new Headers(),
-    cookies: {
-      get: (name: string) =>
-        cookieMap[name] !== undefined ? { value: cookieMap[name]! } : undefined,
-    },
-  });
-  if (!user) {
-    redirect('/login');
-  }
-  if (user.role !== 'admin') {
-    redirect('/admin');
-  }
-
+  const { user, pathname } = await requireAdmin();
   const userTz = await resolveRequestTimezone({ dbValue: user.timezone });
 
   const [backupsRaw, slow, binaryStatus] = await Promise.all([
@@ -67,8 +47,6 @@ export default async function AdminDatabaseOperationsPage(): Promise<ReactElemen
     size: b.size,
     mtime: b.mtime.toISOString(),
   }));
-
-  const pathname = (await headers()).get('x-pathname') ?? '/admin/database/operations';
 
   return (
     <div className="ghc-admin-page">

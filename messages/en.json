@@ -1040,6 +1040,12 @@
         "operationsCardTitle": "Operations",
         "operationsCardDesc": "Create backups, restore from a backup file or upload, and review top slow queries."
       },
+      "health": {
+        "lastBackup": "Last backup",
+        "never": "Never",
+        "diskUsage": "Disk usage",
+        "backUpNow": "Back up now"
+      },
       "schema": {
         "title": "Schema",
         "description": "Every table's columns and indexes, plus the full Prisma migration history."

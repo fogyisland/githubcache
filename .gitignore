@@ -10,6 +10,8 @@ coverage/
 .superpowers/
 *.tsbuildinfo
 .claude/
+# patch-package generated patches (committed so postinstall reapplies)
+patches/
 # Playwright e2e (M7.7) — runtime/test artifacts
 test-results/
 playwright-report/
