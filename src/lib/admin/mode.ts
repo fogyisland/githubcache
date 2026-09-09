@@ -19,7 +19,7 @@
 export const ADMIN_MODE_IDS = ['light', 'dark'] as const;
 export type AdminModeId = (typeof ADMIN_MODE_IDS)[number];
 
-export const DEFAULT_ADMIN_MODE: AdminModeId = 'dark';
+export const DEFAULT_ADMIN_MODE: AdminModeId = 'light';
 
 export interface AdminModeMeta {
   id: AdminModeId;

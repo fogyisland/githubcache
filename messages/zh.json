@@ -52,19 +52,8 @@
     "no": "否"
   },
   "adminMode": {
-    "aria": "管理后台配色",
-    "label": {
-      "light": "亮色",
-      "dark": "暗色"
-    },
-    "fullLabel": {
-      "light": "白昼模式",
-      "dark": "夜幕模式"
-    },
-    "switchTo": "切换到{name} — {mood}",
-    "status": {
-      "ok": "管理后台已切换为{mode}"
-    }
+    "toggleTo": "切换到{name} — {mood}",
+    "switchedTo": "管理后台已切换为{name}"
   },
   "nav": {
     "home": "首页",

@@ -20,10 +20,10 @@ describe('admin mode registry', () => {
     expect(ADMIN_MODES.dark.id).toBe('dark');
   });
 
-  it('defaults to dark when no preference is given', () => {
-    expect(DEFAULT_ADMIN_MODE).toBe('dark');
-    expect(resolveAdminMode(undefined)).toBe('dark');
-    expect(resolveAdminMode(null)).toBe('dark');
+  it('defaults to light when no preference is given', () => {
+    expect(DEFAULT_ADMIN_MODE).toBe('light');
+    expect(resolveAdminMode(undefined)).toBe('light');
+    expect(resolveAdminMode(null)).toBe('light');
   });
 
   it('accepts known mode ids and rejects everything else', () => {

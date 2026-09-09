@@ -307,6 +307,46 @@ a {
     cursor: not-allowed;
   }
 
+  /* ghc-mode-toggle — M28.bug28 sun/moon icon button (replaces the
+     dual-pill row above). One icon button in the top-right utility bar
+     that flips admin light/dark mode. The icon itself shows the
+     *destination* state. Works in both admin modes because the colors
+     read from --admin-* tokens. */
+  .ghc-mode-toggle-form {
+    display: inline-flex;
+    align-items: center;
+  }
+  .ghc-mode-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+    background: transparent;
+    color: var(--admin-ink-muted, var(--color-ink-muted));
+    border: 1px solid transparent;
+    border-radius: var(--radius-pill, 999px);
+    cursor: pointer;
+    transition:
+      background 120ms ease,
+      color 120ms ease,
+      border-color 120ms ease;
+  }
+  .ghc-mode-toggle:hover {
+    background: color-mix(in srgb, var(--admin-accent, var(--color-accent)) 12%, transparent);
+    color: var(--admin-accent, var(--color-accent));
+    border-color: color-mix(in srgb, var(--admin-accent, var(--color-accent)) 35%, transparent);
+  }
+  .ghc-mode-toggle:focus-visible {
+    outline: 2px solid var(--admin-accent, var(--color-accent));
+    outline-offset: 2px;
+  }
+  .ghc-mode-toggle:disabled {
+    opacity: 0.55;
+    cursor: progress;
+  }
+
   /* ghc-account-sidebar-list / link — the /account section sidebar.
      Active state is conveyed via [data-active="true"] so the same
      class works for all 3 themes via the standard tokens. */
