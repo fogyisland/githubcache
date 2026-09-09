@@ -1,6 +1,7 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
+import { useActionState } from 'react';;
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { signupAction, type SignupState } from '@/app/signup/_actions/signup';
@@ -72,7 +73,7 @@ function SubmitBtn(): React.ReactElement {
 /**
  * Public signup form.
  *
- * Mirrors `src/app/login/_login-form.tsx` in shape (useFormState +
+ * Mirrors `src/app/login/_login-form.tsx` in shape (useActionState +
  * field-level errors), but submits via a server action rather than
  * fetch + CSRF — server actions get CSRF protection from Next.js
  * (the framework stamps its own token), so we don't need to fetch
@@ -81,7 +82,7 @@ function SubmitBtn(): React.ReactElement {
 export function SignupForm(): React.ReactElement {
   const t = useTranslations('signup');
   const tErr = useTranslations('signup.error');
-  const [state, formAction] = useFormState(signupAction, INITIAL);
+  const [state, formAction] = useActionState(signupAction, INITIAL);
   const f = state.fieldErrors;
 
   return (

@@ -1,6 +1,7 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
+import { useActionState } from 'react';;
 import { useTranslations } from 'next-intl';
 import { requestKeyAction, type RequestKeyState } from '@/app/account/keys/request/_actions/request';
 
@@ -26,7 +27,7 @@ function SubmitBtn(): React.ReactElement {
  */
 export function RequestKeyForm(): React.ReactElement {
   const t = useTranslations('account.keys.request');
-  const [state, formAction] = useFormState(requestKeyAction, INITIAL);
+  const [state, formAction] = useActionState(requestKeyAction, INITIAL);
   const f = state.fieldErrors;
 
   return (

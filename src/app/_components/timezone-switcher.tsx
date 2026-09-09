@@ -1,6 +1,6 @@
 'use client';
 
-import { useFormState } from 'react-dom';
+import { useActionState } from 'react';
 import { useTranslations } from 'next-intl';
 import { setTimezoneAction, type SetTimezoneState } from '@/app/_actions/set-timezone';
 import { TIMEZONE_IDS, TIMEZONES, type TimezoneId } from '@/lib/timezone/registry';
@@ -21,7 +21,7 @@ const INITIAL: SetTimezoneState = { status: 'idle' };
  */
 export function TimezoneSwitcher({ current }: Props): React.ReactElement {
   const t = useTranslations('timezone');
-  const [state, formAction] = useFormState(setTimezoneAction, INITIAL);
+  const [state, formAction] = useActionState(setTimezoneAction, INITIAL);
   return (
     <form action={formAction} className="ghc-tz-form" aria-label={t('aria')}>
       <label className="sr-only" htmlFor="ghc-tz-select">{t('aria')}</label>

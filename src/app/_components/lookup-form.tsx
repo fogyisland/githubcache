@@ -1,6 +1,6 @@
 'use client';
 
-import { useFormState } from 'react-dom';
+import { useActionState } from 'react';
 import { useTranslations } from 'next-intl';
 import { lookupAction, type LookupFormState } from '@/app/_actions/lookup';
 import { LookupResultCard } from './lookup-result-card';
@@ -10,7 +10,7 @@ const initialState: LookupFormState = { status: 'idle' };
 
 export function LookupForm() {
   const t = useTranslations('home.lookup.form');
-  const [state, formAction] = useFormState(lookupAction, initialState);
+  const [state, formAction] = useActionState(lookupAction, initialState);
 
   return (
     <div className="ghc-card ghc-fade-up p-6 shadow-lg sm:p-8">

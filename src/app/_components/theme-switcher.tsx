@@ -1,6 +1,7 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
+import { useActionState } from 'react';;
 import { useTranslations } from 'next-intl';
 import { setThemeAction, type SetThemeState } from '@/app/_actions/theme';
 import { THEMES, type ThemeId } from '@/lib/theme/themes';
@@ -44,7 +45,7 @@ function PillButton({
 
 export function ThemeSwitcher({ current }: Props) {
   const t = useTranslations('theme');
-  const [state, formAction] = useFormState(setThemeAction, INITIAL);
+  const [state, formAction] = useActionState(setThemeAction, INITIAL);
 
   return (
     <form action={formAction} className="ghc-theme-row" role="radiogroup" aria-label={t('aria')}>

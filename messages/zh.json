@@ -344,38 +344,6 @@
         "confirmRevoke": "撤销此密钥？后续使用它的请求都会被拒绝。",
         "csrfPending": "加载中…"
       },
-      "apiSettings": {
-        "title": "API 设置",
-        "description": "调节 GitHub 查询节奏与对外 API 速率限制。改动会持久化到 .env，需重启服务才完全生效。",
-        "breadcrumb": {
-          "admin": "管理",
-          "apiSettings": "API 设置"
-        },
-        "github": {
-          "heading": "GitHub 查询节奏",
-          "description": "调度器多久调用一次 GitHub API 来刷新缓存的仓库元数据。"
-        },
-        "publicApi": {
-          "heading": "对外 API 速率",
-          "description": "公共 API 端点的单 IP 与单 key 请求预算。"
-        },
-        "fields": {
-          "SCHEDULER_TICK_MS": { "label": "调度器 tick 间隔", "hint": "调度器多久认领任务并刷新一次缓存。越低越灵敏，但 DB 负载越高。", "unit": "毫秒" },
-          "SCHEDULER_BATCH_SIZE": { "label": "每 tick 批处理数", "hint": "每次 tick 认领多少刷新任务。宕机后越高追得越快。" },
-          "NIGHTLY_SWEEP_INTERVAL_MS": { "label": "全量巡检间隔", "hint": "调度器多久把所有已缓存仓库重新入队一次。", "unit": "毫秒" },
-          "SCHEDULER_CORE_SWEEP_HOURS": { "label": "Core 巡检周期", "hint": "一个仓库多久完整重取一次（昂贵的 /repos 调用）。", "unit": "小时" },
-          "SCHEDULER_RELEASES_SWEEP_HOURS": { "label": "Releases 巡检周期", "hint": "Releases 列表多久刷新一次。", "unit": "小时" },
-          "SCHEDULER_BRANCHES_SWEEP_HOURS": { "label": "Branches 巡检周期", "hint": "Branches 列表多久刷新一次。", "unit": "小时" },
-          "TOKEN_AUTO_DISABLE_THRESHOLD": { "label": "Token 自动禁用阈值", "hint": "连续 429 多少次后自动禁用某个 GitHub PAT。设为 0 关闭。" },
-          "PUBLIC_LOOKUP_RATE_PER_MIN": { "label": "单 IP 速率（公共查询）", "hint": "未鉴权查询接口每分钟每 IP 允许的请求数。", "unit": "次/分钟" },
-          "PUBLIC_REPO_RATE_PER_HOUR": { "label": "单 key 速率（API 密钥）", "hint": "鉴权 /api/v1/* 接口每小时每 key 允许的请求数。", "unit": "次/小时" }
-        },
-        "save": "保存",
-        "saving": "保存中…",
-        "saved": "已保存 {count} 项设置。",
-        "needsRestart": "重启服务以应用。",
-        "saveFailed": "保存失败：{error}"
-      },
       "detail": {
         "common": {
           "dash": "—"
@@ -819,9 +787,8 @@
         "hint": "手动触发一次调度 tick——领取最多 SCHEDULER_BATCH_SIZE 个待处理任务并发执行。",
         "autoRefresh": "本页每 2 秒自动刷新。",
         "runTickButton": "立即触发",
-        "running": "执行中…",
-        "schedulerLabel": "调度器：",
         "running": "运行中",
+        "schedulerLabel": "调度器：",
         "paused": "已暂停",
         "pausedAt": "暂停于 {when}",
         "tickSummary": "本次 tick：领取 {claimed}，完成 {done}，仍待处理 {pending}，失败 {failed}。",
@@ -1272,6 +1239,72 @@
         "reset": "重置筛选"
       },
       "errorDash": "—"
+    },
+    "apiSettings": {
+      "title": "API 设置",
+      "description": "调节 GitHub 查询节奏与对外 API 速率限制。改动会持久化到 .env，需重启服务才完全生效。",
+      "breadcrumb": {
+        "admin": "管理",
+        "apiSettings": "API 设置"
+      },
+      "github": {
+        "heading": "GitHub 查询节奏",
+        "description": "调度器多久调用一次 GitHub API 来刷新缓存的仓库元数据。"
+      },
+      "publicApi": {
+        "heading": "对外 API 速率",
+        "description": "公共 API 端点的单 IP 与单 key 请求预算。"
+      },
+      "fields": {
+        "SCHEDULER_TICK_MS": {
+          "label": "调度器 tick 间隔",
+          "hint": "调度器多久认领任务并刷新一次缓存。越低越灵敏，但 DB 负载越高。",
+          "unit": "毫秒"
+        },
+        "SCHEDULER_BATCH_SIZE": {
+          "label": "每 tick 批处理数",
+          "hint": "每次 tick 认领多少刷新任务。宕机后越高追得越快。"
+        },
+        "NIGHTLY_SWEEP_INTERVAL_MS": {
+          "label": "全量巡检间隔",
+          "hint": "调度器多久把所有已缓存仓库重新入队一次。",
+          "unit": "毫秒"
+        },
+        "SCHEDULER_CORE_SWEEP_HOURS": {
+          "label": "Core 巡检周期",
+          "hint": "一个仓库多久完整重取一次（昂贵的 /repos 调用）。",
+          "unit": "小时"
+        },
+        "SCHEDULER_RELEASES_SWEEP_HOURS": {
+          "label": "Releases 巡检周期",
+          "hint": "Releases 列表多久刷新一次。",
+          "unit": "小时"
+        },
+        "SCHEDULER_BRANCHES_SWEEP_HOURS": {
+          "label": "Branches 巡检周期",
+          "hint": "Branches 列表多久刷新一次。",
+          "unit": "小时"
+        },
+        "TOKEN_AUTO_DISABLE_THRESHOLD": {
+          "label": "Token 自动禁用阈值",
+          "hint": "连续 429 多少次后自动禁用某个 GitHub PAT。设为 0 关闭。"
+        },
+        "PUBLIC_LOOKUP_RATE_PER_MIN": {
+          "label": "单 IP 速率（公共查询）",
+          "hint": "未鉴权查询接口每分钟每 IP 允许的请求数。",
+          "unit": "次/分钟"
+        },
+        "PUBLIC_REPO_RATE_PER_HOUR": {
+          "label": "单 key 速率（API 密钥）",
+          "hint": "鉴权 /api/v1/* 接口每小时每 key 允许的请求数。",
+          "unit": "次/小时"
+        }
+      },
+      "save": "保存",
+      "saving": "保存中…",
+      "saved": "已保存 {count} 项设置。",
+      "needsRestart": "重启服务以应用。",
+      "saveFailed": "保存失败：{error}"
     }
   },
   "insights": {
@@ -1938,7 +1971,7 @@
       },
       "contributing": {
         "heading": "3 · 贡献代码",
-        "body": "小而专注的 PR 最易 review。每个里程碑作为独立 commit 落在 master，配一行摘要。",
+        "body": "正文",
         "fork": "Fork → 分支 → 推送 → PR",
         "forkStep1": "Fork 仓库：",
         "forkStep3": "做改动。遵循 CLAUDE.md 里的约定（TypeScript 严格、server action 放 src/app/_actions/、i18n keys 双语同步）。",
@@ -1948,7 +1981,6 @@
         "scope": "范围前缀",
         "subject": "祈使句主题",
         "subjectBody": "≤72 字符，无句号，冒号后小写",
-        "body": "正文",
         "bodyBody": "解释 WHY，不是 WHAT（diff 里看得到 WHAT）。72 列折行。涉及里程碑时附上编号。",
         "coAuthoredBody": "如果用了 Claude 或其他 AI 起草 — 保持透明",
         "styleGuide": "代码风格（要点）",

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition, type ReactElement } from 'react';
-import { useFormState } from 'react-dom';
+import { useActionState } from 'react';
 import { useTranslations } from 'next-intl';
 import { saveApiSettings, type SaveApiSettingsState } from '../_actions/save-settings';
 import type { TunableKey } from '@/lib/config/settings-store';
@@ -46,7 +46,7 @@ export function ApiSettingsForm({
     for (const f of fields) init[f.key] = current[f.key] ?? '';
     return init;
   });
-  const [state, formAction] = useFormState(saveApiSettings, INITIAL);
+  const [state, formAction] = useActionState(saveApiSettings, INITIAL);
   const [pending, startTransition] = useTransition();
 
   function onChange(key: string, value: string) {

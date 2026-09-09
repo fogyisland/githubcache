@@ -1,6 +1,7 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
+import { useActionState } from 'react';;
 import { useTranslations } from 'next-intl';
 import {
   changePasswordAction,
@@ -26,7 +27,7 @@ function SubmitBtn(): React.ReactElement {
  */
 export function ChangePasswordForm(): React.ReactElement {
   const t = useTranslations('account.password');
-  const [state, formAction] = useFormState(changePasswordAction, INITIAL);
+  const [state, formAction] = useActionState(changePasswordAction, INITIAL);
   const f = state.fieldErrors;
 
   return (

@@ -1,6 +1,7 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
+import { useActionState } from 'react';;
 import {
   setAdminVariantAction,
   type SetAdminVariantState,
@@ -44,7 +45,7 @@ function PillButton({
 }
 
 export function AdminVariantSwitcher({ current }: Props) {
-  const [state, formAction] = useFormState(setAdminVariantAction, INITIAL);
+  const [state, formAction] = useActionState(setAdminVariantAction, INITIAL);
 
   return (
     <form

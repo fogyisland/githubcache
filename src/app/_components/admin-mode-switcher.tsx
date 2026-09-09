@@ -1,6 +1,7 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
+import { useActionState } from 'react';;
 import { useTranslations } from 'next-intl';
 import { setAdminModeAction, type SetAdminModeState } from '@/app/_actions/set-admin-mode';
 import { ADMIN_MODES, type AdminModeId } from '@/lib/admin/mode';
@@ -21,7 +22,7 @@ const INITIAL: SetAdminModeState = { status: 'idle' };
  */
 export function AdminModeSwitcher({ current }: { current: AdminModeId }): React.ReactElement {
   const t = useTranslations('adminMode');
-  const [state, formAction] = useFormState(setAdminModeAction, INITIAL);
+  const [state, formAction] = useActionState(setAdminModeAction, INITIAL);
   const next: AdminModeId = current === 'light' ? 'dark' : 'light';
   const ariaLabel = t('toggleTo', {
     name: ADMIN_MODES[next].label,

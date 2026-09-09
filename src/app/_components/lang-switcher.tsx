@@ -1,6 +1,7 @@
 'use client';
 
-import { useFormState, useFormStatus } from 'react-dom';
+import { useFormStatus } from 'react-dom';
+import { useActionState } from 'react';;
 import { useTranslations } from 'next-intl';
 import { setLangAction, type SetLangState } from '@/app/_actions/set-lang';
 import type { Locale } from '@/i18n/config';
@@ -43,13 +44,13 @@ function LangButton({
 /**
  * Two-button language toggle. Mirrors `theme-switcher.tsx`.
  *
- * Uses `useFormState` for the server action wrapper, and `useFormStatus`
+ * Uses `useActionState` for the server action wrapper, and `useFormStatus`
  * for per-button pending state. The sr-only status mirror surfaces
  * action state for tests + a11y.
  */
 export function LangSwitcher({ current, locales }: LangSwitcherProps): React.ReactElement {
   const t = useTranslations('lang');
-  const [state, formAction] = useFormState(setLangAction, INITIAL);
+  const [state, formAction] = useActionState(setLangAction, INITIAL);
   return (
     <form action={formAction} className="ghc-lang-row" role="radiogroup" aria-label={t('aria')}>
       {locales.map((l) => (
