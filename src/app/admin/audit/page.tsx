@@ -26,8 +26,8 @@ import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 export default async function AdminAuditPage({
   searchParams,
 }: {
-  searchParams: { [k: string]: string | undefined };
-}): Promise<ReactElement> {
+  searchParams: Promise<{ [k: string]: string | undefined }> }): Promise<ReactElement> {
+  const sp = await searchParams;
   const t = await getTranslations('admin.audit');
 
   // Admin-only gate (per spec §9.1)
@@ -51,34 +51,34 @@ export default async function AdminAuditPage({
 
   const userTz = await resolveRequestTimezone({ dbValue: user.timezone });
 
-  const limit = Math.min(200, Math.max(1, Number(searchParams.limit ?? 50)));
-  const offset = Math.max(0, Number(searchParams.offset ?? 0));
+  const limit = Math.min(200, Math.max(1, Number(sp.limit ?? 50)));
+  const offset = Math.max(0, Number(sp.offset ?? 0));
 
   let actorUserId: bigint | undefined;
-  if (searchParams.actorUserId) {
+  if (sp.actorUserId) {
     try {
-      actorUserId = BigInt(searchParams.actorUserId);
+      actorUserId = BigInt(sp.actorUserId);
     } catch {
       /* ignore invalid — leave actorUserId undefined */
     }
   }
 
   let from: Date | undefined;
-  if (searchParams.from) {
-    const d = new Date(searchParams.from);
+  if (sp.from) {
+    const d = new Date(sp.from);
     if (!isNaN(d.getTime())) from = d;
   }
 
   let to: Date | undefined;
-  if (searchParams.to) {
-    const d = new Date(searchParams.to);
+  if (sp.to) {
+    const d = new Date(sp.to);
     if (!isNaN(d.getTime())) to = d;
   }
 
   const { rows, total } = await queryAuditLog({
-    ...(searchParams.action ? { action: searchParams.action } : {}),
+    ...(sp.action ? { action: sp.action } : {}),
     ...(actorUserId !== undefined ? { actorUserId } : {}),
-    ...(searchParams.targetType ? { targetType: searchParams.targetType } : {}),
+    ...(sp.targetType ? { targetType: sp.targetType } : {}),
     ...(from ? { from } : {}),
     ...(to ? { to } : {}),
     limit,

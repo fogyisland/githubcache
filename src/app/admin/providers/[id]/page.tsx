@@ -27,8 +27,9 @@ function parseId(idParam: string): bigint | null {
 export default async function ProviderDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }): Promise<ReactElement> {
+  const p = await params;
   const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(
     cookieStore.getAll().map((c) => [c.name, c.value]),
@@ -47,7 +48,7 @@ export default async function ProviderDetailPage({
     redirect('/admin');
   }
 
-  const id = parseId(params.id);
+  const id = parseId(p.id);
   if (!id) {
     redirect('/admin/providers');
   }

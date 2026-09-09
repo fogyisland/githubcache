@@ -30,8 +30,8 @@ const MAX_THRESHOLD_DAYS = 365;
 export default async function AdminInsightsStalePage({
   searchParams,
 }: {
-  searchParams: { threshold?: string; limit?: string; offset?: string };
-}): Promise<ReactElement> {
+  searchParams: Promise<{ threshold?: string; limit?: string; offset?: string }> }): Promise<ReactElement> {
+  const sp = await searchParams;
   const t = await getTranslations('insights');
   const tPag = await getTranslations('admin.common.pagination');
 
@@ -55,13 +55,13 @@ export default async function AdminInsightsStalePage({
 
   const userTz = await resolveRequestTimezone({ dbValue: user.timezone });
 
-  const rawThreshold = Number(searchParams.threshold ?? DEFAULT_THRESHOLD_DAYS);
+  const rawThreshold = Number(sp.threshold ?? DEFAULT_THRESHOLD_DAYS);
   const thresholdDays = Number.isFinite(rawThreshold)
     ? Math.min(MAX_THRESHOLD_DAYS, Math.max(MIN_THRESHOLD_DAYS, Math.round(rawThreshold)))
     : DEFAULT_THRESHOLD_DAYS;
 
-  const rawLimit = Number(searchParams.limit ?? PAGE_SIZE_DEFAULT);
-  const rawOffset = Number(searchParams.offset ?? 0);
+  const rawLimit = Number(sp.limit ?? PAGE_SIZE_DEFAULT);
+  const rawOffset = Number(sp.offset ?? 0);
   const limit = Number.isFinite(rawLimit)
     ? Math.min(PAGE_SIZE_MAX, Math.max(1, rawLimit))
     : PAGE_SIZE_DEFAULT;

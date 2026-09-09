@@ -39,12 +39,13 @@ import { BranchesList } from './_components/branches-list';
 export const dynamic = 'force-dynamic';
 
 interface PageProps {
-  params: { owner: string; name: string };
+  params: Promise<{ owner: string; name: string }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const owner = decodeURIComponent(params.owner);
-  const name = decodeURIComponent(params.name);
+  const p = await params;
+  const owner = decodeURIComponent(p.owner);
+  const name = decodeURIComponent(p.name);
   const t = await getTranslations('repo.meta');
   return {
     title: t('title', { owner, name }),
@@ -410,8 +411,9 @@ function Row({ label, value, mono }: { label: string; value: React.ReactNode; mo
 }
 
 export default async function RepoDetailPage({ params }: PageProps): Promise<ReactElement> {
-  const owner = decodeURIComponent(params.owner);
-  const name = decodeURIComponent(params.name);
+  const p = await params;
+  const owner = decodeURIComponent(p.owner);
+  const name = decodeURIComponent(p.name);
   const tHero = await getTranslations('repo.hero');
   const result = await lookupRepo(owner, name);
   if (result.fetch_status === 'not_found') {

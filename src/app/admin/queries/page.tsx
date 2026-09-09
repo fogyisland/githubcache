@@ -39,8 +39,8 @@ const PAGE_SIZE_MAX = 200;
 export default async function AdminQueriesPage({
   searchParams,
 }: {
-  searchParams: { from?: string; to?: string; limit?: string; offset?: string };
-}): Promise<ReactElement> {
+  searchParams: Promise<{ from?: string; to?: string; limit?: string; offset?: string }> }): Promise<ReactElement> {
+  const sp = await searchParams;
   const t = await getTranslations('admin.queries');
 
   const cookieStore = await cookies();
@@ -58,20 +58,20 @@ export default async function AdminQueriesPage({
 
   const userTz = await resolveRequestTimezone({ dbValue: user.timezone });
 
-  const limit = Math.min(PAGE_SIZE_MAX, Math.max(1, Number(searchParams.limit ?? PAGE_SIZE_DEFAULT)));
-  const offset = Math.max(0, Number(searchParams.offset ?? 0));
+  const limit = Math.min(PAGE_SIZE_MAX, Math.max(1, Number(sp.limit ?? PAGE_SIZE_DEFAULT)));
+  const offset = Math.max(0, Number(sp.offset ?? 0));
 
   const now = new Date();
   const defaultFrom = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
   let from: Date = defaultFrom;
-  if (searchParams.from) {
-    const d = new Date(searchParams.from);
+  if (sp.from) {
+    const d = new Date(sp.from);
     if (!isNaN(d.getTime())) from = d;
   }
   let to: Date = now;
-  if (searchParams.to) {
-    const d = new Date(searchParams.to);
+  if (sp.to) {
+    const d = new Date(sp.to);
     if (!isNaN(d.getTime())) {
       // Bump to inclusive end-of-day so picking 2026-08-31 covers the whole day.
       to = new Date(d.getTime() + 24 * 60 * 60 * 1000);

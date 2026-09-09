@@ -39,8 +39,8 @@ const PAGE_SIZE_MAX = 200;
 export default async function AdminRepositoriesPage({
   searchParams,
 }: {
-  searchParams: { status?: string; limit?: string; offset?: string };
-}): Promise<ReactElement> {
+  searchParams: Promise<{ status?: string; limit?: string; offset?: string }> }): Promise<ReactElement> {
+  const sp = await searchParams;
   const t = await getTranslations('admin.repositories');
   const tPag = await getTranslations('admin.common.pagination');
 
@@ -50,15 +50,15 @@ export default async function AdminRepositoriesPage({
   const userTz = await resolveRequestTimezone({});
 
   const filterStatus: FetchStatus | undefined =
-    searchParams.status === 'ok' ||
-    searchParams.status === 'not_found' ||
-    searchParams.status === 'forbidden' ||
-    searchParams.status === 'error'
-      ? searchParams.status
+    sp.status === 'ok' ||
+    sp.status === 'not_found' ||
+    sp.status === 'forbidden' ||
+    sp.status === 'error'
+      ? sp.status
       : undefined;
 
-  const rawLimit = Number(searchParams.limit ?? PAGE_SIZE_DEFAULT);
-  const rawOffset = Number(searchParams.offset ?? 0);
+  const rawLimit = Number(sp.limit ?? PAGE_SIZE_DEFAULT);
+  const rawOffset = Number(sp.offset ?? 0);
   const limit = Number.isFinite(rawLimit)
     ? Math.min(PAGE_SIZE_MAX, Math.max(1, rawLimit))
     : PAGE_SIZE_DEFAULT;

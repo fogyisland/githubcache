@@ -44,22 +44,22 @@ function isTemplateKey(s: string | undefined): s is TemplateKey {
 export default async function AdminEmailLogPage({
   searchParams,
 }: {
-  searchParams: { status?: string; templateKey?: string; limit?: string; offset?: string };
-}): Promise<ReactElement> {
+  searchParams: Promise<{ status?: string; templateKey?: string; limit?: string; offset?: string }> }): Promise<ReactElement> {
+  const sp = await searchParams;
   const userTz = await resolveRequestTimezone({});
 
   const t = await getTranslations('admin.emailLog');
   const tPag = await getTranslations('admin.common.pagination');
 
-  const filterStatus: EmailLogStatus | undefined = isEmailLogStatus(searchParams.status)
-    ? searchParams.status
+  const filterStatus: EmailLogStatus | undefined = isEmailLogStatus(sp.status)
+    ? sp.status
     : undefined;
-  const filterTemplateKey: TemplateKey | undefined = isTemplateKey(searchParams.templateKey)
-    ? searchParams.templateKey
+  const filterTemplateKey: TemplateKey | undefined = isTemplateKey(sp.templateKey)
+    ? sp.templateKey
     : undefined;
 
-  const rawLimit = Number(searchParams.limit ?? PAGE_SIZE_DEFAULT);
-  const rawOffset = Number(searchParams.offset ?? 0);
+  const rawLimit = Number(sp.limit ?? PAGE_SIZE_DEFAULT);
+  const rawOffset = Number(sp.offset ?? 0);
   const limit = Number.isFinite(rawLimit)
     ? Math.min(PAGE_SIZE_MAX, Math.max(1, rawLimit))
     : PAGE_SIZE_DEFAULT;

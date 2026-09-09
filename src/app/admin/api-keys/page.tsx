@@ -32,8 +32,8 @@ const PAGE_SIZE_MAX = 200;
 export default async function AdminApiKeysPage({
   searchParams,
 }: {
-  searchParams: { status?: string; limit?: string; offset?: string };
-}): Promise<ReactElement> {
+  searchParams: Promise<{ status?: string; limit?: string; offset?: string }> }): Promise<ReactElement> {
+  const sp = await searchParams;
   // api-keys page doesn't validate its own session (layout.tsx gates auth);
   // read timezone from cookie/default only — no DB roundtrip.
   const userTz = await resolveRequestTimezone({});
@@ -42,14 +42,14 @@ export default async function AdminApiKeysPage({
   const tPag = await getTranslations('admin.common.pagination');
 
   const filterStatus: ApiKeyStatus | undefined =
-    searchParams.status === 'pending' ||
-    searchParams.status === 'active' ||
-    searchParams.status === 'revoked'
-      ? searchParams.status
+    sp.status === 'pending' ||
+    sp.status === 'active' ||
+    sp.status === 'revoked'
+      ? sp.status
       : undefined;
 
-  const rawLimit = Number(searchParams.limit ?? PAGE_SIZE_DEFAULT);
-  const rawOffset = Number(searchParams.offset ?? 0);
+  const rawLimit = Number(sp.limit ?? PAGE_SIZE_DEFAULT);
+  const rawOffset = Number(sp.offset ?? 0);
   const limit = Number.isFinite(rawLimit)
     ? Math.min(PAGE_SIZE_MAX, Math.max(1, rawLimit))
     : PAGE_SIZE_DEFAULT;

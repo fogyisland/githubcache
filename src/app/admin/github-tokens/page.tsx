@@ -31,8 +31,8 @@ const PAGE_SIZE_MAX = 200;
 export default async function AdminGithubTokensPage({
   searchParams,
 }: {
-  searchParams: { limit?: string; offset?: string };
-}): Promise<ReactElement> {
+  searchParams: Promise<{ limit?: string; offset?: string }> }): Promise<ReactElement> {
+  const sp = await searchParams;
   const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
   const user = await validateSession({
@@ -51,8 +51,8 @@ export default async function AdminGithubTokensPage({
   const t = await getTranslations('admin.githubTokens');
   const tPag = await getTranslations('admin.common.pagination');
 
-  const rawLimit = Number(searchParams.limit ?? PAGE_SIZE_DEFAULT);
-  const rawOffset = Number(searchParams.offset ?? 0);
+  const rawLimit = Number(sp.limit ?? PAGE_SIZE_DEFAULT);
+  const rawOffset = Number(sp.offset ?? 0);
   const limit = Number.isFinite(rawLimit)
     ? Math.min(PAGE_SIZE_MAX, Math.max(1, rawLimit))
     : PAGE_SIZE_DEFAULT;

@@ -31,13 +31,14 @@ interface AuditRow {
 export default async function AdminApiKeyDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }): Promise<ReactElement> {
+  const p = await params;
   // api-keys detail doesn't validate its own session (layout.tsx gates auth);
   // read timezone from cookie/default only — no DB roundtrip.
   const userTz = await resolveRequestTimezone({});
 
-  const id = BigInt(params.id);
+  const id = BigInt(p.id);
   const key = await getApiKeyById(id);
   if (!key) notFound();
 

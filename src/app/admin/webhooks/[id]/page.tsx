@@ -21,7 +21,7 @@ type DeliveryRow = Awaited<
 const PAGE_SIZE_DEFAULT = 50;
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
   searchParams: { limit?: string };
 }
 
@@ -32,6 +32,7 @@ export default async function AdminWebhookDetailPage({
   params,
   searchParams,
 }: PageProps): Promise<ReactElement> {
+  const p = await params;
   const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(
     cookieStore.getAll().map((c) => [c.name, c.value]),
@@ -51,7 +52,7 @@ export default async function AdminWebhookDetailPage({
 
   let id: bigint;
   try {
-    id = BigInt(params.id);
+    id = BigInt(p.id);
   } catch {
     notFound();
   }

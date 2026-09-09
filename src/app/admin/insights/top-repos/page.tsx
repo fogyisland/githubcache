@@ -33,8 +33,8 @@ const PAGE_SIZE_MAX = 200;
 export default async function AdminInsightsTopReposPage({
   searchParams,
 }: {
-  searchParams: { language?: string; sort?: string; limit?: string; offset?: string };
-}): Promise<ReactElement> {
+  searchParams: Promise<{ language?: string; sort?: string; limit?: string; offset?: string }> }): Promise<ReactElement> {
+  const sp = await searchParams;
   const t = await getTranslations('insights');
   const tPag = await getTranslations('admin.common.pagination');
 
@@ -58,17 +58,17 @@ export default async function AdminInsightsTopReposPage({
 
   const userTz = await resolveRequestTimezone({ dbValue: user.timezone });
 
-  const sortBy: InsightsSortKey = isInsightsSortKey(searchParams.sort)
-    ? searchParams.sort
+  const sortBy: InsightsSortKey = isInsightsSortKey(sp.sort)
+    ? sp.sort
     : 'stars';
 
-  const rawLimit = Number(searchParams.limit ?? PAGE_SIZE_DEFAULT);
-  const rawOffset = Number(searchParams.offset ?? 0);
+  const rawLimit = Number(sp.limit ?? PAGE_SIZE_DEFAULT);
+  const rawOffset = Number(sp.offset ?? 0);
   const limit = Number.isFinite(rawLimit)
     ? Math.min(PAGE_SIZE_MAX, Math.max(1, rawLimit))
     : PAGE_SIZE_DEFAULT;
   const offset = Number.isFinite(rawOffset) ? Math.max(0, rawOffset) : 0;
-  const languageFilter = searchParams.language?.trim() || undefined;
+  const languageFilter = sp.language?.trim() || undefined;
 
   const [languages, result] = await Promise.all([
     distinctLanguages(),

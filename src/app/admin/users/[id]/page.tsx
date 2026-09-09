@@ -40,8 +40,9 @@ interface AuditRow {
 export default async function AdminUserDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }): Promise<ReactElement> {
+  const p = await params;
   const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
   const session = await validateSession({
@@ -61,7 +62,7 @@ export default async function AdminUserDetailPage({
 
   let id: bigint;
   try {
-    id = BigInt(params.id);
+    id = BigInt(p.id);
   } catch {
     notFound();
   }

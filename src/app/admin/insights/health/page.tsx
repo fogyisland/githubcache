@@ -30,8 +30,8 @@ const PAGE_SIZE_MAX = 200;
 export default async function AdminInsightsHealthPage({
   searchParams,
 }: {
-  searchParams: { limit?: string; offset?: string };
-}): Promise<ReactElement> {
+  searchParams: Promise<{ limit?: string; offset?: string }> }): Promise<ReactElement> {
+  const sp = await searchParams;
   const t = await getTranslations('insights');
   const tPag = await getTranslations('admin.common.pagination');
 
@@ -55,8 +55,8 @@ export default async function AdminInsightsHealthPage({
 
   const userTz = await resolveRequestTimezone({ dbValue: user.timezone });
 
-  const rawLimit = Number(searchParams.limit ?? PAGE_SIZE_DEFAULT);
-  const rawOffset = Number(searchParams.offset ?? 0);
+  const rawLimit = Number(sp.limit ?? PAGE_SIZE_DEFAULT);
+  const rawOffset = Number(sp.offset ?? 0);
   const limit = Number.isFinite(rawLimit)
     ? Math.min(PAGE_SIZE_MAX, Math.max(1, rawLimit))
     : PAGE_SIZE_DEFAULT;

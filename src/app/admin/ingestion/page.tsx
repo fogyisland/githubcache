@@ -34,8 +34,8 @@ const PAGE_SIZE_MAX = 200;
 export default async function AdminIngestionPage({
   searchParams,
 }: {
-  searchParams: { limit?: string; offset?: string };
-}): Promise<ReactElement> {
+  searchParams: Promise<{ limit?: string; offset?: string }> }): Promise<ReactElement> {
+  const sp = await searchParams;
   const t = await getTranslations('admin.ingestion');
 
   const cookieStore = await cookies();
@@ -56,8 +56,8 @@ export default async function AdminIngestionPage({
 
   const userTz = await resolveRequestTimezone({ dbValue: user.timezone });
 
-  const limit = Math.min(PAGE_SIZE_MAX, Math.max(1, Number(searchParams.limit ?? PAGE_SIZE_DEFAULT)));
-  const offset = Math.max(0, Number(searchParams.offset ?? 0));
+  const limit = Math.min(PAGE_SIZE_MAX, Math.max(1, Number(sp.limit ?? PAGE_SIZE_DEFAULT)));
+  const offset = Math.max(0, Number(sp.offset ?? 0));
 
   const now = new Date();
   const from = new Date(now.getTime() - 60 * 60 * 1000); // last 1h for done/failed KPIs
