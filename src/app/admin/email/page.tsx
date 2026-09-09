@@ -1,35 +1,39 @@
 import type { ReactElement } from 'react';
+import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { getEmailConfig, publicConfigForUi } from '@/lib/email/config';
 import { validateSession } from '@/lib/auth/session';
+import { getEmailConfig, publicConfigForUi } from '@/lib/email/config';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { EmailConfigForm } from './_components/email-config-form';
 import { TestSendButton } from './_components/test-send-button';
+import { SmtpStatusCard } from './_components/smtp-status-card';
+import { prisma } from '@/lib/db/client';
 
+const DAY_MS = 24 * 60 * 60_000;
 const DEFAULT_PORT = 587;
 const DEFAULT_USER = '';
 const DEFAULT_FROM = '';
 
 /**
- * M25 — admin Email config page.
+ * M25 → M28 — admin Email config page.
  *
- * Server component. Loads the singleton email_config row, renders:
- *  - Page header + description
- *  - "Not configured" hint when no row exists
- *  - EmailConfigForm (host / port / user / pass / secure / from / replyTo)
- *  - "Send test" button (POSTs to /api/admin/email/test)
- *  - "View log →" link to /admin/email/log
+ * Page layout (top → bottom):
+ *   1. PageHeader
+ *   2. SmtpStatusCard — configured status, 24h sent/failed counts,
+ *      last-success timestamp, "Test connection" button
+ *   3. [Optional] BinaryWarning if mysqldump / gzip missing
+ *   4. EmailConfigForm — two visual sections ("Server" + "Identity")
+ *      but a single submit (the SMTP config is one row)
+ *   5. TestSendButton — sends a real test email to the current admin
+ *   6. "View log →" link
  *
- * The form is a client component that drives the server action in
- * `_actions/save-config.ts`. The CSRF token is read from the
- * `ghc_csrf` cookie via cookies() — same source as other admin forms.
+ * Admin-only because the page exposes SMTP credentials (password is
+ * write-only — never returned to the UI).
  */
 export default async function AdminEmailPage(): Promise<ReactElement> {
   const t = await getTranslations('admin.email');
 
-  // Layout already gates auth; resolve CSRF + session id for the form.
   const cookieStore = cookies();
   const csrfToken = cookieStore.get('ghc_csrf')?.value ?? '';
 
@@ -41,8 +45,23 @@ export default async function AdminEmailPage(): Promise<ReactElement> {
         cookieMap[name] !== undefined ? { value: cookieMap[name]! } : undefined,
     },
   });
+  if (!user) {
+    redirect('/login');
+  }
+  if (user.role !== 'admin') {
+    redirect('/admin');
+  }
 
-  const cfg = await getEmailConfig();
+  const [cfg, sentLast24h, failedLast24h, lastSuccessRow] = await Promise.all([
+    getEmailConfig(),
+    prisma.emailLog.count({ where: { status: 'sent', createdAt: { gt: new Date(Date.now() - DAY_MS) } } }),
+    prisma.emailLog.count({ where: { status: 'failed', createdAt: { gt: new Date(Date.now() - DAY_MS) } } }),
+    prisma.emailLog.findFirst({
+      where: { status: 'sent' },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true },
+    }),
+  ]);
   const safe = publicConfigForUi(cfg);
 
   const initial = cfg.configured && cfg.row
@@ -76,25 +95,33 @@ export default async function AdminEmailPage(): Promise<ReactElement> {
         description={t('description')}
       />
 
-      {!safe.configured ? (
-        <p className="ghc-admin-hint">{t('notConfigured')}</p>
-      ) : null}
+      <SmtpStatusCard
+        configured={cfg.configured}
+        totalLast24h={sentLast24h + failedLast24h}
+        sentLast24h={sentLast24h}
+        failedLast24h={failedLast24h}
+        lastSuccessAt={lastSuccessRow?.createdAt.toISOString() ?? null}
+      />
 
       <section>
         <h2 className="ghc-admin-section-title">{t('form.heading')}</h2>
-        <EmailConfigForm initial={initial} csrfToken={csrfToken} />
+        <div className="ghc-api-settings-card">
+          <EmailConfigForm initial={initial} csrfToken={csrfToken} />
+        </div>
       </section>
 
       <section>
         <h2 className="ghc-admin-section-title">{t('test.heading')}</h2>
-        <p className="ghc-admin-hint">{t('test.toHelp', { email: user?.email ?? '?' })}</p>
-        <TestSendButton csrfToken={csrfToken} />
+        <p className="ghc-admin-section-desc">{t('test.toHelp', { email: user?.email ?? '?' })}</p>
+        <div className="ghc-api-settings-card">
+          <TestSendButton csrfToken={csrfToken} />
+        </div>
       </section>
 
-      <p style={{ marginTop: 32 }}>
-        <Link href="/admin/email/log" className="ghc-link">
+      <p>
+        <a href="/admin/email/log" className="ghc-link">
           {t('viewLog')}
-        </Link>
+        </a>
       </p>
     </div>
   );
