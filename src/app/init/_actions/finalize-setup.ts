@@ -1,55 +1,117 @@
 'use server';
 
-import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { cookies } from 'next/headers';
 import { PrismaClient } from '@prisma/client';
 import { redirect } from 'next/navigation';
 import { ENV_PATH } from '@/lib/setup';
+import { ensureFreshSchemaWith } from '@/lib/db/init-schema';
 import { readAdminStash, clearAdminStash } from './submit-admin-config';
 import { logger } from '@/lib/logger';
 
-export interface FinalizeResult {
+/**
+ * Step 3 wizard actions — M28.bug17 split into per-subtask server actions
+ * so the /init/execute page can show a live checklist.
+ *
+ * M28.bug24 (rewritten) — first-time setup uses pure CREATE TABLE IF NOT
+ * EXISTS statements via `@/lib/db/init-schema`, NOT `prisma db push`. db
+ * push requires SUPER privileges and triggers/foreign-key probing, which
+ * standard managed MySQL (PlanetScale, 阿里云 RDS, Aurora) deny — it
+ * fails with P3018 / error 1419. The new path runs as a plain
+ * `$executeRawUnsafe` per CREATE TABLE statement, no SUPER, no
+ * subprocess, idempotent on re-run.
+ *
+ * Each returns a discriminated union `{ ok, error? }`. The client chains
+ * them in order and updates a checklist UI as each completes. If any step
+ * fails, the next one is not invoked; the user sees the error and can
+ * retry the same step (idempotent — CREATE TABLE IF NOT EXISTS is a
+ * no-op on existing tables, upsert admin + set cookie are safe to re-run).
+ */
+
+export interface SubtaskResult {
   ok: boolean;
   error?: string;
 }
 
-/**
- * Server action: run prisma migrate deploy, then create the bootstrap admin
- * from the stashed email + bcrypt hash (held in the ghc_init_admin cookie
- * set by step 2), then delete that cookie, then set ghc_setup_done=1.
- *
- * M28.bug14 ordering: this is the only step that touches the database.
- * Cookie stash in step 2 keeps step 2 free of any DB schema dependency
- * AND keeps .env clean of temporary keys.
- *
- * Process:
- *   1. spawnSync 'npx prisma migrate deploy' (creates all tables)
- *   2. read ghc_init_admin cookie for { email, passwordHash }
- *   3. one-shot PrismaClient with the URL from .env (NOT process.env —
- *      Next.js dev mode clobbers process.env with shell values per request)
- *   4. upsert the user with role=admin, status=active
- *   5. delete the stash cookie
- *   6. set ghc_setup_done cookie (10y) → middleware locks /init from now on
- */
-export async function finalizeSetup(): Promise<FinalizeResult> {
-  // --- 1. read DATABASE_URL from .env BEFORE spawning migrate ---------
-  // Reason: spawnSync inherits process.env, which carries the .env.production
-  // stub DATABASE_URL (mysql://stub:stub@stub.invalid:3306/stub). Without
-  // override, prisma migrate deploy would try to connect to that and fail.
-  // Override DATABASE_URL via env so the child prisma process uses the
-  // URL the operator typed in step 1, not the build-time stub.
-  let envContent: string;
+/** Append connection_limit + connect_timeout like @/lib/db/client does. */
+function appendConnectionParams(raw: string): string {
   try {
-    envContent = readFileSync(ENV_PATH, 'utf8');
+    const url = new URL(raw);
+    if (!url.searchParams.has('connection_limit')) {
+      url.searchParams.set('connection_limit', '32');
+    }
+    if (!url.searchParams.has('connect_timeout')) {
+      url.searchParams.set('connect_timeout', '30');
+    }
+    return url.toString();
+  } catch {
+    return raw;
+  }
+}
+
+/** Read DATABASE_URL from .env. Shared by all three subtasks. */
+function readDbUrl(): { ok: true; dbUrl: string } | { ok: false; error: string } {
+  let content: string;
+  try {
+    content = readFileSync(ENV_PATH, 'utf8');
   } catch {
     return { ok: false, error: '.env 不存在 — 请先完成 /init/db 步骤' };
   }
-  const dbMatch = /^DATABASE_URL=(.+)$/m.exec(envContent);
-  if (!dbMatch || !dbMatch[1]) {
+  const m = /^DATABASE_URL=(.+)$/m.exec(content);
+  if (!m || !m[1]) {
     return { ok: false, error: '.env 缺少 DATABASE_URL' };
   }
-  const dbUrl = dbMatch[1].trim();
+  return { ok: true, dbUrl: m[1].trim() };
+}
+
+/**
+ * Subtask 1: create the schema + seed `_prisma_migrations`.
+ *
+ * The actual DDL lives in `@/lib/db/init-schema` so the wizard, the
+ * CLI script, and any future operator tool all use the same source of
+ * truth. We use a one-shot PrismaClient (not the shared lazy client) so
+ * the wizard runs before the env-merge dance that initialises the
+ * shared instance — see M28.bug14 for the historical context.
+ */
+export async function runMigrateSubtask(): Promise<SubtaskResult> {
+  const url = readDbUrl();
+  if (!url.ok) return url;
+
+  const oneShot = new PrismaClient({
+    datasources: { db: { url: appendConnectionParams(url.dbUrl) } },
+    log: ['error'],
+  });
+  try {
+    const result = await ensureFreshSchemaWith(oneShot);
+    logger.info(
+      {
+        alreadyInitialized: result.alreadyInitialized,
+        createdTables: result.createdTables,
+        markedMigrations: result.markedMigrations,
+      },
+      'init: ensureFreshSchema ok',
+    );
+    return { ok: true };
+  } catch (e) {
+    const msg = (e as Error).message;
+    logger.error({ err: msg }, 'init: ensureFreshSchema failed');
+    return { ok: false, error: msg };
+  } finally {
+    await oneShot.$disconnect().catch(() => undefined);
+  }
+}
+
+/**
+ * Subtask 2: create / promote the admin user.
+ *
+ * Reads the stash cookie written by submitAdminConfig (set in step 2).
+ * Idempotent: upserts by email — if user exists, just resets role/active/
+ * passwordHash. Uses one-shot PrismaClient because the shared client was
+ * instantiated at server boot, possibly with a different DATABASE_URL.
+ */
+export async function createAdminSubtask(): Promise<SubtaskResult> {
+  const url = readDbUrl();
+  if (!url.ok) return url;
 
   const stash = await readAdminStash();
   if (!stash) {
@@ -60,31 +122,10 @@ export async function finalizeSetup(): Promise<FinalizeResult> {
   }
   const { email, passwordHash } = stash;
 
-  // --- 2. prisma migrate deploy (with explicit DATABASE_URL override) --
-  const result = spawnSync('npx prisma migrate deploy', {
-    stdio: 'pipe',
-    env: { ...process.env, DATABASE_URL: dbUrl },
-    shell: true,
-  });
-  if (result.status !== 0) {
-    const stdout = (result.stdout ?? Buffer.alloc(0)).toString();
-    const stderr = (result.stderr ?? Buffer.alloc(0)).toString();
-    const detail = (stderr || stdout).slice(-2000) || 'prisma migrate deploy 失败';
-    logger.error(
-      { exit: result.status, stdout, stderr },
-      'init: prisma migrate deploy failed',
-    );
-    return { ok: false, error: detail };
-  }
-
-  // --- 3. one-shot prisma client (see submit-admin-config note for why
-  //        we don't share @/lib/db/client — same env-merge race in dev mode)
   const oneShot = new PrismaClient({
-    datasources: { db: { url: appendConnectionParams(dbUrl) } },
+    datasources: { db: { url: appendConnectionParams(url.dbUrl) } },
     log: ['error'],
   });
-
-  // --- 4. create / promote admin user -----------------------------------
   try {
     const existing = await oneShot.user.findUnique({ where: { email } });
     if (existing) {
@@ -105,17 +146,23 @@ export async function finalizeSetup(): Promise<FinalizeResult> {
         },
       });
     }
+    return { ok: true };
   } catch (e) {
     logger.error({ err: (e as Error).message, email }, 'init: admin upsert failed');
+    return { ok: false, error: (e as Error).message };
+  } finally {
     await oneShot.$disconnect().catch(() => undefined);
-    return { ok: false, error: `创建管理员失败：${(e as Error).message}` };
   }
-  await oneShot.$disconnect().catch(() => undefined);
+}
 
-  // --- 5. clear the stash cookie ---------------------------------------
+/**
+ * Subtask 3: lock the wizard — clear stash cookie, set ghc_setup_done cookie,
+ * redirect to /login.
+ *
+ * Idempotent: re-setting ghc_setup_done just refreshes the cookie's expiry.
+ */
+export async function lockSetupSubtask(): Promise<SubtaskResult> {
   await clearAdminStash();
-
-  // --- 6. lock the wizard via cookie ------------------------------------
   const jar = await cookies();
   jar.set({
     name: 'ghc_setup_done',
@@ -129,26 +176,23 @@ export async function finalizeSetup(): Promise<FinalizeResult> {
   return { ok: true };
 }
 
-/** Append connection_limit + connect_timeout like @/lib/db/client does. */
-function appendConnectionParams(raw: string): string {
-  try {
-    const url = new URL(raw);
-    if (!url.searchParams.has('connection_limit')) {
-      url.searchParams.set('connection_limit', '32');
-    }
-    if (!url.searchParams.has('connect_timeout')) {
-      url.searchParams.set('connect_timeout', '30');
-    }
-    return url.toString();
-  } catch {
-    return raw;
+/**
+ * Convenience: run all three subtasks atomically. Still exported so legacy
+ * callers (tests, future one-shot admin tools) can use it without the
+ * checklist UX.
+ */
+export async function finalizeSetup(): Promise<SubtaskResult> {
+  for (const step of [runMigrateSubtask, createAdminSubtask, lockSetupSubtask]) {
+    const r = await step();
+    if (!r.ok) return r;
   }
+  return { ok: true };
 }
 
 export async function finalizeSetupAndRedirect(): Promise<never> {
-  const result = await finalizeSetup();
-  if (!result.ok) {
-    redirect(`/init/execute?error=${encodeURIComponent(result.error ?? '')}`);
+  const r = await finalizeSetup();
+  if (!r.ok) {
+    redirect(`/init/execute?error=${encodeURIComponent(r.error ?? '')}`);
   }
   redirect('/login');
 }
