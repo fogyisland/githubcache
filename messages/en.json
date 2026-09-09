@@ -1102,6 +1102,16 @@
         "description": "Prisma Studio is a separate process on port 5555. Start it from the project root:",
         "command": "npx prisma studio",
         "openDocs": "Open Prisma Studio docs →"
+      },
+      "upgrade": {
+        "heading": "Schema upgrade",
+        "description": "Lists every migration under prisma/migrations/ and shows which have been applied. Click the button to run prisma migrate deploy and apply any pending ones.",
+        "runButton": "Upgrade to latest",
+        "running": "Upgrading…",
+        "allApplied": "Already up to date ({count} migrations applied)",
+        "pendingCount": "Upgradable: {pending} pending / {applied} applied",
+        "statusApplied": "applied",
+        "statusPending": "pending"
       }
     },
     "email": {

@@ -3304,3 +3304,138 @@ a {
   flex-direction: column;
   gap: 1rem;
 }
+
+/* === M28.bug25 — schema upgrade panel === */
+.ghc-upgrade-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-button);
+  background: var(--color-surface-2);
+  font-size: 0.9375rem;
+}
+.ghc-upgrade-summary[data-empty='true'] {
+  background: #dcfce7;
+  color: #166534;
+}
+.ghc-upgrade-summary[data-empty='false'] {
+  background: #fef3c7;
+  color: #92400e;
+}
+.ghc-upgrade-list {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 22rem;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-button);
+}
+.ghc-upgrade-row {
+  display: grid;
+  grid-template-columns: 1.5rem 1fr 9rem 5rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.ghc-upgrade-row:last-child {
+  border-bottom: 0;
+}
+.ghc-upgrade-row[data-applied='true'] {
+  color: var(--color-ink);
+}
+.ghc-upgrade-row[data-applied='false'] {
+  background: #fff7ed;
+  color: #9a3412;
+}
+.ghc-upgrade-marker {
+  font-weight: 700;
+  text-align: center;
+}
+.ghc-upgrade-row[data-applied='true'] .ghc-upgrade-marker {
+  color: #15803d;
+}
+.ghc-upgrade-row[data-applied='false'] .ghc-upgrade-marker {
+  color: #c2410c;
+}
+.ghc-upgrade-name {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+.ghc-upgrade-ts {
+  color: var(--color-ink-muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8125rem;
+}
+.ghc-upgrade-status {
+  text-align: right;
+  font-size: 0.75rem;
+  color: var(--color-ink-muted);
+}
+
+/* === M28.bug17 — /init/execute live checklist === */
+.ghc-init-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding: 1.5rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+}
+.ghc-init-checklist-row {
+  display: grid;
+  grid-template-columns: 2rem 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--radius-button);
+  font-size: 0.9375rem;
+  transition: background 0.2s ease;
+}
+.ghc-init-checklist-row[data-status='pending'] {
+  color: var(--color-ink-muted);
+  background: var(--color-surface-2);
+}
+.ghc-init-checklist-row[data-status='running'] {
+  color: var(--color-ink);
+  background: #fef3c7;
+}
+.ghc-init-checklist-row[data-status='ok'] {
+  color: var(--color-ink);
+  background: #dcfce7;
+}
+.ghc-init-checklist-row[data-status='error'] {
+  color: #991b1b;
+  background: #fef2f2;
+}
+.ghc-init-checklist-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+  width: 1.5rem;
+  height: 1.5rem;
+}
+.ghc-init-checklist-row[data-status='ok'] .ghc-init-checklist-icon {
+  color: #15803d;
+}
+.ghc-init-checklist-row[data-status='error'] .ghc-init-checklist-icon {
+  color: #991b1b;
+}
+.ghc-init-checklist-label {
+  color: inherit;
+}
+.ghc-init-checklist-status {
+  font-size: 0.8125rem;
+  color: var(--color-ink-muted);
+  font-variant-numeric: tabular-nums;
+}

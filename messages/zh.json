@@ -1102,6 +1102,16 @@
         "description": "Prisma Studio 是一个独立进程，默认监听 5555 端口。在项目根目录执行：",
         "command": "npx prisma studio",
         "openDocs": "打开 Prisma Studio 文档 →"
+      },
+      "upgrade": {
+        "heading": "架构升级",
+        "description": "显示 prisma/migrations 下的所有迁移，标记已应用和待执行的版本。点击下方按钮立即执行 prisma migrate deploy 升级到最新。",
+        "runButton": "升级到最新",
+        "running": "升级中…",
+        "allApplied": "已是最新（{count} 条迁移全部已应用）",
+        "pendingCount": "可升级：{pending} 条待执行 / {applied} 条已应用",
+        "statusApplied": "已应用",
+        "statusPending": "待执行"
       }
     },
     "email": {

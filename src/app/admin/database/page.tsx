@@ -24,6 +24,8 @@ import { RestoreSection } from './_components/restore-section';
 import { TablesSection } from './_components/tables-section';
 import { SlowQueriesSection } from './_components/slow-queries-section';
 import { PrismaStudioLink } from './_components/prisma-studio-link';
+import { SchemaUpgrade } from './_components/schema-upgrade';
+import { getMigrationStatus } from '@/lib/database/migrations';
 
 const SLOW_QUERY_LIMIT = 20;
 
@@ -65,7 +67,7 @@ export default async function AdminDatabasePage(): Promise<ReactElement> {
 
   const userTz = resolveRequestTimezone({ dbValue: user.timezone });
 
-  const [overview, tableStats, tableDetails, slow, backupsRaw, binaryStatus] =
+  const [overview, tableStats, tableDetails, slow, backupsRaw, binaryStatus, migrations] =
     await Promise.all([
       getDatabaseOverview(),
       getTableStats(),
@@ -73,7 +75,17 @@ export default async function AdminDatabasePage(): Promise<ReactElement> {
       topSlowQueries(SLOW_QUERY_LIMIT),
       listBackups(),
       Promise.resolve(getBinaryStatus()),
+      getMigrationStatus(),
     ]);
+
+  // Normalize Date → ISO string for the client island (it's a server→client boundary).
+  const migrationRows = migrations.map((m) => ({
+    name: m.name,
+    timestamp: m.timestamp,
+    slug: m.slug,
+    applied: m.applied,
+    finishedAt: m.finishedAt ? m.finishedAt.toISOString() : null,
+  }));
 
   // Server-side BackupFileInfo has mtime: Date; the client component
   // wants mtime: ISO string for serialization. Normalize here so the
@@ -115,6 +127,7 @@ export default async function AdminDatabasePage(): Promise<ReactElement> {
 
       <BackupSection initialBackups={backups} keepN={env.BACKUP_KEEP_N} tz={userTz} />
       <RestoreSection backups={backups} />
+      <SchemaUpgrade initialMigrations={migrationRows} />
       <TablesSection stats={tableStats} details={tableDetails} />
       <SlowQueriesSection result={slow} limit={SLOW_QUERY_LIMIT} />
       <PrismaStudioLink />
