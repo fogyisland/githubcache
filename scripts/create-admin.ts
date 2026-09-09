@@ -8,6 +8,12 @@
  *
  * Safe to re-run with the same email: existing user is updated (password
  * reset, role forced to admin, status forced to active).
+ *
+ * NOTE: this script does NOT set the `ghc_setup_done=1` cookie — that's
+ * only set by the /init wizard's lockSetupSubtask. For local dev
+ * convenience, run the wizard once (3 steps, ~30s) OR set the cookie
+ * manually in browser DevTools: `document.cookie = "ghc_setup_done=1;
+ * path=/"` then refresh.
  */
 import { prisma } from '@/lib/db/client';
 import { hashPassword } from '@/lib/auth/password';
@@ -45,6 +51,10 @@ async function main(): Promise<void> {
   logger.info({ user }, 'admin user upserted');
   // eslint-disable-next-line no-console
   console.log(`OK: ${user.email} (role=${user.role}, status=${user.status})`);
+  // eslint-disable-next-line no-console
+  console.log('Set ghc_setup_done=1 in your browser cookie to skip the /init wizard:');
+  // eslint-disable-next-line no-console
+  console.log('  document.cookie = "ghc_setup_done=1; path=/"; location.reload();');
 }
 
 main()

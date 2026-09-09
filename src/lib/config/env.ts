@@ -102,12 +102,25 @@ type ParsedEnv = z.infer<typeof schema>;
  * Trade-off: the parsed object is cached after the first parse, so process.env
  * changes at runtime are NOT picked up. That's the same as before — restart
  * for env changes.
+ *
+ * M28.api-settings — `invalidateEnvCache()` lets the admin UI's
+ * /admin/api-settings page write to .env and force a re-read on the
+ * next access. The running process still keeps the old values
+ * (e.g. an active scheduler tick) — the cache only affects NEW reads.
+ * Operators must restart the server to actually pick up the new
+ * values in the long-running scheduler / pool.
  */
 let cached: ParsedEnv | null = null;
 function parse(): ParsedEnv {
   if (cached) return cached;
   cached = schema.parse(process.env);
   return cached;
+}
+
+/** Clear the in-process env cache. Call after writing to .env so
+ *  subsequent `env.X` reads see the new value. */
+export function invalidateEnvCache(): void {
+  cached = null;
 }
 
 export const env = new Proxy({} as ParsedEnv, {

@@ -343,6 +343,72 @@
         "confirmRevoke": "Revoke this key? Future requests using it will be rejected.",
         "csrfPending": "Loading…"
       },
+      "apiSettings": {
+        "title": "API settings",
+        "description": "Tune GitHub query cadence and the public API rate limits. Changes are persisted to .env and require a server restart to take full effect.",
+        "breadcrumb": {
+          "admin": "Admin",
+          "apiSettings": "API settings"
+        },
+        "github": {
+          "heading": "GitHub query cadence",
+          "description": "How often the scheduler hits the GitHub API to refresh cached repo metadata."
+        },
+        "publicApi": {
+          "heading": "Public API rate limits",
+          "description": "Per-IP and per-key request budgets for the public-facing API endpoints."
+        },
+        "fields": {
+          "SCHEDULER_TICK_MS": {
+            "label": "Scheduler tick interval",
+            "hint": "How often the scheduler claims jobs and refreshes cache. Lower = more responsive but more DB load.",
+            "unit": "ms"
+          },
+          "SCHEDULER_BATCH_SIZE": {
+            "label": "Batch size per tick",
+            "hint": "How many refresh jobs to claim per tick. Higher = faster catch-up after an outage."
+          },
+          "NIGHTLY_SWEEP_INTERVAL_MS": {
+            "label": "Nightly sweep interval",
+            "hint": "How often the scheduler re-queues every cached repo for refresh.",
+            "unit": "ms"
+          },
+          "SCHEDULER_CORE_SWEEP_HOURS": {
+            "label": "Core sweep cadence",
+            "hint": "How often a repo is fully re-fetched (the expensive /repos call).",
+            "unit": "hours"
+          },
+          "SCHEDULER_RELEASES_SWEEP_HOURS": {
+            "label": "Releases sweep cadence",
+            "hint": "How often the releases list is refreshed.",
+            "unit": "hours"
+          },
+          "SCHEDULER_BRANCHES_SWEEP_HOURS": {
+            "label": "Branches sweep cadence",
+            "hint": "How often the branches list is refreshed.",
+            "unit": "hours"
+          },
+          "TOKEN_AUTO_DISABLE_THRESHOLD": {
+            "label": "Token auto-disable threshold",
+            "hint": "Consecutive 429s before a GitHub PAT is auto-disabled. Set to 0 to disable."
+          },
+          "PUBLIC_LOOKUP_RATE_PER_MIN": {
+            "label": "Per-IP rate (public lookup)",
+            "hint": "Per-IP requests per minute against the unauthenticated lookup path.",
+            "unit": "req/min"
+          },
+          "PUBLIC_REPO_RATE_PER_HOUR": {
+            "label": "Per-key rate (API key)",
+            "hint": "Per-key requests per hour against the authenticated /api/v1/* paths.",
+            "unit": "req/hour"
+          }
+        },
+        "save": "Save changes",
+        "saving": "Saving…",
+        "saved": "Saved {count} setting(s).",
+        "needsRestart": "Restart the server to apply.",
+        "saveFailed": "Save failed: {error}"
+      },
       "detail": {
         "common": {
           "dash": "—"

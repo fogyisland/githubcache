@@ -19,8 +19,11 @@
     "node": ">=20"
   },
   "scripts": {
+    "predev": "node -e \"const fs=require('fs');if(fs.existsSync('.next')){console.log('→ wiping stale .next/ before dev');fs.rmSync('.next',{recursive:true,force:true})};\"",
     "dev": "next dev -p 5002",
+    "dev:fresh": "node scripts/dev-fresh.cjs",
     "dev:server": "tsx src/server.ts",
+    "prebuild": "node -e \"const fs=require('fs');if(fs.existsSync('.next')){console.log('→ wiping stale .next/ before build');fs.rmSync('.next',{recursive:true,force:true})};\"",
     "build": "next build",
     "start": "next start -p 5002",
     "start:server": "tsx src/bootstrap.ts",

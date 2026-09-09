@@ -18,6 +18,7 @@ export type AdminSectionSlug =
   | 'queue'
   | 'webhooks'
   | 'database'
+  | 'api-settings'
   | 'insights'
   | 'email'
   | 'email-log';
@@ -45,6 +46,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   { slug: 'queue', icon: 'queue', href: '/admin/queue', roles: ['admin'] },
   { slug: 'webhooks', icon: 'webhooks', href: '/admin/webhooks', roles: ['admin'] },
   { slug: 'database', icon: 'database', href: '/admin/database', roles: ['admin'] },
+  { slug: 'api-settings', icon: 'queries', href: '/admin/api-settings', roles: ['admin'] },
   { slug: 'insights', icon: 'insights', href: '/admin/insights', roles: ['admin'] },
   // M25 — SMTP config + send log. Admin only because misconfiguration
   // can leak credentials to attackers who phish the form.
