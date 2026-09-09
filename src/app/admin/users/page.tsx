@@ -35,8 +35,9 @@ const PAGE_SIZE_MAX = 200;
 export default async function AdminUsersPage({
   searchParams,
 }: {
-  searchParams: { role?: string; status?: string; source?: string; limit?: string; offset?: string };
+  searchParams: Promise<{ role?: string; status?: string; source?: string; limit?: string; offset?: string }>;
 }): Promise<ReactElement> {
+  const sp = await searchParams;
   const cookieStore = await cookies();
   const cookieMap = Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value]));
   const user = await validateSession({
@@ -55,18 +56,18 @@ export default async function AdminUsersPage({
   const t = await getTranslations('admin.users');
   const tPag = await getTranslations('admin.common.pagination');
 
-  const filterRole = searchParams.role === 'admin' || searchParams.role === 'operator'
-    ? searchParams.role
+  const filterRole = sp.role === 'admin' || sp.role === 'operator'
+    ? sp.role
     : undefined;
-  const filterStatus = searchParams.status === 'active' || searchParams.status === 'disabled'
-    ? searchParams.status
+  const filterStatus = sp.status === 'active' || sp.status === 'disabled'
+    ? sp.status
     : undefined;
-  const filterSource = searchParams.source === 'invited' || searchParams.source === 'self'
-    ? searchParams.source
+  const filterSource = sp.source === 'invited' || sp.source === 'self'
+    ? sp.source
     : undefined;
 
-  const rawLimit = Number(searchParams.limit ?? PAGE_SIZE_DEFAULT);
-  const rawOffset = Number(searchParams.offset ?? 0);
+  const rawLimit = Number(sp.limit ?? PAGE_SIZE_DEFAULT);
+  const rawOffset = Number(sp.offset ?? 0);
   const limit = Number.isFinite(rawLimit)
     ? Math.min(PAGE_SIZE_MAX, Math.max(1, rawLimit))
     : PAGE_SIZE_DEFAULT;
