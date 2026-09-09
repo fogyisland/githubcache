@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { NextIntlClientProvider } from 'next-intl';
 import './globals.css';
 import { SiteHeader } from '@/app/_components/site-header';
+import { WebVitalsErrorShield } from '@/app/_components/web-vitals-error-shield';
 import { readThemeFromCookieHeader } from '@/lib/theme/cookie';
 import { readLangFromCookieHeader } from '@/lib/lang/cookie';
 import { resolveLocale } from '@/lib/lang/registry';
@@ -87,6 +88,7 @@ export default async function RootLayout({
       className={`${jetbrainsMono.variable} ${fraunces.variable} ${plexSans.variable} ${plexMono.variable} ${spaceGrotesk.variable}`}
     >
       <body className="min-h-screen font-sans antialiased">
+        <WebVitalsErrorShield />
         <NextIntlClientProvider locale={locale} messages={messages}>
           <SiteHeader />
           {children}

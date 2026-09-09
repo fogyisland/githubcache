@@ -80,5 +80,8 @@
     "workerDirectory": [
       "tests"
     ]
+  },
+  "overrides": {
+    "web-vitals": "^4.2.4"
   }
 }
