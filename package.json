@@ -34,6 +34,8 @@
     "dev:fetch": "tsx scripts/dev-fetch.ts",
     "create:admin": "tsx --env-file=.env scripts/create-admin.ts",
     "db:check-drift": "tsx --env-file=.env scripts/db-drift-check.ts",
+    "db:migrate": "prisma migrate deploy",
+    "db:resolve-rolled-back": "tsx scripts/resolve-rolled-back-migrations.ts",
     "init": "tsx scripts/init.ts",
     "mint:key": "tsx --env-file=.env scripts/mint-local-api-key.ts",
     "smoke:session": "tsx --env-file=.env scripts/smoke-session.ts",
