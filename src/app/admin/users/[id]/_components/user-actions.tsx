@@ -148,7 +148,7 @@ export function UserActions({
             <input
               id="disable-confirm"
               type="text"
-              className="ghc-admin-input ghc-admin-input-mono"
+              className="ghc-api-settings-input ghc-api-settings-input" data-numeric
               placeholder={t('disableConfirmPlaceholder')}
               value={disableConfirm}
               onChange={(e) => setDisableConfirm(e.target.value.toUpperCase())}

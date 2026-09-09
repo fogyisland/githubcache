@@ -142,7 +142,7 @@ export function RestoreSection({ backups }: Props): ReactElement {
           <p className="ghc-admin-empty">{t('selectBackup')}</p>
         ) : (
           <select
-            className="ghc-admin-select"
+            className="ghc-api-settings-input" data-numeric
             value={filename}
             onChange={(e) => setFilename(e.target.value)}
           >
@@ -172,7 +172,7 @@ export function RestoreSection({ backups }: Props): ReactElement {
         <label className="ghc-admin-label">{t('confirmPrompt')}</label>
         <input
           type="text"
-          className="ghc-admin-input ghc-admin-input-mono"
+          className="ghc-api-settings-input ghc-api-settings-input" data-numeric
           placeholder={t('confirmPlaceholder')}
           value={confirm}
           onChange={(e) => setConfirm(e.target.value.toUpperCase())}

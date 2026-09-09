@@ -90,7 +90,7 @@ export function AddWebhookForm(): ReactElement {
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           placeholder={t('urlPlaceholder')}
-          className="ghc-admin-input"
+          className="ghc-api-settings-input"
         />
       </label>
       <label className="ghc-admin-field">
@@ -101,7 +101,7 @@ export function AddWebhookForm(): ReactElement {
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
           placeholder={t('filterPlaceholder')}
-          className="ghc-admin-input"
+          className="ghc-api-settings-input"
         />
       </label>
       {error ? <p className="ghc-admin-error">{error}</p> : null}

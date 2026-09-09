@@ -161,7 +161,7 @@ export function RunViaProvider(): ReactElement {
           <select
             value={selectedId}
             onChange={(e) => setSelectedId(e.target.value)}
-            className="ghc-admin-input"
+            className="ghc-api-settings-input"
           >
             <option value="">—</option>
             {providers.map((p) => (
@@ -180,7 +180,7 @@ export function RunViaProvider(): ReactElement {
             max="10000"
             value={limit}
             onChange={(e) => setLimit(e.target.value)}
-            className="ghc-admin-input"
+            className="ghc-api-settings-input"
           />
         </label>
 

@@ -146,7 +146,7 @@ export function ProviderForm({
           onChange={(e) => setState((s) => ({ ...s, slug: e.target.value }))}
           disabled={isEdit}
           pattern="[a-z0-9\-]+"
-          className="ghc-admin-input"
+          className="ghc-api-settings-input"
         />
         <small className="ghc-admin-help">{t('form.slugHelp')}</small>
       </label>
@@ -159,7 +159,7 @@ export function ProviderForm({
           value={state.name}
           onChange={(e) => setState((s) => ({ ...s, name: e.target.value }))}
           placeholder={t('form.namePlaceholder')}
-          className="ghc-admin-input"
+          className="ghc-api-settings-input"
         />
       </label>
 
@@ -198,7 +198,7 @@ export function ProviderForm({
             value={state.path}
             onChange={(e) => setState((s) => ({ ...s, path: e.target.value }))}
             placeholder={t('form.filePathPlaceholder')}
-            className="ghc-admin-input"
+            className="ghc-api-settings-input"
           />
         </label>
       ) : (
@@ -210,7 +210,7 @@ export function ProviderForm({
             value={state.url}
             onChange={(e) => setState((s) => ({ ...s, url: e.target.value }))}
             placeholder={t('form.urlPlaceholder')}
-            className="ghc-admin-input"
+            className="ghc-api-settings-input"
           />
         </label>
       )}
@@ -223,7 +223,7 @@ export function ProviderForm({
           value={state.itemsPath}
           onChange={(e) => setState((s) => ({ ...s, itemsPath: e.target.value }))}
           placeholder={t('form.itemsPathPlaceholder')}
-          className="ghc-admin-input"
+          className="ghc-api-settings-input"
         />
         <small className="ghc-admin-help">{t('form.itemsPathHelp')}</small>
       </label>
@@ -236,7 +236,7 @@ export function ProviderForm({
           value={state.urlField}
           onChange={(e) => setState((s) => ({ ...s, urlField: e.target.value }))}
           placeholder={t('form.urlFieldPlaceholder')}
-          className="ghc-admin-input"
+          className="ghc-api-settings-input"
         />
         <small className="ghc-admin-help">{t('form.urlFieldHelp')}</small>
       </label>

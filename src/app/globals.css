@@ -3285,7 +3285,11 @@ a {
 }
 
 .ghc-admin-card {
-  padding: 1.25rem;
+  /* M28 — unified with ghc-api-settings-card. Same chrome (white
+     surface, 1px border, 8px radius, 1.5rem padding) so cards look
+     identical whether the page is from the new "API settings" family
+     or the older "admin hub" family. */
+  padding: 1.5rem;
   border: 1px solid var(--border, #e5e7eb);
   background: var(--surface, #fff);
   border-radius: 8px;
@@ -3294,6 +3298,15 @@ a {
   flex-direction: column;
   gap: 0.5rem;
   min-width: 0;
+}
+
+/* ghc-admin-row-inline — small inline group inside a table cell or
+   card body. replaces repeated `style={{ display: 'inline-flex',
+   gap, alignItems }}` blocks. */
+.ghc-admin-row-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .ghc-admin-card-link {
