@@ -53,6 +53,13 @@ export const metadata: Metadata = {
   title: SITE_NAME,
   description:
     'Submit a GitHub repo, get cached metadata (stars, forks, language, license, topics, dates). Per-IP rate limit, no GitHub token required.',
+  // Web Interface Guidelines: theme-color lets mobile browsers paint
+  // the URL bar / chrome to match the page surface (avoids the white
+  // flash on Android PWA add-to-homescreen).
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#FAFAF7' },
+    { media: '(prefers-color-scheme: dark)', color: '#14141A' },
+  ],
 };
 
 // Root layout — server component, reads the theme cookie via next/headers

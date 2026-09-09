@@ -7,6 +7,8 @@ import { AdminFilterBar } from '@/app/admin/_components/admin-filter-bar';
 import { AdminPagination } from '@/app/admin/_components/admin-pagination';
 import { AdminTable, type AdminColumn } from '@/app/admin/_components/admin-table';
 import { AdminStatusChip, type AdminChipVariant } from '@/app/admin/_components/admin-status-chip';
+import { formatDate } from '@/lib/format/datetime';
+import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 
 type RepoRow = Awaited<ReturnType<typeof listRepositories>>['rows'][number];
 
@@ -41,6 +43,11 @@ export default async function AdminRepositoriesPage({
 }): Promise<ReactElement> {
   const t = await getTranslations('admin.repositories');
   const tPag = await getTranslations('admin.common.pagination');
+
+  // M28 — admin tables use the user's TZ via the shared formatter
+  // (CLAUDE.md: do NOT use `d.toISOString().slice(...)` for
+  // user-facing dates — that pattern is reserved for machine APIs).
+  const userTz = resolveRequestTimezone({});
 
   const filterStatus: FetchStatus | undefined =
     searchParams.status === 'ok' ||
@@ -86,7 +93,7 @@ export default async function AdminRepositoriesPage({
     {
       key: 'lastFetched',
       header: t('list.column.lastFetched'),
-      render: (r) => (r.lastFetchedAt ? r.lastFetchedAt.toISOString().slice(0, 10) : t('list.never')),
+      render: (r) => (r.lastFetchedAt ? formatDate(r.lastFetchedAt, userTz) : t('list.never')),
     },
     {
       key: 'error',

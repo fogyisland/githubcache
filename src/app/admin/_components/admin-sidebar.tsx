@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { ReactElement } from 'react';
 import { getTranslations } from 'next-intl/server';
+import { SidebarIcon, type SidebarIconName } from '@/app/_components/sidebar-icons';
 
 export type AdminSectionSlug =
   | 'dashboard'
@@ -24,31 +25,31 @@ export type AdminSectionSlug =
 /** Static metadata — `title` lives in messages, not here, so it can translate. */
 export interface AdminSection {
   slug: AdminSectionSlug;
-  icon: string;
+  icon: SidebarIconName;
   href: string;
   roles: Array<'admin' | 'operator'>;
 }
 
 export const ADMIN_SECTIONS: AdminSection[] = [
-  { slug: 'dashboard', icon: '◉', href: '/admin', roles: ['admin', 'operator'] },
-  { slug: 'users', icon: '◐', href: '/admin/users', roles: ['admin'] },
-  { slug: 'api-keys', icon: '⌬', href: '/admin/api-keys', roles: ['admin', 'operator'] },
-  { slug: 'github-tokens', icon: '⊕', href: '/admin/github-tokens', roles: ['admin', 'operator'] },
-  { slug: 'reports', icon: '⊟', href: '/admin/reports', roles: ['admin', 'operator'] },
-  { slug: 'queries', icon: '⊰', href: '/admin/queries', roles: ['admin', 'operator'] },
-  { slug: 'ingestion', icon: '⊱', href: '/admin/ingestion', roles: ['admin'] },
-  { slug: 'providers', icon: '⊡', href: '/admin/providers', roles: ['admin'] },
-  { slug: 'repositories', icon: '◰', href: '/admin/repositories', roles: ['admin', 'operator'] },
-  { slug: 'audit', icon: '◭', href: '/admin/audit', roles: ['admin'] },
-  { slug: 'refresh', icon: '↻', href: '/admin/refresh', roles: ['admin'] },
-  { slug: 'queue', icon: '⊞', href: '/admin/queue', roles: ['admin'] },
-  { slug: 'webhooks', icon: '⊜', href: '/admin/webhooks', roles: ['admin'] },
-  { slug: 'database', icon: '◰', href: '/admin/database', roles: ['admin'] },
-  { slug: 'insights', icon: '◬', href: '/admin/insights', roles: ['admin'] },
+  { slug: 'dashboard', icon: 'dashboard', href: '/admin', roles: ['admin', 'operator'] },
+  { slug: 'users', icon: 'users', href: '/admin/users', roles: ['admin'] },
+  { slug: 'api-keys', icon: 'api-keys', href: '/admin/api-keys', roles: ['admin', 'operator'] },
+  { slug: 'github-tokens', icon: 'github-tokens', href: '/admin/github-tokens', roles: ['admin', 'operator'] },
+  { slug: 'reports', icon: 'reports', href: '/admin/reports', roles: ['admin', 'operator'] },
+  { slug: 'queries', icon: 'queries', href: '/admin/queries', roles: ['admin', 'operator'] },
+  { slug: 'ingestion', icon: 'ingestion', href: '/admin/ingestion', roles: ['admin'] },
+  { slug: 'providers', icon: 'providers', href: '/admin/providers', roles: ['admin'] },
+  { slug: 'repositories', icon: 'repositories', href: '/admin/repositories', roles: ['admin', 'operator'] },
+  { slug: 'audit', icon: 'audit', href: '/admin/audit', roles: ['admin'] },
+  { slug: 'refresh', icon: 'refresh', href: '/admin/refresh', roles: ['admin'] },
+  { slug: 'queue', icon: 'queue', href: '/admin/queue', roles: ['admin'] },
+  { slug: 'webhooks', icon: 'webhooks', href: '/admin/webhooks', roles: ['admin'] },
+  { slug: 'database', icon: 'database', href: '/admin/database', roles: ['admin'] },
+  { slug: 'insights', icon: 'insights', href: '/admin/insights', roles: ['admin'] },
   // M25 — SMTP config + send log. Admin only because misconfiguration
   // can leak credentials to attackers who phish the form.
-  { slug: 'email', icon: '✉', href: '/admin/email', roles: ['admin'] },
-  { slug: 'email-log', icon: '✉', href: '/admin/email/log', roles: ['admin'] },
+  { slug: 'email', icon: 'email', href: '/admin/email', roles: ['admin'] },
+  { slug: 'email-log', icon: 'email-log', href: '/admin/email/log', roles: ['admin'] },
 ];
 
 interface Props {
@@ -76,7 +77,7 @@ export async function AdminSidebar({ current, userRole }: Props): Promise<ReactE
                 aria-current={isCurrent ? 'page' : undefined}
               >
                 <span className="ghc-admin-sidebar-icon" aria-hidden="true">
-                  {s.icon}
+                  <SidebarIcon name={s.icon} />
                 </span>
                 <span className="ghc-admin-sidebar-title">{t(`sections.${s.slug}`)}</span>
               </Link>
