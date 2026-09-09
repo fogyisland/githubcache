@@ -11,12 +11,17 @@ export interface WriteAuditArgs {
 }
 
 export async function writeAudit(args: WriteAuditArgs): Promise<AuditLog> {
+  // M28.bug21 — audit_log.actor_user_id is NOT NULL. Default to 0
+  // (sentinel for "actor unknown") when caller doesn't supply one.
+  // The DB column default would do this too, but Prisma's typed client
+  // requires the field to be present in the create input.
+  const actorUserId = args.actorUserId ?? 0n;
   const row = await prisma.auditLog.create({
     data: {
+      actorUserId,
       action: args.action,
       targetType: args.targetType,
       targetId: args.targetId,
-      ...(args.actorUserId !== undefined ? { actorUserId: args.actorUserId } : {}),
       ...(args.metadata !== undefined
         ? { metadata: args.metadata as Prisma.InputJsonValue }
         : {}),

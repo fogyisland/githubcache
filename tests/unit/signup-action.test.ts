@@ -218,8 +218,8 @@ describe('signupAction', () => {
       });
       await prisma.auditLog.createMany({
         data: [
-          { action: 'user_signed_up', targetType: 'user', targetId: 'fake-0', ip, createdAt: new Date() },
-          { action: 'user_signed_up', targetType: 'user', targetId: 'fake-1', ip, createdAt: new Date() },
+          { actorUserId: 0, action: 'user_signed_up', targetType: 'user', targetId: 'fake-0', ip, createdAt: new Date() },
+          { actorUserId: 0, action: 'user_signed_up', targetType: 'user', targetId: 'fake-1', ip, createdAt: new Date() },
         ],
       });
 

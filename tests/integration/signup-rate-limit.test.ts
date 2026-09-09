@@ -95,6 +95,7 @@ describe('signup rate limit', () => {
         // Pre-seed 3 audit rows so the next call sees count === 3.
         await prisma.auditLog.createMany({
           data: Array.from({ length: 3 }, (_, i) => ({
+            actorUserId: 0,
             action: 'user_signed_up',
             targetType: 'user',
             targetId: `seed-${i}`,

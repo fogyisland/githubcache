@@ -201,7 +201,7 @@ enum ApiKeyStatus {
 
 model AuditLog {
   id          BigInt   @id @default(autoincrement())
-  actorUserId BigInt?  @map("actor_user_id")
+  actorUserId BigInt   @map("actor_user_id")
   action      String   @db.VarChar(100)
   targetType  String   @map("target_type") @db.VarChar(50)
   targetId    String   @map("target_id") @db.VarChar(100)

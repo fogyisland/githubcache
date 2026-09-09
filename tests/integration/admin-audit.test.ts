@@ -95,7 +95,7 @@ beforeAll(async () => {
       ip: '10.0.0.2',
     },
     {
-      actorUserId: null,
+      actorUserId: 0,
       action: 'system_event',
       targetType: 'system',
       targetId: 'sys-1',
@@ -208,7 +208,7 @@ describe('GET /api/admin/audit', () => {
     // Seed one refresh.failed_review row (actor=null since this is system-generated).
     const seeded = await prisma.auditLog.create({
       data: {
-        actorUserId: null,
+        actorUserId: 0,
         action: 'refresh.failed_review',
         targetType: 'repository',
         targetId: 'test/repo-43',
