@@ -168,19 +168,27 @@ export default async function AdminLayout({
 
   return (
     <div>
-      {/* Top utility bar (lang switcher + theme switcher + variant switcher + mode switcher + tz switcher + clock + logout)
-          — kept outside AdminShell so it stays on top across all variants. */}
+      {/* Top utility bar — slim 56px chrome.
+          Left: user identity pill. Right: settings cluster (mode, lang, tz, theme, clock, logout). */}
       <div className="ghc-admin-utility">
-        <span className="text-sm">
-          {user.email} ({tShell(`role.${user.role}`)})
-        </span>
-        <AdminVariantSwitcher current={currentAdminVariant} />
-        <AdminModeSwitcher current={currentAdminMode} />
-        <LangSwitcher current={currentLang} locales={LOCALES} />
-        <TimezoneSwitcher current={currentTz} />
-        <ThemeSwitcher current={currentTheme} />
-        <AdminClock />
-        <LogoutButton />
+        <div className="ghc-admin-utility-left">
+          <span className="ghc-admin-user-pill">
+            <span className="ghc-admin-user-avatar" aria-hidden="true">
+              {user.email.slice(0, 1).toUpperCase()}
+            </span>
+            <span className="ghc-admin-user-email">{user.email}</span>
+            <span className="ghc-admin-user-role">{tShell(`role.${user.role}`)}</span>
+          </span>
+          <AdminVariantSwitcher current={currentAdminVariant} />
+          <AdminClock />
+        </div>
+        <div className="ghc-admin-utility-right">
+          <AdminModeSwitcher current={currentAdminMode} />
+          <LangSwitcher current={currentLang} locales={LOCALES} />
+          <TimezoneSwitcher current={currentTz} />
+          <ThemeSwitcher current={currentTheme} />
+          <LogoutButton />
+        </div>
       </div>
       <AdminShell
         current={currentSection}

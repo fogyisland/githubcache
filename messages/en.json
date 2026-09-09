@@ -1172,7 +1172,11 @@
         "weekly-report": "Weekly report",
         "test": "Test send"
       },
-      "empty": "No email log entries match these filters.",
+      "empty": {
+        "title": "No matching logs",
+        "description": "Try adjusting your filters, or wait for new transactional emails to arrive.",
+        "reset": "Reset filters"
+      },
       "errorDash": "—"
     }
   },

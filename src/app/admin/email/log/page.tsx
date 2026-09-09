@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react';
+import Link from 'next/link';
 import type { EmailLogStatus } from '@prisma/client';
 import { getTranslations } from 'next-intl/server';
 import { listEmailLog } from '@/lib/email/log';
@@ -108,6 +109,8 @@ export default async function AdminEmailLogPage({
   if (filterStatus) extraSearch.status = filterStatus;
   if (filterTemplateKey) extraSearch.templateKey = filterTemplateKey;
 
+  const hasActiveFilter = filterStatus !== undefined || filterTemplateKey !== undefined;
+
   return (
     <div className="ghc-admin-page">
       <AdminPageHeader
@@ -140,7 +143,15 @@ export default async function AdminEmailLogPage({
       <AdminTable<EmailLogRow>
         columns={columns}
         rows={rows}
-        emptyTitle={t('empty')}
+        emptyTitle={t('empty.title')}
+        emptyDescription={t('empty.description')}
+        emptyAction={
+          hasActiveFilter ? (
+            <Link href="/admin/email/log" className="ghc-btn-ghost">
+              {t('empty.reset')}
+            </Link>
+          ) : undefined
+        }
         ariaLabel={t('title')}
       />
       <AdminPagination

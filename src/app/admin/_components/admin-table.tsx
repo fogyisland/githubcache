@@ -99,6 +99,9 @@ export function AdminTable<T>({
   }
 
   if (rows.length === 0) {
+    // `emptyAction` lets callers add a CTA below the empty state (e.g.
+    // a "Reset filters" link on filterable pages). EmptyAction is
+    // optional rendered to avoid the exactOptionalPropertyTypes hazard.
     return (
       <AdminEmptyState
         icon={<span>{emptyIcon}</span>}
