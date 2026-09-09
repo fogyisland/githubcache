@@ -20,6 +20,7 @@ import { AdminShell } from '@/app/admin/_components/admin-shell';
 import { CommandPalette } from '@/app/admin/_components/command-palette';
 import {
   ADMIN_SECTIONS,
+  type AdminSection,
   type AdminSectionSlug,
 } from '@/app/admin/_components/admin-sidebar';
 import { isPaused } from '@/lib/scheduler/state';
@@ -30,15 +31,24 @@ import type { PaletteData } from '@/app/admin/_components/command-palette';
 /**
  * Map a request pathname to the matching sidebar slug. Returns
  * 'dashboard' as the fallback for any unrecognised admin path.
+ *
+ * M28.bug-fix — previously this looped `ADMIN_SECTIONS` in array order,
+ * so sub-pages like `/admin/email/log` would match the *parent* slug
+ * (`email`) first and leave "Email" highlighted on the Email log page.
+ * Fix: prefer exact match immediately; among prefix matches, keep the
+ * longest href (most specific section wins).
  */
 function sectionForPath(pathname: string): AdminSectionSlug {
   if (pathname === '/admin' || pathname === '/admin/') return 'dashboard';
-  // Order matters — more specific slugs first.
-  const matches = ADMIN_SECTIONS.filter((s) => s.slug !== 'dashboard');
-  for (const s of matches) {
-    if (pathname === s.href || pathname.startsWith(`${s.href}/`)) return s.slug;
+  const candidates = ADMIN_SECTIONS.filter((s) => s.slug !== 'dashboard');
+  let best: AdminSection | null = null;
+  for (const s of candidates) {
+    if (pathname === s.href) return s.slug;
+    if (pathname.startsWith(`${s.href}/`)) {
+      if (best === null || s.href.length > best.href.length) best = s;
+    }
   }
-  return 'dashboard';
+  return best?.slug ?? 'dashboard';
 }
 
 /**
