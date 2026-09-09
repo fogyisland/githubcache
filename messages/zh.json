@@ -321,12 +321,27 @@
           "status": "状态",
           "rate": "速率/分钟",
           "quota": "日配额",
-          "lastUsed": "最后使用"
+          "lastUsed": "最后使用",
+          "actions": "操作"
         },
         "empty": {
           "title": "没有匹配的 API 密钥",
           "description": "尝试清除筛选条件或邀请新的操作员。"
         }
+      },
+      "rowActions": {
+        "approve": "通过",
+        "approving": "通过中…",
+        "approveAria": "通过 API 密钥 {id}",
+        "reject": "拒绝",
+        "rejecting": "拒绝中…",
+        "rejectAria": "拒绝 API 密钥 {id}",
+        "confirmReject": "拒绝此密钥申请？用户需要重新申请。",
+        "revoke": "撤销",
+        "revoking": "撤销中…",
+        "revokeAria": "撤销 API 密钥 {id}",
+        "confirmRevoke": "撤销此密钥？后续使用它的请求都会被拒绝。",
+        "csrfPending": "加载中…"
       },
       "detail": {
         "common": {

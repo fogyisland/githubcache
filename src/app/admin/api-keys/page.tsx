@@ -9,6 +9,7 @@ import { AdminTable, type AdminColumn } from '@/app/admin/_components/admin-tabl
 import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
 import { formatDate } from '@/lib/format/datetime';
 import { resolveRequestTimezone } from '@/lib/timezone/resolve';
+import { KeyRowActions } from './_components/key-row-actions';
 
 type KeyRow = Awaited<ReturnType<typeof listApiKeys>>['rows'][number];
 
@@ -115,6 +116,14 @@ export default async function AdminApiKeysPage({
       render: (k) =>
         k.lastUsedAt ? formatDate(k.lastUsedAt, userTz) : t('list.never'),
     },
+    {
+      key: 'actions',
+      header: t('list.column.actions'),
+      // M28 — inline Approve / Reject / Revoke so the operator
+      // doesn't have to click into the detail page to act.
+      render: (k) => <KeyRowActions apiKeyId={k.id.toString()} status={k.status} />,
+      align: 'right',
+    },
   ];
 
   return (
@@ -151,6 +160,8 @@ export default async function AdminApiKeysPage({
         emptyTitle={t('list.empty.title')}
         emptyDescription={t('list.empty.description')}
         ariaLabel={t('list.ariaLabel')}
+        // The inline action buttons need to stay clickable; don't
+        // bubble the row-link click from the buttons themselves.
       />
       <AdminPagination
         basePath="/admin/api-keys"

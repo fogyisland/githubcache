@@ -321,12 +321,27 @@
           "status": "Status",
           "rate": "Rate/min",
           "quota": "Daily quota",
-          "lastUsed": "Last used"
+          "lastUsed": "Last used",
+          "actions": "Actions"
         },
         "empty": {
           "title": "No API keys match this filter",
           "description": "Try clearing the filter or invite a new operator."
         }
+      },
+      "rowActions": {
+        "approve": "Approve",
+        "approving": "Approving…",
+        "approveAria": "Approve API key {id}",
+        "reject": "Reject",
+        "rejecting": "Rejecting…",
+        "rejectAria": "Reject API key {id}",
+        "confirmReject": "Reject this key request? The user will need to re-request.",
+        "revoke": "Revoke",
+        "revoking": "Revoking…",
+        "revokeAria": "Revoke API key {id}",
+        "confirmRevoke": "Revoke this key? Future requests using it will be rejected.",
+        "csrfPending": "Loading…"
       },
       "detail": {
         "common": {

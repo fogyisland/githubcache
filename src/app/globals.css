@@ -210,8 +210,44 @@ a {
   /* ghc-btn-sm — size modifier for ghc-btn-* buttons used in dense
      toolbars (logout, revoke, "Cancel" links). */
   .ghc-btn-sm {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.625rem;
+    min-height: 1.625rem;
+  }
+
+  /* ghc-btn-danger — destructive action variant. White text on
+     red 600, hover brightens. Same `sm` modifier applies. */
+  .ghc-btn-danger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    background: #DC2626;
+    color: white;
+    border: 1px solid #DC2626;
+    border-radius: 6px;
+    padding: 0.5rem 1rem;
     font-size: 0.8125rem;
-    padding: 0.4rem 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 120ms ease, transform 80ms ease;
+  }
+  .ghc-btn-danger:hover { background: #B91C1C; }
+  .ghc-btn-danger:active { transform: translateY(1px); }
+  .ghc-btn-danger:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  /* ghc-admin-row-actions — inline action cell container. Right-
+     aligned stack of buttons; gap = 0.5rem per Web Interface
+     Guidelines (8px+ touch spacing). */
+  .ghc-admin-row-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    justify-content: flex-end;
+  }
+  .ghc-admin-row-actions-error {
+    font-size: 0.75rem;
+    color: var(--color-danger, #DC2626);
   }
 
   /* ghc-table — plain themed data table used by the /account surface.
@@ -484,20 +520,18 @@ a {
     align-items: center;
     justify-content: center;
     gap: 0.375rem;
-    background: var(--color-accent);
-    color: var(--color-accent-ink);
-    border: var(--border-width-card) solid var(--color-accent);
-    border-radius: var(--radius-button);
+    background: var(--brand);
+    color: white;
+    border: 1px solid var(--brand);
+    border-radius: 6px;
     padding: 0.5rem 1rem;
-    font-family: var(--font-mono-active);
-    font-size: 0.875rem;
-    font-weight: 600;
+    font-size: 0.8125rem;
+    font-weight: 500;
     cursor: pointer;
-    transition: filter 120ms ease-out;
+    transition: background 120ms ease, transform 80ms ease;
   }
-  .ghc-btn-primary:hover {
-    filter: brightness(1.08);
-  }
+  .ghc-btn-primary:hover { background: var(--brand-hover, #2563EB); }
+  .ghc-btn-primary:active { transform: translateY(1px); }
   .ghc-btn-primary:disabled {
     opacity: 0.55;
     cursor: not-allowed;
