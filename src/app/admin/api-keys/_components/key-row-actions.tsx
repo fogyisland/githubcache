@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState, type ReactElement } from 'react';
+import { useState, type ReactElement } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { fetchCsrfToken } from '@/lib/csrf/client';
+import { adminFetch } from '@/lib/api/admin-fetch';
 
 /**
  * M28 — inline Approve / Reject / Revoke buttons for the API key list.
@@ -12,6 +12,9 @@ import { fetchCsrfToken } from '@/lib/csrf/client';
  * detail page to act on a key. Both endpoints already exist
  * (POST /api/admin/api-keys/[id]/approve and /revoke); this
  * component just calls them and refreshes the table.
+ *
+ * adminFetch owns CSRF + credentials + JSON encoding. CSRF is fetched
+ * lazily per call; no up-front probe needed.
  *
  * Web Interface Guidelines:
  *  - Destructive actions need a confirmation modal/undo window —
@@ -31,46 +34,40 @@ export function KeyRowActions({
 }): ReactElement {
   const t = useTranslations('admin.apiKeys.rowActions');
   const router = useRouter();
-  const [csrf, setCsrf] = useState('');
   const [busy, setBusy] = useState<'approve' | 'reject' | 'revoke' | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    void fetchCsrfToken()
-      .then(setCsrf)
-      .catch(() => {
-        // Token fetch failed; the next action click will retry.
-        // fetchCsrfToken self-heals via resetCsrfCache on throw.
-      });
-  }, []);
 
   async function call(
     endpoint: 'approve' | 'reject' | 'revoke',
     confirmMessage?: string,
   ): Promise<void> {
-    if (!csrf) {
-      setError(t('csrfPending'));
-      return;
-    }
     if (confirmMessage && !window.confirm(confirmMessage)) {
       return;
     }
     setBusy(endpoint);
     setError(null);
     try {
-      const res = await fetch(`/api/admin/api-keys/${apiKeyId}/${endpoint}`, {
+      await adminFetch(`/api/admin/api-keys/${apiKeyId}/${endpoint}`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-csrf-token': csrf },
-        body: JSON.stringify({ csrf }),
       });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { error?: string };
-        setError(body.error ?? `HTTP ${res.status}`);
-        return;
-      }
       router.refresh();
     } catch (e) {
-      setError((e as Error).message);
+      const message = e instanceof Error ? e.message : 'unknown';
+      const match = /^adminFetch (\d+):\s*(.*)$/.exec(message);
+      if (match) {
+        const status = Number(match[1]);
+        const bodyText = match[2] ?? '';
+        let parsedError: string | undefined;
+        try {
+          const parsed = JSON.parse(bodyText) as { error?: string };
+          parsedError = parsed.error;
+        } catch {
+          // body wasn't JSON; fall through to status-based message
+        }
+        setError(parsedError ?? `HTTP ${status}`);
+      } else {
+        setError(message);
+      }
     } finally {
       setBusy(null);
     }

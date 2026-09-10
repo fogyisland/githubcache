@@ -4,6 +4,7 @@ import { useState, useTransition, type ReactElement } from 'react';
 import { useTranslations } from 'next-intl';
 import { formatDateTime } from '@/lib/format/datetime';
 import type { TimezoneId } from '@/lib/timezone/registry';
+import { adminFetch } from '@/lib/api/admin-fetch';
 import { fetchCsrfToken } from '@/lib/csrf/client';
 
 interface BackupRow {
@@ -37,8 +38,8 @@ function formatBytes(n: number): string {
  * /api/admin/database/backup and refreshes the list. Each row has a
  * download link + delete button.
  *
- * CSRF: we read the token from the cookie set by /api/admin/auth/csrf
- * (same convention as the rest of the admin SPA).
+ * CSRF: adminFetch auto-injects the x-csrf-token header. The route
+ * also validates body.csrf, which we provide via fetchCsrfToken().
  */
 export function BackupSection({ initialBackups, keepN, tz }: Props): ReactElement {
   const t = useTranslations('admin.database.backup');
@@ -50,14 +51,9 @@ export function BackupSection({ initialBackups, keepN, tz }: Props): ReactElemen
     | null
   >(null);
 
-  async function getCsrf(): Promise<string> {
-    return fetchCsrfToken();
-  }
-
   function refresh(): void {
-    void fetch('/api/admin/database/backup', { credentials: 'include' })
-      .then((r) => r.json())
-      .then((j: { backups?: BackupRow[] }) => {
+    void adminFetch<{ backups?: BackupRow[] }>('/api/admin/database/backup')
+      .then((j) => {
         if (j.backups) setRows(j.backups);
       })
       .catch(() => undefined);
@@ -68,22 +64,14 @@ export function BackupSection({ initialBackups, keepN, tz }: Props): ReactElemen
     startTransition(() => {
       void (async () => {
         try {
-          const csrf = await getCsrf();
-          const r = await fetch('/api/admin/database/backup', {
-            method: 'POST',
-            credentials: 'include',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ csrf }),
-          });
-          if (!r.ok) {
-            const j = (await r.json().catch(() => ({}))) as { message?: string };
-            setFeedback({
-              kind: 'error',
-              message: t('createFailed', { error: j.message ?? `HTTP ${r.status}` }),
-            });
-            return;
-          }
-          const j = (await r.json()) as { filename: string; size: number };
+          const csrf = await fetchCsrfToken();
+          const j = await adminFetch<{ filename: string; size: number }>(
+            '/api/admin/database/backup',
+            {
+              method: 'POST',
+              body: { csrf },
+            },
+          );
           setFeedback({
             kind: 'success',
             message: t('createSuccess', {
@@ -93,10 +81,11 @@ export function BackupSection({ initialBackups, keepN, tz }: Props): ReactElemen
           });
           refresh();
         } catch (e: unknown) {
+          const message = e instanceof Error ? e.message : String(e);
           setFeedback({
             kind: 'error',
             message: t('createFailed', {
-              error: e instanceof Error ? e.message : String(e),
+              error: message.startsWith('adminFetch ') ? `HTTP ${message.split(' ')[1]?.split(':')[0] ?? ''}` : message,
             }),
           });
         }
@@ -109,23 +98,17 @@ export function BackupSection({ initialBackups, keepN, tz }: Props): ReactElemen
     startTransition(() => {
       void (async () => {
         try {
-          const r = await fetch(
+          await adminFetch(
             `/api/admin/database/backup?id=${encodeURIComponent(filename)}`,
-            { method: 'DELETE', credentials: 'include' },
+            { method: 'DELETE' },
           );
-          if (!r.ok) {
-            setFeedback({
-              kind: 'error',
-              message: t('createFailed', { error: `HTTP ${r.status}` }),
-            });
-            return;
-          }
           refresh();
         } catch (e: unknown) {
+          const message = e instanceof Error ? e.message : String(e);
           setFeedback({
             kind: 'error',
             message: t('createFailed', {
-              error: e instanceof Error ? e.message : String(e),
+              error: message.startsWith('adminFetch ') ? `HTTP ${message.split(' ')[1]?.split(':')[0] ?? ''}` : message,
             }),
           });
         }

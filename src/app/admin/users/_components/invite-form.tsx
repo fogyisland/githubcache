@@ -1,44 +1,42 @@
 'use client';
-import { useState, useEffect, type ReactElement, type FormEvent as ReactFormEvent } from 'react';
+import { useState, type ReactElement, type FormEvent as ReactFormEvent } from 'react';
 import { useTranslations } from 'next-intl';
+import { adminFetch } from '@/lib/api/admin-fetch';
 import { fetchCsrfToken } from '@/lib/csrf/client';
 
 /**
  * Client component: invite a new user (M13.4 i18n).
  *
- * Fetches CSRF on mount, posts to /api/admin/users/invite, displays the
+ * Calls adminFetch to POST /api/admin/users/invite, displays the
  * returned invitation link. The actual invite UX (consuming the link,
  * choosing a password) lives at /request-access and is M7-deferred.
  */
 export function InviteForm(): ReactElement {
   const t = useTranslations('admin.users.invite');
-  const [csrf, setCsrf] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'admin' | 'operator'>('operator');
   const [error, setError] = useState<string | null>(null);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
 
-  useEffect(() => {
-    void fetchCsrfToken().then(setCsrf).catch(() => undefined);
-  }, []);
-
   async function onSubmit(e: ReactFormEvent): Promise<void> {
     e.preventDefault();
     setError(null);
     setInviteLink(null);
-    const res = await fetch('/api/admin/users/invite', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-csrf-token': csrf },
-      body: JSON.stringify({ email, role, csrf }),
-    });
-    if (!res.ok) {
-      const err = (await res.json().catch(() => ({}))) as { error?: string };
-      setError(err.error ?? t('error.http', { status: res.status }));
-      return;
+    try {
+      const csrf = await fetchCsrfToken();
+      const data = await adminFetch<{ inviteLink: string }>(
+        '/api/admin/users/invite',
+        {
+          method: 'POST',
+          body: { email, role, csrf },
+        },
+      );
+      setInviteLink(data.inviteLink);
+      setEmail('');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message);
     }
-    const data = (await res.json()) as { inviteLink: string };
-    setInviteLink(data.inviteLink);
-    setEmail('');
   }
 
   return (

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { formatDateTime } from '@/lib/format/datetime';
 import type { TimezoneId } from '@/lib/timezone/registry';
+import { adminFetch } from '@/lib/api/admin-fetch';
 import { fetchCsrfToken } from '@/lib/csrf/client';
 
 interface Props {
@@ -22,8 +23,8 @@ interface Props {
  *   2. Auto-refresh the parent server component every 2s via
  *      router.refresh() so the queue tables stay live without manual reload.
  *
- * CSRF: fetches /api/admin/auth/csrf and echoes the token in BOTH the
- * x-csrf-token header AND the body — same pattern as RefreshControls.
+ * CSRF: adminFetch injects the x-csrf-token header. The route also
+ * validates body.csrf, which we provide via fetchCsrfToken().
  */
 export function QueueControls({ isPaused, pausedAt, tz }: Props): ReactElement {
   const t = useTranslations('admin.queue.controls');
@@ -38,37 +39,31 @@ export function QueueControls({ isPaused, pausedAt, tz }: Props): ReactElement {
     return () => window.clearInterval(id);
   }, [router]);
 
-  async function postCsrf(): Promise<Response> {
-    const csrfToken = await fetchCsrfToken();
-    return fetch('/api/admin/queue/tick', {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: { 'content-type': 'application/json', 'x-csrf-token': csrfToken },
-      body: JSON.stringify({ csrf: csrfToken }),
-    });
-  }
-
   async function handleRunTick(): Promise<void> {
     setBusy(true);
     setError(null);
     setResult(null);
     try {
-      const res = await postCsrf();
-      if (!res.ok) {
-        const j = (await res.json().catch(() => ({}))) as { error?: string };
-        setError(j.error ?? `HTTP ${res.status}`);
-        return;
-      }
-      const data = (await res.json()) as {
+      const csrf = await fetchCsrfToken();
+      const data = await adminFetch<{
         ok: true;
         claimed: number;
         done: number;
         pending: number;
         failed: number;
-      };
+      }>('/api/admin/queue/tick', {
+        method: 'POST',
+        body: { csrf },
+      });
       setResult(data);
       // Re-fetch the page so the per-status sections + KPIs reflect the tick.
       router.refresh();
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      const detail = message.startsWith('adminFetch ')
+        ? message.split('adminFetch ')[1] ?? message
+        : message;
+      setError(detail);
     } finally {
       setBusy(false);
     }

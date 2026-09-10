@@ -1,9 +1,9 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { ReactElement } from 'react';
-import { fetchCsrfToken } from '@/lib/csrf/client';
+import { adminFetch } from '@/lib/api/admin-fetch';
 
 interface CreatedResponse {
   id: string;
@@ -16,46 +16,42 @@ interface CreatedResponse {
  * Add a new webhook subscription. On success, displays the one-time
  * signing secret in a copyable code block with a warning that it
  * cannot be recovered after the admin navigates away.
+ *
+ * CSRF: adminFetch injects the x-csrf-token header. The route does not
+ * validate body.csrf (middleware checks header only).
  */
 export function AddWebhookForm(): ReactElement {
   const t = useTranslations('admin.webhooks.add');
   const router = useRouter();
-  const [csrf, setCsrf] = useState('');
   const [url, setUrl] = useState('');
   const [filter, setFilter] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<CreatedResponse | null>(null);
 
-  useEffect(() => {
-    void fetchCsrfToken().then(setCsrf).catch(() => undefined);
-  }, []);
-
   async function onSubmit(e: React.FormEvent): Promise<void> {
     e.preventDefault();
-    if (!csrf) return;
     setBusy(true);
     setError(null);
     const events = filter
       .split(/[,\s]+/)
       .map((s) => s.trim())
       .filter((s) => s.length > 0);
-    const res = await fetch('/api/admin/webhooks', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-csrf-token': csrf },
-      body: JSON.stringify({ url, eventFilter: events, csrf }),
-    });
-    setBusy(false);
-    if (!res.ok) {
-      const err = (await res.json().catch(() => ({}))) as { error?: string };
-      setError(err.error ?? String(res.status));
-      return;
+    try {
+      const data = await adminFetch<CreatedResponse>('/api/admin/webhooks', {
+        method: 'POST',
+        body: { url, eventFilter: events },
+      });
+      setCreated(data);
+      setUrl('');
+      setFilter('');
+      router.refresh();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message);
+    } finally {
+      setBusy(false);
     }
-    const data = (await res.json()) as CreatedResponse;
-    setCreated(data);
-    setUrl('');
-    setFilter('');
-    router.refresh();
   }
 
   if (created) {
@@ -105,7 +101,7 @@ export function AddWebhookForm(): ReactElement {
         />
       </label>
       {error ? <p className="ghc-admin-error">{error}</p> : null}
-      <button type="submit" disabled={!csrf || busy} className="ghc-btn-primary">
+      <button type="submit" disabled={busy} className="ghc-btn-primary">
         {busy ? t('submitting') : t('submit')}
       </button>
     </form>

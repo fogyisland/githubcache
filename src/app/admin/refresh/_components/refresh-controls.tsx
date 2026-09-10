@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { formatDateTime } from '@/lib/format/datetime';
 import type { TimezoneId } from '@/lib/timezone/registry';
+import { adminFetch } from '@/lib/api/admin-fetch';
 import { fetchCsrfToken } from '@/lib/csrf/client';
 
 interface Repo {
@@ -29,8 +30,9 @@ interface Props {
  *   2. Scheduler pause button — action=pause (rendered when running).
  *   3. Scheduler resume button — action=resume (rendered when paused).
  *
- * CSRF: fetches /api/admin/auth/csrf, then echoes the token in the
- * `x-csrf-token` header (M7.1 pattern).
+ * CSRF: adminFetch injects the x-csrf-token header. The route schema
+ * also requires csrf as a body field, which we provide via
+ * fetchCsrfToken().
  *
  * On success, calls `router.refresh()` so the parent server component
  * re-renders with the updated scheduler state and pending-jobs list.
@@ -43,16 +45,24 @@ export function RefreshControls({ isPaused, pausedAt, repos, tz }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [repoId, setRepoId] = useState('');
 
-  async function postCsrf(body: Record<string, unknown>): Promise<Response> {
-    const csrfToken = await fetchCsrfToken();
-    return fetch('/api/admin/refresh', {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: { 'content-type': 'application/json', 'x-csrf-token': csrfToken },
-      // Send csrf in body too — route schemas require it as a body field
-      // (defense-in-depth on top of the middleware header check).
-      body: JSON.stringify({ ...body, csrf: csrfToken }),
-    });
+  async function postAction(body: Record<string, unknown>): Promise<void> {
+    setSubmitting(true);
+    try {
+      const csrf = await fetchCsrfToken();
+      await adminFetch('/api/admin/refresh', {
+        method: 'POST',
+        body: { ...body, csrf },
+      });
+      router.refresh();
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      const detail = message.startsWith('adminFetch ')
+        ? message.split('adminFetch ')[1] ?? message
+        : message;
+      setError(detail);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   async function handleTrigger(): Promise<void> {
@@ -61,45 +71,18 @@ export function RefreshControls({ isPaused, pausedAt, repos, tz }: Props) {
       setError(tTrigger('selectRepoError'));
       return;
     }
-    setSubmitting(true);
-    const res = await postCsrf({ action: 'trigger', repoId });
-    if (!res.ok) {
-      const j = (await res.json().catch(() => ({}))) as { error?: string };
-      setError(j.error ?? `HTTP ${res.status}`);
-      setSubmitting(false);
-      return;
-    }
     setRepoId('');
-    router.refresh();
-    setSubmitting(false);
+    await postAction({ action: 'trigger', repoId });
   }
 
   async function handlePause(): Promise<void> {
     setError(null);
-    setSubmitting(true);
-    const res = await postCsrf({ action: 'pause' });
-    if (!res.ok) {
-      const j = (await res.json().catch(() => ({}))) as { error?: string };
-      setError(j.error ?? `HTTP ${res.status}`);
-      setSubmitting(false);
-      return;
-    }
-    router.refresh();
-    setSubmitting(false);
+    await postAction({ action: 'pause' });
   }
 
   async function handleResume(): Promise<void> {
     setError(null);
-    setSubmitting(true);
-    const res = await postCsrf({ action: 'resume' });
-    if (!res.ok) {
-      const j = (await res.json().catch(() => ({}))) as { error?: string };
-      setError(j.error ?? `HTTP ${res.status}`);
-      setSubmitting(false);
-      return;
-    }
-    router.refresh();
-    setSubmitting(false);
+    await postAction({ action: 'resume' });
   }
 
   return (

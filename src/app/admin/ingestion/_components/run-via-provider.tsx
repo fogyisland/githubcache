@@ -2,6 +2,7 @@
 import { useEffect, useState, type ReactElement } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { adminFetch } from '@/lib/api/admin-fetch';
 import { fetchCsrfToken } from '@/lib/csrf/client';
 
 interface ProviderRow {
@@ -52,7 +53,7 @@ export function RunViaProvider(): ReactElement {
 
   const [providers, setProviders] = useState<ProviderRow[] | null>(null);
   const [loadError, setLoadError] = useState<{ status: number } | null>(null);
-  const [csrf, setCsrf] = useState('');
+  const [csrfReady, setCsrfReady] = useState(false);
   const [selectedId, setSelectedId] = useState('');
   const [limit, setLimit] = useState('');
   const [dryRun, setDryRun] = useState(true);
@@ -70,55 +71,69 @@ export function RunViaProvider(): ReactElement {
       fetch('/api/admin/providers?enabled=true').then((r) => r.json() as Promise<{ providers: ProviderRow[] }>),
       fetchCsrfToken(),
     ])
-      .then(([prov, csrfToken]) => {
+      .then(([prov]) => {
         setProviders(prov.providers);
-        setCsrf(csrfToken);
+        setCsrfReady(true);
       })
       .catch(() => setLoadError({ status: 0 }));
   }, []);
 
   async function onPreview(): Promise<void> {
-    if (!csrf || !selectedId) return;
+    if (!csrfReady || !selectedId) return;
     setPreviewBusy(true);
     setPreviewError(null);
     setPreview(null);
-    const body: Record<string, unknown> = { csrf };
-    if (limit.trim() !== '') body.limit = Number(limit);
-    const res = await fetch(`/api/admin/providers/${selectedId}/preview`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-csrf-token': csrf },
-      body: JSON.stringify(body),
-    });
-    setPreviewBusy(false);
-    if (!res.ok) {
-      setPreviewError({ status: res.status });
-      return;
+    try {
+      const csrf = await fetchCsrfToken();
+      const body: Record<string, unknown> = { csrf };
+      if (limit.trim() !== '') body.limit = Number(limit);
+      const data = await adminFetch<PreviewResponse>(
+        `/api/admin/providers/${selectedId}/preview`,
+        {
+          method: 'POST',
+          body,
+        },
+      );
+      setPreview(data);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      const status = message.startsWith('adminFetch ')
+        ? Number(message.split(' ')[1]?.split(':')[0] ?? 0)
+        : 0;
+      setPreviewError({ status });
+    } finally {
+      setPreviewBusy(false);
     }
-    const data = (await res.json()) as PreviewResponse;
-    setPreview(data);
   }
 
   async function onRun(): Promise<void> {
-    if (!csrf || !selectedId) return;
+    if (!csrfReady || !selectedId) return;
     setRunBusy(true);
     setRunError(null);
     setRunResult(null);
-    const body: Record<string, unknown> = { dryRun, csrf };
-    if (limit.trim() !== '') body.limit = Number(limit);
-    const res = await fetch(`/api/admin/providers/${selectedId}/run`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-csrf-token': csrf },
-      body: JSON.stringify(body),
-    });
-    setRunBusy(false);
-    if (!res.ok) {
-      setRunError({ status: res.status });
-      return;
-    }
-    const data = (await res.json()) as RunResponse;
-    setRunResult(data);
-    if (!dryRun && data.jobCount > 0) {
-      router.refresh();
+    try {
+      const csrf = await fetchCsrfToken();
+      const body: Record<string, unknown> = { dryRun, csrf };
+      if (limit.trim() !== '') body.limit = Number(limit);
+      const data = await adminFetch<RunResponse>(
+        `/api/admin/providers/${selectedId}/run`,
+        {
+          method: 'POST',
+          body,
+        },
+      );
+      setRunResult(data);
+      if (!dryRun && data.jobCount > 0) {
+        router.refresh();
+      }
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      const status = message.startsWith('adminFetch ')
+        ? Number(message.split(' ')[1]?.split(':')[0] ?? 0)
+        : 0;
+      setRunError({ status });
+    } finally {
+      setRunBusy(false);
     }
   }
 
@@ -198,7 +213,7 @@ export function RunViaProvider(): ReactElement {
         <button
           type="button"
           onClick={() => void onPreview()}
-          disabled={previewBusy || !csrf || !selectedId}
+          disabled={previewBusy || !csrfReady || !selectedId}
           className="ghc-btn-secondary"
         >
           {t('submitPreview')}
@@ -206,7 +221,7 @@ export function RunViaProvider(): ReactElement {
         <button
           type="button"
           onClick={() => void onRun()}
-          disabled={runBusy || !csrf || !selectedId}
+          disabled={runBusy || !csrfReady || !selectedId}
           className="ghc-btn-primary"
         >
           {t('submitRun')}

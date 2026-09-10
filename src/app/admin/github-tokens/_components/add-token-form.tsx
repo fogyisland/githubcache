@@ -1,45 +1,42 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { ReactElement } from 'react';
+import { adminFetch } from '@/lib/api/admin-fetch';
 import { fetchCsrfToken } from '@/lib/csrf/client';
 
 export function AddTokenForm(): ReactElement {
   const t = useTranslations('admin.githubTokens.addForm');
   const router = useRouter();
-  const [csrf, setCsrf] = useState('');
   const [label, setLabel] = useState('');
   const [token, setToken] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  useEffect(() => {
-    void fetchCsrfToken().then(setCsrf).catch(() => undefined);
-  }, []);
-
   async function onSubmit(e: React.FormEvent): Promise<void> {
     e.preventDefault();
-    if (!csrf || !token || !label) return;
+    if (!token || !label) return;
     setBusy(true);
     setError(null);
     setSuccess(null);
-    const res = await fetch('/api/admin/github-tokens', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-csrf-token': csrf },
-      body: JSON.stringify({ label, token, csrf }),
-    });
-    setBusy(false);
-    if (!res.ok) {
-      const err = (await res.json().catch(() => ({}))) as { error?: string };
-      setError(err.error ?? t('error.http', { status: res.status }));
-      return;
+    try {
+      const csrf = await fetchCsrfToken();
+      await adminFetch('/api/admin/github-tokens', {
+        method: 'POST',
+        body: { label, token, csrf },
+      });
+      setBusy(false);
+      setSuccess(t('success'));
+      setLabel('');
+      setToken('');
+      router.refresh();
+    } catch (err: unknown) {
+      setBusy(false);
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message);
     }
-    setSuccess(t('success'));
-    setLabel('');
-    setToken('');
-    router.refresh();
   }
 
   return (
@@ -65,7 +62,7 @@ export function AddTokenForm(): ReactElement {
           className="ghc-input-mono"
         />
       </label>
-      <button type="submit" disabled={busy || !csrf || !token || !label}>
+      <button type="submit" disabled={busy || !token || !label}>
         {t('submit')}
       </button>
       {error && <p role="alert">{error}</p>}

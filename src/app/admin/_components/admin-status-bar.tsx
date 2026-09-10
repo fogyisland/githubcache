@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type JSX } from 'react';
 import { useTranslations } from 'next-intl';
+import { adminFetch } from '@/lib/api/admin-fetch';
 
 export interface AdminStatusBarData {
   dbPingMs: number;
@@ -33,9 +34,9 @@ export function AdminStatusBar({ initialData }: Props): JSX.Element {
     let cancelled = false;
     const tick = async (): Promise<void> => {
       try {
-        const res = await fetch('/api/admin/status', { cache: 'no-store' });
-        if (!res.ok) return;
-        const fresh = (await res.json()) as AdminStatusBarData;
+        const fresh = await adminFetch<AdminStatusBarData>('/api/admin/status', {
+          cache: 'no-store',
+        });
         if (!cancelled) setData(fresh);
       } catch {
         // network error — keep last good data

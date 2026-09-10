@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
+import { adminFetch } from '@/lib/api/admin-fetch';
 
 interface Props {
   csrfToken: string;
@@ -11,8 +12,9 @@ interface Props {
  * M25 — "Send test email" button.
  *
  * POSTs to /api/admin/email/test. Sends to the currently-logged-in
- * admin's email (the server resolves that from the session, so the
- * client only sends CSRF). Shows a status line with the result.
+ * admin's email (the server resolves that from the session). adminFetch
+ * auto-injects the x-csrf-token header; the prop is still required because
+ * the route handler validates `body.csrf` (double-submit cookie check).
  */
 export function TestSendButton({ csrfToken }: Props): React.ReactElement {
   const t = useTranslations('admin.email.test');
@@ -23,16 +25,14 @@ export function TestSendButton({ csrfToken }: Props): React.ReactElement {
     e.preventDefault();
     startTransition(async () => {
       try {
-        const res = await fetch('/api/admin/email/test', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json', 'x-csrf-token': csrfToken },
-          body: JSON.stringify({ csrf: csrfToken }),
-        });
-        const body = (await res.json().catch(() => ({}))) as {
+        const body = await adminFetch<{
           ok?: boolean;
           messageId?: string;
           error?: string;
-        };
+        }>('/api/admin/email/test', {
+          method: 'POST',
+          body: { csrf: csrfToken },
+        });
         if (body.ok) {
           setStatus({ ok: true, message: t('ok') });
         } else if (body.error === 'not_configured') {
@@ -41,9 +41,10 @@ export function TestSendButton({ csrfToken }: Props): React.ReactElement {
           setStatus({ ok: false, message: t('failedWithError', { error: body.error ?? 'unknown' }) });
         }
       } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'unknown';
         setStatus({
           ok: false,
-          message: t('failedWithError', { error: err instanceof Error ? err.message : 'unknown' }),
+          message: t('failedWithError', { error: message }),
         });
       }
     });

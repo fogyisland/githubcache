@@ -2,6 +2,7 @@
 
 import { useState, useTransition, type ReactElement } from 'react';
 import { useTranslations } from 'next-intl';
+import { adminFetch } from '@/lib/api/admin-fetch';
 import { fetchCsrfToken } from '@/lib/csrf/client';
 
 interface BackupRow {
@@ -38,10 +39,6 @@ export function RestoreSection({ backups }: Props): ReactElement {
     | null
   >(null);
 
-  async function getCsrf(): Promise<string> {
-    return fetchCsrfToken();
-  }
-
   const canSubmit =
     confirm === 'RESTORE' &&
     !isPending &&
@@ -53,14 +50,16 @@ export function RestoreSection({ backups }: Props): ReactElement {
     startTransition(() => {
       void (async () => {
         try {
-          const csrf = await getCsrf();
-          let res: Response;
+          const csrf = await fetchCsrfToken();
+          let j: {
+            preRestoreBackup?: string;
+            tableCount?: number;
+            message?: string;
+          };
           if (mode === 'backup') {
-            res = await fetch('/api/admin/database/restore', {
+            j = await adminFetch('/api/admin/database/restore', {
               method: 'POST',
-              credentials: 'include',
-              headers: { 'content-type': 'application/json' },
-              body: JSON.stringify({ csrf, mode: 'backup', filename, confirm }),
+              body: { csrf, mode: 'backup', filename, confirm },
             });
           } else {
             if (!file) throw new Error('file missing');
@@ -69,25 +68,10 @@ export function RestoreSection({ backups }: Props): ReactElement {
             fd.set('mode', 'upload');
             fd.set('confirm', confirm);
             fd.set('file', file);
-            res = await fetch('/api/admin/database/restore', {
+            j = await adminFetch('/api/admin/database/restore', {
               method: 'POST',
-              credentials: 'include',
               body: fd,
             });
-          }
-          const j = (await res.json().catch(() => ({}))) as {
-            preRestoreBackup?: string;
-            tableCount?: number;
-            message?: string;
-          };
-          if (!res.ok) {
-            setFeedback({
-              kind: 'error',
-              message: t('resultFailed', {
-                error: j.message ?? `HTTP ${res.status}`,
-              }),
-            });
-            return;
           }
           setFeedback({
             kind: 'success',
@@ -97,11 +81,13 @@ export function RestoreSection({ backups }: Props): ReactElement {
             }),
           });
         } catch (e: unknown) {
+          const message = e instanceof Error ? e.message : String(e);
+          const displayMessage = message.startsWith('adminFetch ')
+            ? message.split('adminFetch ')[1]?.split(':')[1]?.trim() ?? message
+            : message;
           setFeedback({
             kind: 'error',
-            message: t('resultFailed', {
-              error: e instanceof Error ? e.message : String(e),
-            }),
+            message: t('resultFailed', { error: displayMessage }),
           });
         }
       })();

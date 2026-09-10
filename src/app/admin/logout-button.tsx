@@ -1,16 +1,12 @@
 'use client';
 
 import { useState, type ReactElement } from 'react';
-import { fetchCsrfToken } from '@/lib/csrf/client';
+import { adminFetch } from '@/lib/api/admin-fetch';
 
 /**
  * Logout button.
  *
- * The CSRF token is rotated on login, and the in-page copy may be stale (the
- * dashboard is server-rendered and never received one). So we always re-fetch
- * a fresh token from GET /api/admin/auth/csrf immediately before POSTing to
- * /api/admin/auth/logout — the middleware rejects non-GET /api/admin/* without
- * a matching cookie+header pair.
+ * adminFetch handles CSRF + credentials. On success we navigate to /login.
  */
 export function LogoutButton(): ReactElement {
   const [loading, setLoading] = useState<boolean>(false);
@@ -19,18 +15,11 @@ export function LogoutButton(): ReactElement {
   async function handleLogout(): Promise<void> {
     setLoading(true);
     try {
-      const csrfToken = await fetchCsrfToken();
-      const res = await fetch('/api/admin/auth/logout', {
+      await adminFetch('/api/admin/auth/logout', {
         method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'x-csrf-token': csrfToken },
       });
-      if (res.ok) {
-        window.location.href = '/login';
-        return;
-      }
-      setLoading(false);
-      setError('Logout failed. Please try again.');
+      window.location.href = '/login';
+      return;
     } catch {
       setLoading(false);
       setError('Network error. Please try again.');
