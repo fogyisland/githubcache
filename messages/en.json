@@ -1694,6 +1694,12 @@
       "empty": "No repositories cached yet. Try submitting a repo above.",
       "starsPrefix": "★ "
     },
+    "apiPreview": {
+      "eyebrow": "API",
+      "heading": "One endpoint. One JSON response.",
+      "request": "Request",
+      "response": "Response"
+    },
     "timeAgo": {
       "justNow": "just now",
       "minutesAgo": "{m}m ago",

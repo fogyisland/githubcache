@@ -2848,6 +2848,104 @@ a {
     padding: 0 0.25rem;
     font-family: inherit;
   }
+
+  /* M29 — homepage redesign: 5-section restrained-professional structure.
+     Hero / Stats / Features / API / Recent. */
+  .ghc-hero { background: var(--color-bg); }
+  .ghc-display-heading {
+    font-family: var(--font-sans);
+    font-size: var(--text-display-xl);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: var(--color-ink);
+  }
+  @media (max-width: 640px) {
+    .ghc-display-heading { font-size: 2.25rem; }
+  }
+  .ghc-hero-tagline {
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 1rem;
+    max-width: 42rem;
+    color: var(--color-ink-muted);
+    font-size: var(--text-body-lg);
+    line-height: 1.6;
+  }
+  .ghc-lookup-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  @media (min-width: 640px) {
+    .ghc-lookup-form { flex-direction: row; align-items: end; }
+  }
+
+  /* Section spacing */
+  .ghc-section { padding-block: var(--space-section); }
+  .ghc-section-last { padding-bottom: calc(var(--space-section) + 2rem); }
+
+  /* API split */
+  .ghc-api-split { }
+  .ghc-api-split-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 768px) {
+    .ghc-api-split-grid { grid-template-columns: 1fr 1fr; }
+  }
+  .ghc-code-block {
+    background: var(--color-surface-2);
+    border: 1px solid var(--color-rule);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .ghc-code-block-label {
+    padding: 0.5rem 0.75rem;
+    font-size: var(--text-eyebrow);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--color-ink-muted);
+    border-bottom: 1px solid var(--color-rule);
+  }
+  .ghc-code-block-content {
+    margin: 0;
+    padding: 1rem;
+    font-family: var(--font-mono);
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    color: var(--color-ink);
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  /* Quick try */
+  .ghc-quick-try {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    font-size: var(--text-caption);
+    color: var(--color-ink-muted);
+  }
+  .ghc-quick-try-label { font-weight: 500; }
+  .ghc-quick-try-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  /* Recent lookups grid override */
+  .ghc-recent-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 640px) { .ghc-recent-grid { grid-template-columns: 1fr 1fr; } }
+  @media (min-width: 1024px) { .ghc-recent-grid { grid-template-columns: repeat(4, 1fr); } }
 }
 
 /* =========================================================================

@@ -37,9 +37,8 @@ export function QuickTry(): JSX.Element {
   }
 
   return (
-    <section className="ghc-quick-try" data-testid="ghc-quick-try">
-      <div className="ghc-section-eyebrow">Or just pick one</div>
-      <h2 className="ghc-section-heading">Three repos to try right now.</h2>
+    <div className="ghc-quick-try" data-testid="ghc-quick-try">
+      <div className="ghc-quick-try-label">Try:</div>
       <div className="ghc-quick-try-buttons">
         {QUICK_REPOS.map((r) => (
           <button
@@ -58,6 +57,6 @@ export function QuickTry(): JSX.Element {
       {pending ? (
         <p className="ghc-quick-try-pending">Looking up…</p>
       ) : null}
-    </section>
+    </div>
   );
 }

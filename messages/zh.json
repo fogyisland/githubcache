@@ -1694,6 +1694,12 @@
       "empty": "暂无缓存的仓库,请在上方提交。",
       "starsPrefix": "★ "
     },
+    "apiPreview": {
+      "eyebrow": "API",
+      "heading": "一个端点。一个 JSON 响应。",
+      "request": "请求",
+      "response": "响应"
+    },
     "timeAgo": {
       "justNow": "刚刚",
       "minutesAgo": "{m} 分钟前",

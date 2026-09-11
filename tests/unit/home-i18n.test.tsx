@@ -172,8 +172,11 @@ vi.mock('@/app/_components/stats-bar', () => ({
 vi.mock('@/app/_components/features-section', () => ({
   FeaturesSection: () => createElement('div', { 'data-testid': 'features-section-stub' }),
 }));
-vi.mock('@/app/_components/how-it-works', () => ({
-  HowItWorks: () => createElement('div', { 'data-testid': 'how-it-works-stub' }),
+vi.mock('@/app/_components/api-split', () => ({
+  ApiSplit: () => createElement('div', { 'data-testid': 'api-split-stub' }),
+}));
+vi.mock('@/app/_components/hero-section', () => ({
+  HeroSection: () => createElement('div', { 'data-testid': 'hero-section-stub' }),
 }));
 vi.mock('@/app/_components/quick-try', () => ({
   QuickTry: () => createElement('div', { 'data-testid': 'quick-try-stub' }),
@@ -190,13 +193,6 @@ vi.mock('../../../package.json', () => ({
 import HomePage, { generateMetadata } from '@/app/page';
 
 describe('HomePage i18n smoke (page-level chrome)', () => {
-  it('renders translated hero title and eyebrow', async () => {
-    const el = await HomePage();
-    const html = renderToStaticMarkup(el);
-    expect(html).toContain('GitHub Metadata Cache');
-    expect(html).toContain('Managed cache · per-IP rate-limited · open API');
-  });
-
   it('renders translated recent section heading and interpolated cached count', async () => {
     const el = await HomePage();
     const html = renderToStaticMarkup(el);
@@ -231,14 +227,35 @@ describe('FeaturesSection i18n (sub-component)', () => {
   });
 });
 
-describe('HowItWorks i18n (sub-component)', () => {
-  it('renders translated heading', async () => {
-    const mod = await vi.importActual<typeof import('@/app/_components/how-it-works')>(
-      '@/app/_components/how-it-works',
+describe('HeroSection i18n (sub-component)', () => {
+  it('renders translated title and eyebrow', async () => {
+    const mod = await vi.importActual<typeof import('@/app/_components/hero-section')>(
+      '@/app/_components/hero-section',
     );
-    const el = await mod.HowItWorks();
+    const el = await mod.HeroSection();
     const html = renderToStaticMarkup(el);
-    expect(html).toContain('Three steps from request to JSON.');
+    expect(html).toContain('GitHub Metadata Cache');
+    expect(html).toContain('Managed cache · per-IP rate-limited · open API');
+  });
+});
+
+describe('ApiSplit i18n (sub-component)', () => {
+  it('renders translated eyebrow and heading with both panels', async () => {
+    const mod = await vi.importActual<typeof import('@/app/_components/api-split')>(
+      '@/app/_components/api-split',
+    );
+    const el = await mod.ApiSplit();
+    const html = renderToStaticMarkup(el);
+    // Key translation assertions (mocked translator returns keys as identity).
+    expect(html).toContain('eyebrow');
+    expect(html).toContain('heading');
+    expect(html).toContain('request');
+    expect(html).toContain('response');
+    // The curl command + JSON content from api-split.tsx is rendered as text.
+    expect(html).toContain('curl https://api.githubcache.dev/api/v1/repos/facebook/react');
+    // "owner" appears (HTML-escaped to &quot; in the rendered output).
+    expect(html).toMatch(/owner|owner/);
+    expect(html).toContain('facebook');
   });
 });
 

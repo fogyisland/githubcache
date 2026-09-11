@@ -13,10 +13,10 @@ export function LookupForm() {
   const [state, formAction] = useActionState(lookupAction, initialState);
 
   return (
-    <div className="ghc-card ghc-fade-up p-6 shadow-lg sm:p-8">
+    <>
       <form
         action={formAction}
-        className="flex flex-col gap-4 sm:flex-row sm:items-end"
+        className="ghc-lookup-form"
         aria-label={t('ariaLabel')}
       >
         <label className="flex flex-1 flex-col gap-1.5">
@@ -49,10 +49,7 @@ export function LookupForm() {
       </form>
 
       {state.status === 'invalid' && (
-        <div
-          role="alert"
-          className="ghc-fade-up mt-5 flex items-start gap-2 border border-[color:var(--color-danger)] px-3 py-2.5 text-sm text-[color:var(--color-danger)]"
-        >
+        <div role="alert" className="ghc-alert ghc-alert-danger ghc-fade-up mt-5">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
@@ -70,10 +67,7 @@ export function LookupForm() {
         </div>
       )}
       {state.status === 'rate_limited' && (
-        <div
-          role="alert"
-          className="ghc-fade-up mt-5 flex items-start gap-2 border border-[color:var(--color-warn)] px-3 py-2.5 text-sm text-[color:var(--color-warn)]"
-        >
+        <div role="alert" className="ghc-alert ghc-alert-warn ghc-fade-up mt-5">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
@@ -91,10 +85,7 @@ export function LookupForm() {
         </div>
       )}
       {state.status === 'error' && (
-        <div
-          role="alert"
-          className="ghc-fade-up mt-5 flex items-start gap-2 border border-[color:var(--color-danger)] px-3 py-2.5 text-sm text-[color:var(--color-danger)]"
-        >
+        <div role="alert" className="ghc-alert ghc-alert-danger ghc-fade-up mt-5">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
@@ -112,6 +103,6 @@ export function LookupForm() {
         </div>
       )}
       {state.status === 'ok' && state.result && <LookupResultCard result={state.result} />}
-    </div>
+    </>
   );
 }
