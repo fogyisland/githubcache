@@ -87,3 +87,28 @@ describe('AdminJobActionButton', () => {
     expect(html).toContain('ghc-btn-cancel');
   });
 });
+
+describe('QuickRefreshForm trigger body', () => {
+  it('includes csrf in the trigger body', async () => {
+    const { buildQuickRefreshBody } = await import(
+      '@/app/admin/refresh/_components/quick-refresh-form'
+    );
+    const body = buildQuickRefreshBody('99', 'csrf-XYZ');
+    expect(body).toEqual({ action: 'trigger', repoId: '99', csrf: 'csrf-XYZ' });
+    expect(typeof body.csrf).toBe('string');
+    expect(body.csrf.length).toBeGreaterThan(0);
+  });
+
+  it('emits the body that adminFetch would POST to /api/admin/refresh', async () => {
+    // Smoke: ensure the helper shape matches what /api/admin/refresh's
+    // Zod schema requires. The route validates { action, repoId, csrf }.
+    const { buildQuickRefreshBody } = await import(
+      '@/app/admin/refresh/_components/quick-refresh-form'
+    );
+    const body = buildQuickRefreshBody('repo-1', 'tok');
+    expect(Object.keys(body).sort()).toEqual(['action', 'csrf', 'repoId']);
+    expect(body.action).toBe('trigger');
+    expect(body.csrf).toBe('tok');
+    expect(body.repoId).toBe('repo-1');
+  });
+});

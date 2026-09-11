@@ -48,16 +48,18 @@ export default async function AdminAuditPage({
     }
   }
 
-  // M30 task 4 — quick-range filter via `?since=<token>`. Resolves to a
-  // `from` Date that's passed into queryAuditLog. Takes precedence over
-  // an explicit `from` only when both are present (since is the shorter
-  // operator-friendly alias).
+  // Resolve the time-range. Explicit `from` (the legacy filter input)
+  // wins over `since` (the quick-range pill alias); `since` is only
+  // consulted when `from` is absent. Unknown `since` tokens fall through
+  // to no time filter (via resolveSince returning undefined).
   const now = new Date();
-  const sinceFrom = resolveSince(sp.since, now);
-  let from: Date | undefined = sinceFrom;
-  if (!from && sp.from) {
+  let from: Date | undefined;
+  if (sp.from) {
     const d = new Date(sp.from);
     if (!isNaN(d.getTime())) from = d;
+  }
+  if (!from) {
+    from = resolveSince(sp.since, now);
   }
 
   let to: Date | undefined;
@@ -104,6 +106,23 @@ export default async function AdminAuditPage({
     { token: '', label: tRange('all') },
   ];
 
+  // Preserve any non-`since` query params (action / targetType / actorUserId /
+  // from / to / limit / offset) when emitting each pill href. The 'All' link
+  // removes only `since`, not the other filters the operator has set.
+  const preservedEntries = Object.entries(sp).filter(
+    ([k, v]) => k !== 'since' && v !== undefined,
+  );
+
+  function buildHref(token: string): string {
+    const params = new URLSearchParams();
+    if (token) params.set('since', token);
+    for (const [k, v] of preservedEntries) {
+      if (v !== undefined) params.set(k, v);
+    }
+    const qs = params.toString();
+    return qs ? `/admin/audit?${qs}` : '/admin/audit';
+  }
+
   return (
     <div className="ghc-admin-page">
       <AdminPageHeader
@@ -117,7 +136,7 @@ export default async function AdminAuditPage({
       <nav className="ghc-admin-audit-time-range" aria-label={tRange('label')}>
         <span className="ghc-admin-audit-time-range-label">{tRange('label')}</span>
         {sinceTokens.map(({ token, label }) => {
-          const href = token ? `/admin/audit?since=${token}` : '/admin/audit';
+          const href = buildHref(token);
           const active = currentSince === token;
           return (
             <Link

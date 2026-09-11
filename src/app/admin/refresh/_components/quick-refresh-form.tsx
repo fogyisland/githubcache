@@ -4,6 +4,20 @@ import { useState, type ReactElement } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { adminFetch } from '@/lib/api/admin-fetch';
+import { fetchCsrfToken } from '@/lib/csrf/client';
+
+/**
+ * Pure body shape for /api/admin/refresh action=trigger.
+ *
+ * Exported so tests can assert the contract (csrf in body) without
+ * driving the form via a DOM. Mirrors RefreshControls.postAction.
+ */
+export function buildQuickRefreshBody(
+  repoId: string,
+  csrf: string,
+): { action: 'trigger'; repoId: string; csrf: string } {
+  return { action: 'trigger', repoId, csrf };
+}
 
 /**
  * Inline "refresh this repo" form for /admin/refresh.
@@ -66,7 +80,7 @@ export function QuickRefreshForm(): ReactElement {
       }
       await adminFetch('/api/admin/refresh', {
         method: 'POST',
-        body: { action: 'trigger', repoId },
+        body: buildQuickRefreshBody(repoId, await fetchCsrfToken()),
       });
       setQueued(t('queued', { owner, name }));
       setSlug('');

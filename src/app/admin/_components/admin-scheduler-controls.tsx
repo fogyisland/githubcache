@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, type ReactElement } from 'react';
+import { useState, useEffect, useRef, type ReactElement } from 'react';
 import { useTranslations } from 'next-intl';
 import { adminFetch } from '@/lib/api/admin-fetch';
 
@@ -26,17 +26,19 @@ export function AdminSchedulerControls({ currentState: initial }: Props): ReactE
   const [state, setState] = useState<'RUNNING' | 'PAUSED'>(initial);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const prevInitial = useRef(initial);
 
   // If the SSR-rendered state differs from the local one (e.g. the parent
-  // re-fetched via router.refresh), keep them aligned. We only react to
-  // *external* state changes that come from the props, not to local
-  // optimistic updates we just wrote — so we compare against `initial`.
+  // re-fetched via router.refresh, or another admin paused the scheduler
+  // in a different tab), keep them aligned. We track `initial` across
+  // renders and only call setState when it actually changes — local
+  // optimistic toggles are not overwritten unless the server confirms.
   useEffect(() => {
-    setState(initial);
-    // initial is intentionally not in deps; we only want to react to the
-    // initial snapshot, then let local state take over.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    if (prevInitial.current !== initial) {
+      prevInitial.current = initial;
+      setState(initial);
+    }
+  }, [initial]);
 
   async function toggle(): Promise<void> {
     if (pending) return;
