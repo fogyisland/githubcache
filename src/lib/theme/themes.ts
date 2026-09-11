@@ -1,32 +1,33 @@
 /**
  * Visual theme registry.
  *
- * Three opinionated themes for the public surface. Each one is a deliberate
- * choice — not an AI-default skin — picked from the design brainstorm at the
- * end of M9. Token definitions live here so server (cookie / DB), client
- * (switcher UI) and CSS (`globals.css`) all share a single source of truth.
+ * Four themes: professional (light + dark variant) is the default;
+ * editorial and brutalist are alt themes kept for back-compat.
+ * The CSS file (`globals.css`) carries 4 `[data-theme="<id>"]` blocks.
  *
- * The CSS file mirrors these tokens into three `[data-theme="<id>"]` blocks;
- * component classes (`ghc-card`, `ghc-btn-primary`, ...) only reference the
- * variable names below, never raw hex values.
+ * The `terminal` id is kept as an ALIAS for `professional` to honor
+ * any existing cookies set before M29. Theme always resolves to one
+ * of the 4 canonical ids — never to `terminal`.
  */
 
-export const THEME_IDS = ['terminal', 'editorial', 'brutalist'] as const;
+export const THEME_IDS = ['professional', 'professional-dark', 'editorial', 'brutalist'] as const;
 export type ThemeId = (typeof THEME_IDS)[number];
 
-export const DEFAULT_THEME: ThemeId = 'terminal';
+// Legacy alias — kept so old cookies (pre-M29) still work.
+export const LEGACY_THEME_ALIASES: Record<string, ThemeId> = {
+  terminal: 'professional',
+};
+
+export const DEFAULT_THEME: ThemeId = 'professional';
 
 export interface ThemeMeta {
   id: ThemeId;
   label: string;
   shortLabel: string;
   blurb: string;
-  /**
-   * Mood summary surfaced in the switcher tooltip + admin settings copy.
-   * One short sentence — describes the *why*, not the *what*.
-   */
+  /** Mood summary surfaced in admin settings copy. */
   mood: string;
-  /** next/font/css var that drives display + body + mono for this theme. */
+  /** CSS var names for display + body + mono for this theme. */
   fonts: {
     display: string;
     body: string;
@@ -35,15 +36,27 @@ export interface ThemeMeta {
 }
 
 export const THEMES: Record<ThemeId, ThemeMeta> = {
-  terminal: {
-    id: 'terminal',
-    label: 'Terminal',
-    shortLabel: 'T',
-    blurb: 'Dark IDE / command line',
-    mood: 'Late-night dev — every page is a shell session.',
+  professional: {
+    id: 'professional',
+    label: 'Professional',
+    shortLabel: 'P',
+    blurb: 'Light neutral / indigo accent',
+    mood: 'Restrained professional — Linear / Vercel family.',
     fonts: {
-      display: 'var(--font-mono)',
-      body: 'var(--font-mono)',
+      display: 'var(--font-sans)',
+      body: 'var(--font-sans)',
+      mono: 'var(--font-mono)',
+    },
+  },
+  'professional-dark': {
+    id: 'professional-dark',
+    label: 'Professional (dark)',
+    shortLabel: 'Pd',
+    blurb: 'Dark zinc / indigo accent',
+    mood: 'Restrained professional in dark — Linear dark family.',
+    fonts: {
+      display: 'var(--font-sans)',
+      body: 'var(--font-sans)',
       mono: 'var(--font-mono)',
     },
   },
@@ -74,9 +87,17 @@ export const THEMES: Record<ThemeId, ThemeMeta> = {
 };
 
 export function isThemeId(value: unknown): value is ThemeId {
-  return typeof value === 'string' && (THEME_IDS as readonly string[]).includes(value);
+  if (typeof value !== 'string') return false;
+  if ((THEME_IDS as readonly string[]).includes(value)) return true;
+  // Legacy alias accepted but not exposed via TypeScript narrowing.
+  return value in LEGACY_THEME_ALIASES;
 }
 
 export function resolveTheme(value: unknown): ThemeId {
-  return isThemeId(value) ? value : DEFAULT_THEME;
+  if (typeof value === 'string') {
+    if ((THEME_IDS as readonly string[]).includes(value)) return value as ThemeId;
+    const alias = LEGACY_THEME_ALIASES[value];
+    if (alias) return alias;
+  }
+  return DEFAULT_THEME;
 }

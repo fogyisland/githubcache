@@ -3,15 +3,12 @@ import type { ReactElement } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { validateSession } from '@/lib/auth/session';
 import { LangSwitcher } from '@/app/_components/lang-switcher';
-import { ThemeSwitcher } from '@/app/_components/theme-switcher';
 import { TimezoneSwitcher } from '@/app/_components/timezone-switcher';
 import { LOCALES } from '@/i18n/config';
 import { readLangFromCookieHeader } from '@/lib/lang/cookie';
 import { readTimezoneFromCookieHeader } from '@/lib/timezone/cookie';
-import { readThemeFromCookieHeader } from '@/lib/theme/cookie';
 import { resolveLocale } from '@/lib/lang/registry';
 import { resolveTimezone } from '@/lib/timezone/registry';
-import { isThemeId } from '@/lib/theme/themes';
 
 /**
  * M26 — /account/preferences.
@@ -46,8 +43,6 @@ export default async function AccountPreferencesPage(): Promise<ReactElement> {
     cookieValue: readTimezoneFromCookieHeader(cookieHeader),
     dbValue: user.timezone,
   });
-  const themeCookie = readThemeFromCookieHeader(cookieHeader);
-  const currentTheme = isThemeId(themeCookie) ? themeCookie : user.theme;
 
   return (
     <div className="ghc-fade-up flex flex-col gap-6 max-w-2xl">
@@ -58,10 +53,6 @@ export default async function AccountPreferencesPage(): Promise<ReactElement> {
 
       <PrefSection title={t('lang.label')} body={t('lang.body')}>
         <LangSwitcher current={currentLang} locales={LOCALES} />
-      </PrefSection>
-
-      <PrefSection title={t('theme.label')} body={t('theme.body')}>
-        <ThemeSwitcher current={currentTheme} />
       </PrefSection>
 
       <PrefSection title={t('timezone.label')} body={t('timezone.body')}>

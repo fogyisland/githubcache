@@ -7,6 +7,7 @@ import { THEME_IDS, isThemeId, type ThemeId } from '@/lib/theme/themes';
 import { THEME_COOKIE } from '@/lib/theme/cookie';
 import { validateSession, SESSION_COOKIE_NAME } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/client';
+import type { Theme as DbTheme } from '@prisma/client';
 import { logger } from '@/lib/logger';
 
 export interface SetThemeState {
@@ -72,12 +73,18 @@ export async function setThemeAction(
       },
     });
     if (user) {
+      // The DB enum (terminal, editorial, brutalist) hasn't been migrated;
+      // M29's 'professional' / 'professional-dark' are client-side only and
+      // both map to the legacy 'terminal' DB value. The actual visual choice
+      // is driven by the ghc_theme cookie + CSS, not by this DB column.
+      const dbTheme: DbTheme =
+        theme === 'editorial' || theme === 'brutalist' ? theme : 'terminal';
       await prisma.user.update({
         where: { id: user.id },
-        data: { theme },
+        data: { theme: dbTheme },
       });
       logger.info(
-        { userId: user.id.toString(), theme, sidPrefix: cookieMap[SESSION_COOKIE_NAME]?.slice(0, 4) },
+        { userId: user.id.toString(), theme: dbTheme, sidPrefix: cookieMap[SESSION_COOKIE_NAME]?.slice(0, 4) },
         'theme persisted on user',
       );
     }

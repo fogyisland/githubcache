@@ -24,27 +24,34 @@
  * ======================================================================= */
 
 :root {
-  /* Wulan palette (M24) — light off-white surface + deep navy ink + sky-blue
-     accent. Same palette feeds all three themes below; themes differ only
-     in font choice, radius, and border weight. */
-  --color-bg: #fafbfc;
+  --color-bg: #fbfbfa;
   --color-surface: #ffffff;
-  --color-surface-2: #f5f8fa;
-  --color-ink: #1a2b4a;
-  --color-ink-muted: #6b7b95;
-  --color-rule: #dde4ec;
-  --color-accent: #4a90e2;
+  --color-surface-2: #f7f7f5;
+  --color-ink: #18181b;
+  --color-ink-muted: #71717a;
+  --color-rule: #e4e4e7;
+  --color-accent: #4f46e5;
+  --color-accent-deep: #4338ca;
+  --color-accent-soft: #eef2ff;
   --color-accent-ink: #ffffff;
-  --color-accent-deep: #2c5f8e;
-  --color-warn: #c08a2a;
-  --color-danger: #b73e3e;
-  --radius-card: 6px;
-  --radius-button: 4px;
-  --radius-pill: 999px;
-  --shadow-card: 0 1px 2px rgba(26, 43, 74, 0.04), 0 1px 3px rgba(26, 43, 74, 0.06);
-  --border-width-card: 1px;
-  --selection-bg: var(--color-accent);
-  --selection-fg: var(--color-accent-ink);
+  --color-warn: #b45309;
+  --color-danger: #b91c1c;
+
+  --font-display: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-serif: 'Fraunces', Georgia, serif;
+
+  --text-display-xl: 3.5rem;
+  --text-display-lg: 2.5rem;
+  --text-display-md: 1.875rem;
+  --text-display-sm: 1.5rem;
+  --text-body-lg: 1.125rem;
+  --text-body: 1rem;
+  --text-caption: 0.875rem;
+  --text-eyebrow: 0.75rem;
+
+  --space-section: clamp(3rem, 6vw, 5rem);
 }
 
 /* =========================================================================
@@ -53,18 +60,18 @@
  * the signature visual element.
  * ======================================================================= */
 
-[data-theme="terminal"] {
-  /* Wulan palette + monospace everywhere. The signature of this theme is
-     numeric status codes / IDs in the data table set in JetBrains Mono. */
-  --radius-card: 6px;
-  --radius-button: 4px;
-  --radius-pill: 999px;
-  --shadow-card: 0 1px 2px rgba(26, 43, 74, 0.04), 0 1px 3px rgba(26, 43, 74, 0.06);
-  --border-width-card: 1px;
-  --font-display: var(--font-mono);
-  --font-serif: var(--font-mono);
-  --font-sans: var(--font-mono);
-  --font-mono-active: var(--font-mono);
+[data-theme="professional-dark"] {
+  --color-bg: #09090b;
+  --color-surface: #18181b;
+  --color-surface-2: #27272a;
+  --color-ink: #fafafa;
+  --color-ink-muted: #a1a1aa;
+  --color-rule: #27272a;
+  --color-accent: #818cf8;
+  --color-accent-deep: #6366f1;
+  --color-accent-soft: #1e1b4b;
+  --color-warn: #fbbf24;
+  --color-danger: #f87171;
 }
 
 /* =========================================================================
