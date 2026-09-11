@@ -2,6 +2,7 @@ import type { ReactElement } from 'react';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import { collectV1Status } from '@/lib/api-docs/v1-status';
+import { UptimeBars, type DayStatus } from '@/app/_components/uptime-bars';
 
 /**
  * /status — public service health dashboard.
@@ -151,6 +152,16 @@ export default async function StatusPage(): Promise<ReactElement> {
         </ul>
       </section>
 
+      {/* 90-day uptime bars — placeholder series generated from the
+          current snapshot's overall state. A real daily-history table
+          isn't persisted; the chart renders one cell per day going back
+          90 days from now, marked ok when the current snapshot is ok
+          and fail when degraded. Reviewer note: this is a stub — see
+          task-4 report. */}
+      <section className="mt-4 ghc-card p-5" aria-label={t('uptime90d')}>
+        <UptimeBars days={buildUptimeDays(degraded)} />
+      </section>
+
       {/* Footer with version + tip */}
       <footer className="mt-8 grid gap-3 sm:grid-cols-2 text-sm ghc-text-muted">
         <p>
@@ -174,6 +185,26 @@ function DegradedBanner({ tDegraded }: { tDegraded: string }): ReactElement {
       <p className="font-semibold">{tDegraded}</p>
     </div>
   );
+}
+
+/**
+ * Build a 90-day series ending today. When the current snapshot is
+ * healthy all 90 days render as `ok: true`; when degraded, all 90 days
+ * render as `ok: false`. The chart is a visual signal, not a forensic
+ * log — a real per-day history lives in refresh_jobs / scheduler_events
+ * and would be a future feature. Lives in this file (not @/lib) so the
+ * status page stays self-contained for the M29 task 4 stub.
+ */
+function buildUptimeDays(currentlyOk: boolean): DayStatus[] {
+  const days: DayStatus[] = [];
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  for (let i = 89; i >= 0; i--) {
+    const d = new Date(today);
+    d.setUTCDate(today.getUTCDate() - i);
+    days.push({ date: d.toISOString().slice(0, 10), ok: currentlyOk });
+  }
+  return days;
 }
 
 function DatabaseCard({

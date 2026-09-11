@@ -141,7 +141,7 @@ async function RepoOkView({
             </Link>
           </nav>
           <div className="flex flex-wrap items-baseline justify-between gap-3">
-            <h1 className="ghc-display-name">{result.canonical}</h1>
+            <h1 className="font-mono text-3xl font-bold">{result.canonical}</h1>
             <a
               href={htmlUrl}
               target="_blank"
@@ -392,7 +392,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="ghc-stat">
       <div className="ghc-eyebrow">{label}</div>
-      <div className="ghc-stat-number mt-1">{value}</div>
+      <div className="mt-1 text-4xl font-semibold tabular-nums">{value}</div>
     </div>
   );
 }

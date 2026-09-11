@@ -1854,6 +1854,21 @@
         "heading": "快速开始",
         "body": "先访问公开的状态端点 — 无需认证："
       },
+      "overviewCards": {
+        "heading": "概览",
+        "endpointsTitle": "端点",
+        "endpointsBody": "三个路由覆盖单仓库查询、批量查询,以及免认证的服务健康检查。",
+        "howCachingTitle": "缓存机制",
+        "howCachingBody": "优先读缓存、命中失败入队回填、出错指数退避、按速率限制自动暂停。",
+        "rateLimitsTitle": "速率限制",
+        "rateLimitsBody": "按 key 与按 IP 双重配额,保障所有用户的公平使用。",
+        "errorCodesTitle": "错误码",
+        "errorCodesBody": "API 返回的所有错误形态,包括 HTTP 状态码与处理建议。",
+        "developmentTitle": "开发",
+        "developmentBody": "本地搭建、贡献指南,以及架构说明。",
+        "deploymentTitle": "部署",
+        "deploymentBody": "生产环境部署:环境变量、调度器与运维注意事项。"
+      },
       "endpoints": {
         "heading": "端点列表"
       },
@@ -2284,7 +2299,10 @@
       "startedAt": "进程启动: {time}",
       "node": "Node: {node}",
       "refresh": "页面在客户端每 {seconds} 秒自动刷新。"
-    }
+    },
+    "uptime90d": "90 天可用率",
+    "uptimeOk": "正常",
+    "uptimeFail": "降级"
   },
   "getStarted": {
     "eyebrow": "快速开始",

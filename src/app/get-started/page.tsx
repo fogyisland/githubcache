@@ -89,6 +89,7 @@ export default async function GetStartedPage(): Promise<ReactElement> {
       <p className="ghc-getstarted-lede">{t('lede')}</p>
 
       {/* === STEP 1 — Sign up === */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       <section className="ghc-getstarted-step" aria-labelledby="ghc-gs-step-1">
         <div className="ghc-getstarted-step-header">
           <span className="ghc-getstarted-step-num">1</span>
@@ -187,6 +188,7 @@ export default async function GetStartedPage(): Promise<ReactElement> {
           </tbody>
         </table>
       </section>
+      </div>
 
       {/* === Deeper reading === */}
       <section className="ghc-getstarted-deeper">

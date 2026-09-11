@@ -64,7 +64,10 @@ describe('LoginPage (server shell)', () => {
     // `style="max-width:..."` style attributes that the old placeholder used.
     expect(html).not.toMatch(/style="margin:\s*4rem auto/);
     expect(html).not.toMatch(/style="display:\s*block/);
-    expect(html).toContain('max-w-[26rem]');
+    // M29 task 4: card layout moved to ghc-card wrapper (the form is
+    // rendered inside it), so the wrapper class is the assertion target.
+    expect(html).toContain('max-w-[400px]');
+    expect(html).toContain('ghc-card');
     expect(html).toContain('ghc-fade-up');
   });
 });

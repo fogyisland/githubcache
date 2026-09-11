@@ -4289,3 +4289,13 @@ a {
   color: var(--color-ink-muted);
   font-variant-numeric: tabular-nums;
 }
+
+/* ghc-uptime-bars — 90-day service-uptime strip rendered under the
+   /status service list. Each cell = 1 day; data-state="ok" = green,
+   data-state="fail" = red. Token-based so dark + light themes both
+   read the right color. M29 task 4. */
+.ghc-uptime-bars { display: flex; flex-direction: column; gap: 0.5rem; }
+.ghc-uptime-bars-label { font-family: var(--font-mono-active); font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-muted); }
+.ghc-uptime-bars-grid { display: grid; grid-auto-flow: column; grid-template-columns: repeat(90, minmax(0, 1fr)); gap: 2px; height: 1.5rem; }
+.ghc-uptime-bar { background: color-mix(in srgb, var(--color-ok, #16a34a) 70%, transparent); border-radius: 2px; height: 100%; }
+.ghc-uptime-bar[data-state="fail"] { background: var(--color-danger); }

@@ -12,7 +12,7 @@ export default async function RequestKeyPage(): Promise<ReactElement> {
   const t = await getTranslations('account.keys.request');
 
   return (
-    <div className="ghc-fade-up flex flex-col gap-6 max-w-xl">
+    <div className="ghc-fade-up mx-auto flex max-w-md flex-col gap-6">
       <header>
         <h2 className="text-xl font-semibold">{t('title')}</h2>
         <p className="mt-1 text-sm ghc-text-muted">

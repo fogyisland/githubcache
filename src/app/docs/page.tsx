@@ -31,7 +31,45 @@ export default async function DocsLanding(): Promise<ReactElement> {
 
       {howCaching}
 
-      <section className="ghc-doc-section">
+      {/* Overview card grid — six sections, three columns on desktop.
+          Each card deep-links into the corresponding section. */}
+      <section className="ghc-doc-section" aria-label={t('overviewCards.heading')}>
+        <h2 className="ghc-doc-h2">{t('overviewCards.heading')}</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <OverviewCard
+            href="#endpoints"
+            title={t('overviewCards.endpointsTitle')}
+            body={t('overviewCards.endpointsBody')}
+          />
+          <OverviewCard
+            href="#howCaching"
+            title={t('overviewCards.howCachingTitle')}
+            body={t('overviewCards.howCachingBody')}
+          />
+          <OverviewCard
+            href="#rateLimits"
+            title={t('overviewCards.rateLimitsTitle')}
+            body={t('overviewCards.rateLimitsBody')}
+          />
+          <OverviewCard
+            href="#errorCodes"
+            title={t('overviewCards.errorCodesTitle')}
+            body={t('overviewCards.errorCodesBody')}
+          />
+          <OverviewCard
+            href="/docs/development"
+            title={t('overviewCards.developmentTitle')}
+            body={t('overviewCards.developmentBody')}
+          />
+          <OverviewCard
+            href="/docs/deployment"
+            title={t('overviewCards.deploymentTitle')}
+            body={t('overviewCards.deploymentBody')}
+          />
+        </div>
+      </section>
+
+      <section id="endpoints" className="ghc-doc-section">
         <h2 className="ghc-doc-h2">{t('endpoints.heading')}</h2>
         <ul className="ghc-doc-endpoint-list">
           {ENDPOINT_DOCS.map((doc) => (
@@ -55,5 +93,22 @@ export default async function DocsLanding(): Promise<ReactElement> {
       {rateLimits}
       {liveStatus}
     </article>
+  );
+}
+
+function OverviewCard({
+  href,
+  title,
+  body,
+}: {
+  href: string;
+  title: string;
+  body: string;
+}): ReactElement {
+  return (
+    <a href={href} className="ghc-card p-5 hover:bg-[color-mix(in_srgb,var(--color-accent-soft)_60%,var(--color-surface))] transition-colors">
+      <h3 className="text-base font-semibold">{title}</h3>
+      <p className="mt-1 text-sm ghc-text-muted">{body}</p>
+    </a>
   );
 }

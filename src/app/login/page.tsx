@@ -7,7 +7,7 @@ import { LoginForm } from './_login-form';
  *
  * The root layout already reads the `ghc_theme` cookie and sets
  * `data-theme` on `<html>` before paint, so this page inherits the
- * active public theme (terminal / editorial / brutalist) via the
+ * active public theme (professional / editorial / brutalist) via the
  * existing ghc-* classes — no theme-specific code here.
  *
  * The form is a client component because CSRF + submit are interactive.
@@ -16,7 +16,7 @@ import { LoginForm } from './_login-form';
 export default async function LoginPage(): Promise<ReactElement> {
   const t = await getTranslations('login');
   return (
-    <main className="mx-auto max-w-[26rem] py-16 px-4 ghc-fade-up">
+    <main className="mx-auto max-w-[400px] mt-16 p-8 ghc-card ghc-fade-up">
       <header className="mb-8 text-center">
         <p
           className="font-mono text-xs tracking-[0.2em] uppercase"
@@ -30,9 +30,7 @@ export default async function LoginPage(): Promise<ReactElement> {
         </p>
       </header>
 
-      <div className="ghc-card p-6">
-        <LoginForm />
-      </div>
+      <LoginForm />
 
       <p className="mt-6 text-center text-sm">
         <a href="/" className="ghc-link">
