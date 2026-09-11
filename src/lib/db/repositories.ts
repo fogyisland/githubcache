@@ -5,12 +5,19 @@ export const findRepoByCanonical = (owner: string, name: string): Promise<Reposi
   prisma.repository.findUnique({ where: { owner_name: { owner, name } } });
 
 export const upsertRepo = (data: Prisma.RepositoryUncheckedCreateInput): Promise<Repository> => {
-  const update: Prisma.RepositoryUncheckedUpdateInput = {};
-  if (data.metadata !== undefined) update.metadata = data.metadata;
-  if (data.etag !== undefined) update.etag = data.etag;
-  if (data.lastFetchedAt !== undefined) update.lastFetchedAt = data.lastFetchedAt;
-  if (data.fetchStatus !== undefined) update.fetchStatus = data.fetchStatus;
-  update.fetchError = data.fetchError ?? null;
+  // M27.4 fix — propagate the full set of fields on UPDATE, not just the
+  // 5 the original code carried. The cache-miss → enqueue path creates a
+  // stub row via `lookup.ts → enqueueRefresh`, then the scheduler fetch
+  // calls `storeRepoMetadata → upsertRepo` which hits the UPDATE branch.
+  // Without forwarding the flat columns (`stars`, `forks`, `description`,
+  // `language`, `topics`, …), the post-fetch row stays at the stub's
+  // defaults (all 0 / null) and the indexed-column reads in
+  // `cache/read.ts` always return zeros.
+  //
+  // We forward every field that is present in `data`. The CREATE branch
+  // uses `data` directly (it has every column set, including the
+  // defaults from `storeRepoMetadata`'s defensive extraction).
+  const update: Prisma.RepositoryUncheckedUpdateInput = data;
   return prisma.repository.upsert({
     where: { owner_name: { owner: data.owner, name: data.name } },
     create: data,
