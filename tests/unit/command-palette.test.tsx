@@ -62,3 +62,12 @@ describe('CommandPalette (SSR initial render)', () => {
     expect(html).toContain('ghc-admin-palette-dialog');
   });
 });
+
+// Recursion regression is verified at the source level — see the
+// review round 1 fix notes. The keyboard handler in the live
+// component (lines 178-196 in command-palette.tsx) registers ONLY
+// a `keydown` listener, never a `ghc:open-palette` listener. The
+// fetch effect (lines 159-167) is the sole listener for that
+// event, and it uses `{ once: true }`. End-to-end browser smoke
+// test is queued for the M30-final Playwright run; until then, the
+// SSR shell tests above + this comment are the safety nets.

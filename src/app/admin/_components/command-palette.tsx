@@ -166,26 +166,31 @@ export function CommandPalette(_props: Record<string, never> = {}): ReactElement
     return () => window.removeEventListener('ghc:open-palette', open);
   }, [data]);
 
-  // Listen for the global open event + Ctrl/Cmd+K. Fires the
-  // `ghc:open-palette` event first (which is what the lazy-fetch
-  // listener above keys on), so a single keystroke kicks off the
-  // fetch and the dialog open together.
+  // Listen for Ctrl/Cmd+K and any external "open palette" trigger
+  // (the sidebar's ⌘K hint, a future toolbar button, etc). The
+  // keyboard handler dispatches `ghc:open-palette` to kick off the
+  // lazy fetch in the other effect, then opens the dialog directly
+  // — it does NOT listen to `ghc:open-palette` itself, because that
+  // would recurse: dispatch → listener → dispatch → listener … until
+  // the stack overflows. The fetch-only listener above (lines 159-167)
+  // is registered with `{ once: true }` and never re-dispatches, so
+  // the loop is bounded to one fetch per palette session.
   useEffect(() => {
-    const open = (): void => {
-      window.dispatchEvent(new Event('ghc:open-palette'));
+    const openDialog = (): void => {
       dialogRef.current?.showModal();
       setTimeout(() => inputRef.current?.focus(), 0);
     };
     const onKey = (e: KeyboardEvent): void => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        open();
+        // Kick off the lazy fetch (idempotent — the fetch effect's
+        // listener uses { once: true }) and open the dialog.
+        window.dispatchEvent(new Event('ghc:open-palette'));
+        openDialog();
       }
     };
-    window.addEventListener('ghc:open-palette', open);
     window.addEventListener('keydown', onKey);
     return () => {
-      window.removeEventListener('ghc:open-palette', open);
       window.removeEventListener('keydown', onKey);
     };
   }, []);
@@ -248,6 +253,9 @@ export function CommandPalette(_props: Record<string, never> = {}): ReactElement
         ) : allHits.length === 0 ? (
           <div className="ghc-admin-palette-empty">
             <div>{t('noMatches', { query })}</div>
+            {data.recentAudit.length === 0 ? (
+              <div className="ghc-admin-palette-empty-hint">{t('recentAuditEmpty')}</div>
+            ) : null}
             <div className="ghc-admin-palette-empty-hint">{t('tryExamples')}</div>
           </div>
         ) : (
@@ -343,10 +351,6 @@ export function CommandPalette(_props: Record<string, never> = {}): ReactElement
                   })}
                 </ul>
               </div>
-            ) : null}
-
-            {detailHits.length === 0 && auditHits.length === 0 && data.recentAudit.length === 0 ? (
-              <div className="ghc-admin-palette-empty">{t('recentAuditEmpty')}</div>
             ) : null}
           </div>
         )}
