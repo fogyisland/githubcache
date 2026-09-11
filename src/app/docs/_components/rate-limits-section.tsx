@@ -23,7 +23,7 @@ export async function RateLimitsSection(): Promise<ReactElement> {
   const authRepoPerHour = env.PUBLIC_REPO_RATE_PER_HOUR;
   const apiKeyPerMin = 60; // mirrors apiKey.rateLimitPerMin @default
   return (
-    <section className="ghc-doc-section" aria-labelledby="ghc-doc-rate-limits-heading">
+    <section id="rateLimits" className="ghc-doc-section" aria-labelledby="ghc-doc-rate-limits-heading">
       <h2 className="ghc-doc-h2" id="ghc-doc-rate-limits-heading">
         {t('heading')}
       </h2>

@@ -17,7 +17,7 @@ export async function HowCachingWorks(): Promise<ReactElement> {
     { key: 'step5', text: t('steps.step5') },
   ];
   return (
-    <section className="ghc-doc-section">
+    <section id="howCaching" className="ghc-doc-section">
       <h2 className="ghc-doc-h2">{t('heading')}</h2>
       <p>{t('intro')}</p>
       <ol className="ghc-doc-cache-steps">

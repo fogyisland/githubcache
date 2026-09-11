@@ -159,7 +159,7 @@ export default async function StatusPage(): Promise<ReactElement> {
           and fail when degraded. Reviewer note: this is a stub — see
           task-4 report. */}
       <section className="mt-4 ghc-card p-5" aria-label={t('uptime90d')}>
-        <UptimeBars days={buildUptimeDays(degraded)} />
+        <UptimeBars days={buildUptimeDays(!degraded)} />
       </section>
 
       {/* Footer with version + tip */}

@@ -32,7 +32,7 @@ const RETRY_HINTS: Record<ErrorCode, RetryHint> = {
 export async function ErrorCodesTable(): Promise<ReactElement> {
   const t = await getTranslations('docs.landing.errorCodes');
   return (
-    <section className="ghc-doc-section">
+    <section id="errorCodes" className="ghc-doc-section">
       <h2 className="ghc-doc-h2">{t('heading')}</h2>
       <p>{t('intro')}</p>
       <table className="ghc-doc-table">
