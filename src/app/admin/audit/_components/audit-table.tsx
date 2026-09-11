@@ -21,17 +21,23 @@ interface Props {
   limit: number;
   offset: number;
   tz: TimezoneId;
+  searchParams?: Record<string, string | undefined>;
 }
 
 /**
  * Server-rendered audit log table. Shows rows, the current range, and
- * prev/next pagination controls.
- *
- * TODO(M7.5): Prev/next currently preserves only `offset`+`limit` — filters
- * reset on pagination. Future polish: preserve all filters in prev/next
- * href builders.
+ * prev/next pagination controls. Prev/next hrefs preserve all non-pagination
+ * query params (action / targetType / actorUserId / from / to / since) so
+ * filters survive page navigation.
  */
-export async function AuditTable({ rows, total, limit, offset, tz }: Props): Promise<ReactElement> {
+export async function AuditTable({
+  rows,
+  total,
+  limit,
+  offset,
+  tz,
+  searchParams,
+}: Props): Promise<ReactElement> {
   const t = await getTranslations('admin.audit.table');
   const start = total === 0 ? 0 : offset + 1;
   const end = Math.min(offset + limit, total);
@@ -41,6 +47,27 @@ export async function AuditTable({ rows, total, limit, offset, tz }: Props): Pro
   const nextOffset = offset + limit;
   const pageNum = Math.floor(offset / limit) + 1;
   const totalPages = Math.max(1, Math.ceil(total / limit));
+
+  // Preserve all non-`offset`/non-`limit` query params (action, targetType,
+  // actorUserId, from, to, since) in prev/next hrefs so filters survive
+  // pagination. Mirrors the `buildHref` pattern used by the time-range
+  // pills in page.tsx.
+  const preservedEntries = searchParams
+    ? Object.entries(searchParams).filter(
+        ([k, v]) => k !== 'offset' && k !== 'limit' && v !== undefined,
+      )
+    : [];
+
+  function buildHref(newOffset: number): string {
+    const params = new URLSearchParams();
+    params.set('offset', String(newOffset));
+    params.set('limit', String(limit));
+    for (const [k, v] of preservedEntries) {
+      if (v !== undefined) params.set(k, v);
+    }
+    const qs = params.toString();
+    return qs ? `?${qs}` : '?';
+  }
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
@@ -104,7 +131,7 @@ export async function AuditTable({ rows, total, limit, offset, tz }: Props): Pro
 
       <div className="mt-4 flex items-center justify-between">
         <a
-          href={`?offset=${prevOffset}&limit=${limit}`}
+          href={buildHref(prevOffset)}
           className={`rounded border border-gray-300 bg-white px-3 py-1 text-sm ${
             !hasPrev ? 'pointer-events-none opacity-50' : 'hover:bg-gray-50'
           }`}
@@ -116,7 +143,7 @@ export async function AuditTable({ rows, total, limit, offset, tz }: Props): Pro
           {t('pageOf', { page: pageNum, total: totalPages })}
         </span>
         <a
-          href={`?offset=${nextOffset}&limit=${limit}`}
+          href={buildHref(nextOffset)}
           className={`rounded border border-gray-300 bg-white px-3 py-1 text-sm ${
             !hasNext ? 'pointer-events-none opacity-50' : 'hover:bg-gray-50'
           }`}

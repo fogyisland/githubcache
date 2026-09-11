@@ -15,13 +15,6 @@ export interface QueueJobRow {
 }
 
 interface Props {
-  /**
-   * Pending is rendered separately as a card grid (M30 task 4). The
-   * prop is intentionally optional so the type doesn't force callers
-   * to pass it, but if a caller does pass it we throw loudly so the
-   * duplication doesn't silently render twice.
-   */
-  pending?: QueueJobRow[];
   inProgress: QueueJobRow[];
   done24h: QueueJobRow[];
   failed24h: QueueJobRow[];
@@ -42,20 +35,11 @@ const STATUS_LABEL_KEY: Record<'inProgress' | 'done' | 'failed', string> = {
  *   job id · owner/name · priority · scheduled/updated · attempts · last error
  */
 export async function QueueSections({
-  pending,
   inProgress,
   done24h,
   failed24h,
   tz,
 }: Props): Promise<ReactElement> {
-  // Belt-and-suspenders: catch any future caller that passes `pending`.
-  // Pending is rendered separately via AdminJobCardGrid; rendering it
-  // here too would silently double-display.
-  if (pending !== undefined) {
-    throw new Error(
-      'QueueSections: pending rows must be rendered as <AdminJobCardGrid />, not passed here',
-    );
-  }
   const t = await getTranslations('admin.queue.sections');
 
   const sections: Array<{

@@ -14,10 +14,6 @@ import { resolveSince } from './since-resolver';
  *
  * Server component. Renders filter UI + paginated table.
  *
- * TODO(M7.5): Prev/next pagination currently preserves only `offset`+`limit`
- * — filters reset on pagination. Future polish: preserve all filters in
- * prev/next href builders (audit-table.tsx).
- *
  * TODO(M7.5): `<input type="date">` produces `YYYY-MM-DD` (no time). For
  * `to`, this becomes `createdAt < 00:00 UTC`, meaning the to-date itself
  * is NOT included. Future polish: add an inclusive end-of-day option or
@@ -151,7 +147,14 @@ export default async function AdminAuditPage({
         })}
       </nav>
       <AuditFilters />
-      <AuditTable rows={tableRows} total={total} limit={limit} offset={offset} tz={userTz} />
+      <AuditTable
+        rows={tableRows}
+        total={total}
+        limit={limit}
+        offset={offset}
+        tz={userTz}
+        searchParams={sp}
+      />
     </div>
   );
 }
