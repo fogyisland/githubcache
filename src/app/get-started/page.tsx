@@ -141,10 +141,10 @@ async function CodeExample(props: CodeExampleProps): Promise<ReactElement> {
 }
 
 const ERROR_ROWS = [
-  { code: 'unauthorized', http: 401, meaningKey: 'step4.errors.unauthorized' },
-  { code: 'forbidden', http: 403, meaningKey: 'step4.errors.forbidden' },
-  { code: 'rate_limited', http: 429, meaningKey: 'step4.errors.rate_limited' },
-  { code: 'not_found', http: 404, meaningKey: 'step4.errors.not_found' },
+  { code: 'unauthorized', http: 401, meaningKey: 'errors.unauthorized' },
+  { code: 'forbidden', http: 403, meaningKey: 'errors.forbidden' },
+  { code: 'rate_limited', http: 429, meaningKey: 'errors.rate_limited' },
+  { code: 'not_found', http: 404, meaningKey: 'errors.not_found' },
 ] as const;
 
 interface Step {
