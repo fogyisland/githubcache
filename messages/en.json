@@ -149,7 +149,12 @@
         "recentAudit": "Recent audit",
         "hintNav": "navigate",
         "hintOpen": "open",
-        "hintClose": "close"
+        "hintClose": "close",
+        "loading": "Loading…",
+        "tryExamples": "Try: refresh · audit · users · repo:owner/name",
+        "goToDetail": "Go to {label}",
+        "detailsHeading": "Quick links",
+        "recentAuditEmpty": "No recent activity yet"
       },
       "dashboard": {
         "breadcrumbAdmin": "Admin",

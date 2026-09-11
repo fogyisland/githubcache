@@ -149,7 +149,12 @@
         "recentAudit": "最近审计",
         "hintNav": "浏览",
         "hintOpen": "打开",
-        "hintClose": "关闭"
+        "hintClose": "关闭",
+        "loading": "加载中…",
+        "tryExamples": "试试:刷新 · 审计 · 用户 · repo:owner/name",
+        "goToDetail": "前往 {label}",
+        "detailsHeading": "快捷链接",
+        "recentAuditEmpty": "暂无最近活动"
       },
       "dashboard": {
         "breadcrumbAdmin": "管理",

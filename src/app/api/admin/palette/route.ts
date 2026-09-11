@@ -1,54 +1,35 @@
 import { NextResponse } from 'next/server';
-import { cookiesFromRequest } from '@/lib/auth/cookies-from-request';
-import { validateSession } from '@/lib/auth/session';
-import { queryAuditLog, getActorEmails } from '@/lib/db/audit';
-import { apiError } from '@/lib/api/errors';
+import { requireAdminFromRequest } from '@/lib/auth/require-admin';
+import { loadPaletteData } from '@/lib/admin/palette-loader';
 
 /**
  * GET /api/admin/palette
  *
- * Command-palette data payload (M11.5 → M11.7). Returns:
- *   - sections — sidebar section list (7 fixed sections)
+ * Command-palette data payload. Returns:
+ *   - sections — sidebar section list (role-filtered)
  *   - recentAudit — last 5 audit entries (used for jump-to-actor)
+ *   - indexed — flat detail-page hits (recent 20 users, etc.) so
+ *     "user 42" / "alice" resolve to /admin/users/42
  *
- * Auth: any authenticated operator/admin.
+ * Auth: any authenticated admin. The previous M11.5 stub allowed
+ * any authenticated operator — Task 2 tightens to admin only
+ * because the route exposes the user id + email list, and the
+ * palette itself only opens for admins (it lives under /admin/*).
+ * See `requireAdminFromRequest` for the auth gate.
  *
  * Response codes:
  *   200 — palette payload
  *   401 — not signed in
+ *   403 — not admin
+ *
+ * M30 — Task 2 replaces the M11.5 stub (which built the payload
+ * inline) with a call into `loadPaletteData()`. The previous commit
+ * (Task 1, d6c9763) left the M11.5 stub in place pending this work.
  */
 export async function GET(req: Request): Promise<Response> {
-  const cookies = cookiesFromRequest(req);
-  const user = await validateSession({ headers: req.headers, cookies });
-  if (!user) {
-    return apiError('unauthorized', 'unauthorized', {}, req);
-  }
+  const auth = await requireAdminFromRequest(req);
+  if (!auth.ok) return auth.response;
 
-  const { rows } = await queryAuditLog({ limit: 5, offset: 0 });
-  const actorIds = [
-    ...new Set(rows.map((r) => r.actorUserId).filter((id): id is bigint => id !== null)),
-  ];
-  const emails = await getActorEmails(actorIds);
-
-  const sections = [
-    { slug: 'dashboard', title: 'Dashboard', icon: '◉', roles: ['admin', 'operator'] },
-    { slug: 'users', title: 'Users', icon: '◐', roles: ['admin'] },
-    { slug: 'api-keys', title: 'API Keys', icon: '⌬', roles: ['admin', 'operator'] },
-    { slug: 'github-tokens', title: 'GitHub Tokens', icon: '⊕', roles: ['admin', 'operator'] },
-    { slug: 'reports', title: 'Reports', icon: '⊟', roles: ['admin', 'operator'] },
-    { slug: 'ingestion', title: 'Ingestion', icon: '⊱', roles: ['admin'] },
-    { slug: 'providers', title: 'Providers', icon: '⊡', roles: ['admin'] },
-    { slug: 'audit', title: 'Audit', icon: '◭', roles: ['admin'] },
-    { slug: 'refresh', title: 'Refresh', icon: '↻', roles: ['admin'] },
-  ];
-
-  return NextResponse.json({
-    sections: sections.filter((s) => s.roles.includes(user.role)),
-    recentAudit: rows.map((r) => ({
-      id: r.id.toString(),
-      action: r.action,
-      actor: r.actorUserId ? (emails.get(r.actorUserId) ?? null) : null,
-      createdAt: r.createdAt.toISOString(),
-    })),
-  });
+  const data = await loadPaletteData(auth.user.role);
+  return NextResponse.json(data);
 }
