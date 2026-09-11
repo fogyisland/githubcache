@@ -2,28 +2,26 @@ import Link from 'next/link';
 import { cookies, headers } from 'next/headers';
 import { getTranslations } from 'next-intl/server';
 import { LangSwitcher } from '@/app/_components/lang-switcher';
+import { TimezoneSwitcher } from '@/app/_components/timezone-switcher';
 import { readLangFromCookieHeader } from '@/lib/lang/cookie';
+import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 import { resolveLocale, LOCALES } from '@/lib/lang/registry';
 import { SITE_NAME } from '@/lib/config/site';
 import { validateSession } from '@/lib/auth/session';
+import { MobileNav } from './mobile-nav';
+import { AccountMenu } from './account-menu';
 
 /**
- * Top navigation bar. Sticky, theme-aware, with brand logo on the left,
- * Status/Admin links + lang switcher on the right.
+ * Top navigation bar. Sticky, theme-aware.
  *
- * Pure server component: reads the cookie via next/headers and passes the
- * current locale down to the (client) LangSwitcher.
+ * Layout:
+ *   - left:  logo
+ *   - middle (≥ 1024px): nav links (Lookup / Docs / Status)
+ *   - right (≥ 1024px): TZ / Lang / Login | AccountMenu
+ *   - < 1024px: MobileNav hamburger on the right
  *
- * M26 — the rightmost nav area shows different links based on session:
- *   - anon: a single "Log in" link → /login
- *   - operator: a single "My account" link → /account
- *   - admin: BOTH "Admin center" → /admin AND "My account" → /account
- *     (admins also have a personal center — they're operators too, just
- *     with extra privileges — so both links are surfaced).
- *
- * The session check is a cookie-presence-only lookup via validateSession
- * — the DB hit is fine on a static-header render and we avoid the
- * complexity of a middleware-based redirect here.
+ * Pure server component; reads cookies + session once, passes primitives
+ * down to the (client) MobileNav + AccountMenu.
  */
 export async function SiteHeader() {
   const headerStore = await headers();
@@ -43,8 +41,17 @@ export async function SiteHeader() {
         cookieMap[name] !== undefined ? { value: cookieMap[name]! } : undefined,
     },
   });
+  const currentTimezone = await resolveRequestTimezone({
+    dbValue: session?.timezone ?? null,
+  });
   const isAdmin = session?.role === 'admin';
   const isLoggedIn = session !== null;
+  const userEmail = session?.email ?? '';
+
+  const navLinks = [
+    { href: '/get-started', label: t('apiGuide'), ariaLabel: t('apiGuideAria') },
+    { href: '/status', label: t('status'), ariaLabel: t('statusAria') },
+  ];
 
   return (
     <header className="ghc-site-header sticky top-0 z-40">
@@ -65,27 +72,32 @@ export async function SiteHeader() {
           </span>
           <span className="text-base">{SITE_NAME}</span>
         </Link>
-        <nav className="flex items-center gap-3">
+
+        {/* Desktop nav (≥ 1024px) */}
+        <nav className="ghc-desktop-nav">
+          {navLinks.map((l) => (
+            <Link key={l.href} href={l.href} className="ghc-header-util-link" aria-label={l.ariaLabel}>
+              {l.label}
+            </Link>
+          ))}
+          <TimezoneSwitcher current={currentTimezone} />
           <LangSwitcher current={currentLang} locales={LOCALES} />
-          <Link href="/get-started" className="ghc-header-util-link">
-            {t('apiGuide')}
-          </Link>
-          <Link href="/status" className="ghc-header-util-link" aria-label={t('statusAria')}>
-            {t('status')}
-          </Link>
-          {isAdmin && (
-            <Link href="/admin" className="ghc-header-util-link" aria-label={t('adminAria')}>
-              {t('admin')}
+          {isLoggedIn ? (
+            <AccountMenu email={userEmail} isAdmin={isAdmin} logoutHref="/api/admin/auth/logout" />
+          ) : (
+            <Link href="/login" className="ghc-btn-secondary ghc-btn-sm">
+              {t('login')}
             </Link>
           )}
-          <Link
-            href={isLoggedIn ? '/account' : '/login'}
-            className="ghc-header-util-link"
-            aria-label={isLoggedIn ? t('accountAria') : t('adminAria')}
-          >
-            {isLoggedIn ? t('account') : t('login')}
-          </Link>
         </nav>
+
+        {/* Mobile nav (< 1024px) */}
+        <MobileNav
+          links={navLinks}
+          accountLabel={isLoggedIn ? t('account') : t('login')}
+          accountHref={isLoggedIn ? '/account' : '/login'}
+          loggedInLabel={t('login')}
+        />
       </div>
     </header>
   );

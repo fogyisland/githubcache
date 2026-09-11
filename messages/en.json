@@ -66,7 +66,12 @@
     "account": "My account",
     "statusAria": "System status JSON",
     "adminAria": "Admin login",
-    "accountAria": "My account"
+    "accountAria": "My account",
+    "mobileMenuAria": "Open menu",
+    "accountMenuAria": "Account menu for {email}",
+    "apiGuideAria": "API usage guide",
+    "apiKeys": "API keys",
+    "preferences": "Preferences"
   },
   "theme": {
     "aria": "Theme",
@@ -89,7 +94,12 @@
     "repoLink": "GitHub repo →",
     "operations": "Operations",
     "maintainer": "Maintained by",
-    "fine": "© {year} · Built with Next.js + Prisma + MySQL."
+    "fine": "© {year} · Built with Next.js + Prisma + MySQL.",
+    "explore": "Explore",
+    "statusOk": "API operational",
+    "statusOkSr": "All systems operational",
+    "statusDown": "API degraded",
+    "statusDownSr": "API is reporting issues"
   },
   "admin": {
     "common": {

@@ -66,7 +66,12 @@
     "account": "我的账号",
     "statusAria": "系统状态 JSON",
     "adminAria": "管理员登录",
-    "accountAria": "我的账号"
+    "accountAria": "我的账号",
+    "mobileMenuAria": "打开菜单",
+    "accountMenuAria": "账户菜单 {email}",
+    "apiGuideAria": "API 使用指南",
+    "apiKeys": "API 密钥",
+    "preferences": "偏好设置"
   },
   "theme": {
     "aria": "主题",
@@ -89,7 +94,12 @@
     "repoLink": "GitHub 仓库 →",
     "operations": "运维",
     "maintainer": "维护者",
-    "fine": "© {year} · 基于 Next.js + Prisma + MySQL 构建。"
+    "fine": "© {year} · 基于 Next.js + Prisma + MySQL 构建。",
+    "explore": "浏览",
+    "statusOk": "API 正常",
+    "statusOkSr": "所有系统正常",
+    "statusDown": "API 异常",
+    "statusDownSr": "API 正在报错"
   },
   "admin": {
     "common": {

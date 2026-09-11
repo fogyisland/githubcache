@@ -80,6 +80,12 @@ vi.mock('@/app/_components/api-split', () => ({
 vi.mock('@/app/_components/hero-section', () => ({
   HeroSection: () => null,
 }));
+// SiteFooter now calls unstable_cache-backed fetchStatusPing, which
+// throws "incrementalCache missing" under renderToStaticMarkup (no Next
+// request context). Stub it to a static ok result for the home-page test.
+vi.mock('@/lib/status/ping', () => ({
+  fetchStatusPing: async () => ({ ok: true }),
+}));
 
 import HomePage from '@/app/page';
 
@@ -109,15 +115,14 @@ describe('public home page surface', () => {
     expect(html).toContain('vite');
   });
 
-  it('renders the new site footer with version + status link', async () => {
+  it('renders the new site footer with version + status dot', async () => {
     const el = await HomePage();
     const html = renderToStaticMarkup(el);
     expect(html).toContain('ghc-site-footer');
-    // Mocked translator returns the key as-is, so we look for "version"
-    // (the key name). In production with real translations this would
-    // be "Version" (en) / "版本" (zh).
-    expect(html).toMatch(/version<\/span>\s*<code>[^<]+<\/code>/i);
-    expect(html).toContain('/api/v1/status');
+    // Status dot + key (mocked translator returns keys as-is)
+    expect(html).toContain('ghc-status-dot');
+    expect(html).toContain('data-state="ok"');
+    expect(html).toMatch(/v\d+\.\d+\.\d+/);
     expect(html).toContain('/login');
   });
 });

@@ -3,19 +3,20 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import packageJson from '../../../package.json';
 import { SITE_NAME } from '@/lib/config/site';
+import { fetchStatusPing } from '@/lib/status/ping';
 
 const VERSION = packageJson.version;
 
 /**
- * 3-column site footer: brand+tagline / version+source / status+admin.
+ * Site footer: brand+tagline / nav links / live API status dot.
  * Reads version from package.json at build time (Next.js inlines it).
  *
- * Server component — pulls translated copy via `getTranslations`. Marked
- * async because `getTranslations` is async.
+ * Server component — fetches a small status snapshot for the live dot.
  */
 export async function SiteFooter(): Promise<ReactElement> {
   const tNav = await getTranslations('nav');
   const tFoot = await getTranslations('footer');
+  const ping = await fetchStatusPing();
 
   return (
     <footer className="ghc-site-footer" data-testid="ghc-site-footer">
@@ -25,49 +26,41 @@ export async function SiteFooter(): Promise<ReactElement> {
           <p className="ghc-site-footer-tagline">{tFoot('tagline')}</p>
         </div>
         <div className="ghc-site-footer-col">
-          <p className="ghc-site-footer-heading">{tFoot('source')}</p>
+          <p className="ghc-site-footer-heading">{tFoot('explore')}</p>
           <ul className="ghc-site-footer-list">
-            <li>
-              <span className="ghc-site-footer-label">{tFoot('version')}</span>{' '}
-              <code>{VERSION}</code>
-            </li>
-            <li>
-              <a href="https://github.com/fogyisland/githubcache" className="ghc-link">
-                {tFoot('repoLink')}
-              </a>
-            </li>
-            <li>
-              <span className="ghc-site-footer-label">{tFoot('maintainer')}</span>{' '}
-              <a
-                href="https://github.com/fogyisland"
-                target="_blank"
-                rel="noreferrer noopener"
-                className="ghc-link"
-              >
-                @fogyisland
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div className="ghc-site-footer-col">
-          <p className="ghc-site-footer-heading">{tFoot('operations')}</p>
-          <ul className="ghc-site-footer-list">
-            <li>
-              <Link href="/api/v1/status" className="ghc-link">
-                {tNav('status')}
-              </Link>
-            </li>
-            <li>
-              <Link href="/login" className="ghc-link">
-                {tNav('admin')}
-              </Link>
-            </li>
+            <li><Link href="/get-started" className="ghc-link">{tNav('apiGuide')}</Link></li>
+            <li><Link href="/status" className="ghc-link">{tNav('status')}</Link></li>
+            <li><Link href="/account" className="ghc-link">{tNav('account')}</Link></li>
+            <li><Link href="/login" className="ghc-link">{tNav('login')}</Link></li>
           </ul>
         </div>
       </div>
-      <p className="ghc-site-footer-fine">
-        {tFoot('fine', { year: new Date().getUTCFullYear() })}
-      </p>
+      <div className="ghc-site-footer-fine">
+        <span>© {new Date().getUTCFullYear()} {SITE_NAME}</span>
+        <span className="ghc-site-footer-fine-sep">·</span>
+        <span>MIT</span>
+        <span className="ghc-site-footer-fine-sep">·</span>
+        <span>v{VERSION}</span>
+        <span className="ghc-site-footer-fine-sep">·</span>
+        <a
+          href="https://github.com/fogyisland/githubcache"
+          className="ghc-link"
+          target="_blank"
+          rel="noreferrer noopener"
+        >
+          GitHub
+        </a>
+        <span className="ghc-site-footer-fine-sep">·</span>
+        <span className="ghc-site-footer-status">
+          <span
+            className="ghc-status-dot"
+            data-state={ping.ok ? 'ok' : 'fail'}
+            aria-hidden="true"
+          />
+          {ping.ok ? tFoot('statusOk') : tFoot('statusDown')}
+          <span className="sr-only">{ping.ok ? tFoot('statusOkSr') : tFoot('statusDownSr')}</span>
+        </span>
+      </div>
     </footer>
   );
 }
