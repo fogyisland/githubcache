@@ -41,3 +41,48 @@ export async function loadDashboardBuckets(
   }
   return buckets;
 }
+
+/**
+ * M30 — single-roundtrip aggregate for the 4 dashboard KPI tiles.
+ *
+ * Replaces the 4 parallel `prisma.X.count()` calls the dashboard
+ * used to make. One `$queryRaw` round-trip returns all four counts
+ * (cached repos, active users, active API keys, active GitHub
+ * tokens); the sub-selects let MySQL use the existing indexes on
+ * `status`.
+ *
+ * `prisma.$queryRaw` returns the count columns as `bigint`. We
+ * `Number(...)` them at the boundary so JSX can render them
+ * directly — Prisma's bigint does not serialize cleanly to React
+ * text nodes without an explicit conversion.
+ */
+export interface DashboardCounts {
+  cachedRepos: number;
+  activeUsers: number;
+  activeApiKeys: number;
+  activeGithubTokens: number;
+}
+
+interface DashboardCountsRow {
+  cached_repos: bigint;
+  active_users: bigint;
+  active_api_keys: bigint;
+  active_github_tokens: bigint;
+}
+
+export async function getDashboardCounts(): Promise<DashboardCounts> {
+  const rows = await prisma.$queryRaw<DashboardCountsRow[]>`
+    SELECT
+      (SELECT COUNT(*) FROM repositories) AS cached_repos,
+      (SELECT COUNT(*) FROM users WHERE status = 'active') AS active_users,
+      (SELECT COUNT(*) FROM api_keys WHERE status = 'active') AS active_api_keys,
+      (SELECT COUNT(*) FROM github_tokens WHERE status = 'active') AS active_github_tokens
+  `;
+  const r = rows[0]!;
+  return {
+    cachedRepos: Number(r.cached_repos),
+    activeUsers: Number(r.active_users),
+    activeApiKeys: Number(r.active_api_keys),
+    activeGithubTokens: Number(r.active_github_tokens),
+  };
+}

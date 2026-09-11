@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { cookies, headers } from 'next/headers';
+import { cookies } from 'next/headers';
 import type { ReactElement, ReactNode } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { validateSession } from '@/lib/auth/session';
@@ -18,38 +18,9 @@ import {
 import { resolveAdminMode, type AdminModeId } from '@/lib/admin/mode';
 import { AdminShell } from '@/app/admin/_components/admin-shell';
 import { CommandPalette } from '@/app/admin/_components/command-palette';
-import {
-  ADMIN_SECTIONS,
-  type AdminSection,
-  type AdminSectionSlug,
-} from '@/app/admin/_components/admin-sidebar';
 import { isPaused } from '@/lib/scheduler/state';
-import { getActorEmails, loadAdminStatusData } from '@/lib/admin/status-loader';
+import { loadAdminStatusData } from '@/lib/admin/status-loader';
 import type { AdminStatusBarData } from '@/app/admin/_components/admin-status-bar';
-import type { PaletteData } from '@/app/admin/_components/command-palette';
-
-/**
- * Map a request pathname to the matching sidebar slug. Returns
- * 'dashboard' as the fallback for any unrecognised admin path.
- *
- * M28.bug-fix — previously this looped `ADMIN_SECTIONS` in array order,
- * so sub-pages like `/admin/email/log` would match the *parent* slug
- * (`email`) first and leave "Email" highlighted on the Email log page.
- * Fix: prefer exact match immediately; among prefix matches, keep the
- * longest href (most specific section wins).
- */
-function sectionForPath(pathname: string): AdminSectionSlug {
-  if (pathname === '/admin' || pathname === '/admin/') return 'dashboard';
-  const candidates = ADMIN_SECTIONS.filter((s) => s.slug !== 'dashboard');
-  let best: AdminSection | null = null;
-  for (const s of candidates) {
-    if (pathname === s.href) return s.slug;
-    if (pathname.startsWith(`${s.href}/`)) {
-      if (best === null || s.href.length > best.href.length) best = s;
-    }
-  }
-  return best?.slug ?? 'dashboard';
-}
 
 /**
  * Layout for all /admin/* pages.
@@ -63,13 +34,23 @@ function sectionForPath(pathname: string): AdminSectionSlug {
  * M11 wiring:
  *  - <AdminShell> wraps page children with the role-gated sidebar +
  *    variant-specific chrome + (mission_control only) status bar.
- *  - <CommandPalette> mounts once at layout root; SSR-prefetched with
- *    palette data so first paint has results.
- *  - Status-bar data is also SSR-prefetched (DB ping, queue depth,
+ *  - <CommandPalette> mounts once at layout root. M30: it now lazy-
+ *    fetches its own data via GET /api/admin/palette on first open —
+ *    the layout no longer prefetches palette data, so the layout's
+ *    status-load is faster (one fewer DB round-trip on every admin
+ *    page render) and palette data lives behind the same `/api/admin/*`
+ *    auth boundary as everything else.
+ *  - Status-bar data is SSR-prefetched (DB ping, queue depth,
  *    scheduler state) so the bar renders without a flash before its
- *    client poll kicks in.
- *  - Active sidebar section is derived from the pathname header set
- *    by middleware.
+ *    client poll kicks in. M30: wrapped in `unstable_cache` with a 60s
+ *    revalidate window + an `admin-status` tag so cron-driven refreshes
+ *    can invalidate the cache.
+ *
+ * M30 — the sidebar now derives its own active section via
+ * `usePathname()`. The layout no longer reads the `x-pathname` header
+ * or computes `sectionForPath()`. The middleware still sets the
+ * header (other consumers may read it), but the server-rendered
+ * highlight used to be frozen on first paint and broke on soft-nav.
  */
 export default async function AdminLayout({
   children,
@@ -104,16 +85,12 @@ export default async function AdminLayout({
 
   const tShell = await getTranslations('admin.shell');
 
-  // Pathname header set by middleware (so the server component knows the
-  // active route without a client roundtrip).
-  const headerStore = await headers();
-  const pathname = headerStore.get('x-pathname') ?? '/admin';
-  const currentSection = sectionForPath(pathname);
-
-  // Prefetch status-bar + palette data via the helper that owns the
-  // `Date.now()` calls (extracted to escape react-hooks/purity).
-  const { dbPingMs, queueDepth, recentAuditCount, paletteAudit } =
-    await loadAdminStatusData();
+  // M30 — palette data is now fetched lazily by the CommandPalette
+  // component (GET /api/admin/palette on first open). The layout no
+  // longer assembles `paletteData`; the status loader no longer
+  // returns `paletteAudit`. This drops the per-layout actor-lookup +
+  // recent-audit query.
+  const { dbPingMs, queueDepth, recentAuditCount } = await loadAdminStatusData();
 
   const initialStatus: AdminStatusBarData = {
     dbPingMs,
@@ -123,28 +100,6 @@ export default async function AdminLayout({
     user: { email: user.email, role: user.role },
     variant: currentAdminVariant,
     fetchedAt: new Date().toISOString(),
-  };
-
-  const actorIds = [
-    ...new Set(
-      paletteAudit.rows
-        .map((r) => r.actorUserId)
-        .filter((id): id is bigint => id !== null),
-    ),
-  ];
-  const actorEmails = await getActorEmails(actorIds);
-
-  const paletteSections = ADMIN_SECTIONS.filter((s) => s.roles.includes(user.role)).map(
-    (s) => ({ slug: s.slug, title: tShell(`sections.${s.slug}`), icon: s.icon, href: s.href }),
-  );
-  const paletteData: PaletteData = {
-    sections: paletteSections,
-    recentAudit: paletteAudit.rows.map((r) => ({
-      id: r.id.toString(),
-      action: r.action,
-      actor: r.actorUserId ? (actorEmails.get(r.actorUserId) ?? null) : null,
-      createdAt: r.createdAt.toISOString(),
-    })),
   };
 
   return (
@@ -168,7 +123,6 @@ export default async function AdminLayout({
         </div>
       </div>
       <AdminShell
-        current={currentSection}
         variant={currentAdminVariant}
         mode={currentAdminMode}
         user={{ email: user.email, role: user.role }}
@@ -176,7 +130,7 @@ export default async function AdminLayout({
       >
         {children}
       </AdminShell>
-      <CommandPalette data={paletteData} />
+      <CommandPalette />
     </div>
   );
 }

@@ -24,8 +24,15 @@ export interface PaletteData {
 }
 
 interface Props {
-  /** SSR-prefetched palette data (avoids fetch-on-open for first paint). */
-  data: PaletteData;
+  /**
+   * SSR-prefetched palette data (avoids fetch-on-open for first paint).
+   *
+   * M30 — optional. The layout now mounts `<CommandPalette />` with no
+   * data; the palette lazy-fetches `/api/admin/palette` on first open.
+   * `data` is kept for backward compatibility (tests + Task 2 will
+   * remove it entirely once the rewrite lands).
+   */
+  data?: PaletteData;
   /** Optional initial query (test override). */
   query?: string;
 }
@@ -47,19 +54,25 @@ export function CommandPalette({ data, query: initialQuery = '' }: Props): React
   const t = useTranslations('admin.shell.palette');
 
   const { sectionHits, auditHits } = useMemo(() => {
+    // M30 — when no `data` prop is provided (the layout now mounts
+    // `<CommandPalette />` without one and Task 2 will lazy-fetch via
+    // `/api/admin/palette`), render an empty palette rather than
+    // crashing. Task 2 replaces this with a real client-side fetch.
+    const sections = data?.sections ?? [];
+    const audit = data?.recentAudit ?? [];
     const q = query.trim().toLowerCase();
     const sectionHits = q
-      ? data.sections.filter(
+      ? sections.filter(
           (s) => s.title.toLowerCase().includes(q) || s.slug.toLowerCase().includes(q),
         )
-      : data.sections;
+      : sections;
     const auditHits = q
-      ? data.recentAudit.filter(
+      ? audit.filter(
           (a) =>
             a.action.toLowerCase().includes(q) ||
             (a.actor ?? '').toLowerCase().includes(q),
         )
-      : data.recentAudit;
+      : audit;
     return { sectionHits, auditHits };
   }, [data, query]);
 

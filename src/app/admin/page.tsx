@@ -1,12 +1,11 @@
 import type { ReactElement } from 'react';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { prisma } from '@/lib/db/client';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { AdminKpiCard } from '@/app/admin/_components/admin-kpi-card';
 import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
 import { queryAuditLog, getActorEmails } from '@/lib/db/audit';
-import { loadDashboardBuckets } from '@/lib/admin/dashboard-buckets';
+import { loadDashboardBuckets, getDashboardCounts } from '@/lib/admin/dashboard-buckets';
 import { formatTime } from '@/lib/format/datetime';
 import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 
@@ -22,6 +21,11 @@ import { resolveRequestTimezone } from '@/lib/timezone/resolve';
  *
  * Data is fetched in parallel via Promise.all. The page is async SSR;
  * no client-side fetch needed.
+ *
+ * M30 — the 4 KPI counts are now produced by a single `getDashboardCounts`
+ * `$queryRaw` aggregate (one round-trip instead of four parallel
+ * prisma.count calls). Recent-audit lookup still uses `queryAuditLog`
+ * because it also needs actor emails for the activity feed.
  */
 export default async function AdminDashboardPage(): Promise<ReactElement> {
   const t = await getTranslations('admin.shell.dashboard');
@@ -30,13 +34,11 @@ export default async function AdminDashboardPage(): Promise<ReactElement> {
   // so we read timezone from cookie/default only — no DB roundtrip.
   const userTz = await resolveRequestTimezone({});
 
-  const [repoCount, userCount, apiKeyCount, tokenCount, recentAudit] = await Promise.all([
-    prisma.repository.count(),
-    prisma.user.count({ where: { status: 'active' } }),
-    prisma.apiKey.count({ where: { status: 'active' } }),
-    prisma.githubToken.count({ where: { status: 'active' } }),
+  const [counts, recentAudit] = await Promise.all([
+    getDashboardCounts(),
     queryAuditLog({ limit: 5, offset: 0 }),
   ]);
+  const { cachedRepos, activeUsers, activeApiKeys, activeGithubTokens } = counts;
 
   // Requests by hour — last 6h, 1h buckets, sourced from audit log
   // (action = 'api.query' or 'cache.read'). Best-effort: counts are
@@ -73,25 +75,25 @@ export default async function AdminDashboardPage(): Promise<ReactElement> {
       <section className="ghc-admin-kpi-row">
         <AdminKpiCard
           label={t('kpi.cachedRepos')}
-          value={repoCount}
-          hint={repoCount === 0 ? t('kpi.empty') : t('kpi.totalInCache')}
+          value={cachedRepos}
+          hint={cachedRepos === 0 ? t('kpi.empty') : t('kpi.totalInCache')}
         />
         <AdminKpiCard
           label={t('kpi.activeUsers')}
-          value={userCount}
-          tone={userCount > 0 ? 'positive' : 'default'}
+          value={activeUsers}
+          tone={activeUsers > 0 ? 'positive' : 'default'}
           hint={t('kpi.usersHint')}
         />
         <AdminKpiCard
           label={t('kpi.activeApiKeys')}
-          value={apiKeyCount}
-          tone={apiKeyCount > 0 ? 'positive' : 'default'}
+          value={activeApiKeys}
+          tone={activeApiKeys > 0 ? 'positive' : 'default'}
           hint={t('kpi.apiKeysHint')}
         />
         <AdminKpiCard
           label={t('kpi.activeGithubTokens')}
-          value={tokenCount}
-          tone={tokenCount === 0 ? 'negative' : 'positive'}
+          value={activeGithubTokens}
+          tone={activeGithubTokens === 0 ? 'negative' : 'positive'}
           hint={t('kpi.githubTokensHint')}
         />
       </section>

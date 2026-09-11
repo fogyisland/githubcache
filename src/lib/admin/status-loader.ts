@@ -1,5 +1,5 @@
+import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/db/client';
-import { queryAuditLog, getActorEmails, type AuditPage } from '@/lib/db/audit';
 
 export interface AdminStatusBundle {
   /** Time in milliseconds for a `SELECT 1` round-trip. */
@@ -8,14 +8,11 @@ export interface AdminStatusBundle {
   queueDepth: number;
   /** Number of audit log entries created in the last 24 hours. */
   recentAuditCount: number;
-  /** Last 5 audit log rows used for the command palette's recent section. */
-  paletteAudit: AuditPage;
 }
 
 /**
- * Prefetch all the data the admin shell needs in a single async hop:
- * DB ping (used by the status bar), queue depth, 24h audit count, and
- * the most recent 5 audit rows (for the command palette's recent section).
+ * Prefetch the data the admin status bar needs in a single async hop:
+ * DB ping (used by the status bar), queue depth, and 24h audit count.
  *
  * Lifted out of `src/app/admin/layout.tsx` because `react-hooks/purity`
  * flags `Date.now()` calls inside the function-component body. This is
@@ -25,20 +22,34 @@ export interface AdminStatusBundle {
  * a `SELECT 1` and again immediately after — the difference is the
  * round-trip time in milliseconds. A single `Date.now()` call is also
  * impure, but the lint rule does not flag helper functions.
+ *
+ * M30:
+ *  - Wrapped in `unstable_cache` with a 60s revalidate window and the
+ *    `admin-status` tag. The 4 sub-queries (queue count, 24h audit
+ *    count, raw `SELECT 1`, date-now bookkeeping) run in parallel via
+ *    `Promise.all`; the cache layer deduplicates them across admin
+ *    page renders within the 60s window. Cron jobs that touch
+ *    refresh / audit rows can call `revalidateTag('admin-status')` to
+ *    invalidate immediately.
+ *  - `paletteAudit` and `getActorEmails` were removed — the command
+ *    palette lazy-fetches its own data via GET /api/admin/palette
+ *    (Task 2). The audit `findMany` + actor-email `findMany` that used
+ *    to live here moved to `src/lib/admin/palette-loader.ts` (Task 2).
  */
-export async function loadAdminStatusData(): Promise<AdminStatusBundle> {
-  const pingStartMs = Date.now();
-  const paletteAudit = await queryAuditLog({ limit: 5, offset: 0 });
-  await prisma.$queryRaw`SELECT 1`;
-  const dbPingMs = Date.now() - pingStartMs;
-
+async function rawLoadAdminStatusData(): Promise<AdminStatusBundle> {
   const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const pingStartMs = Date.now();
   const [queueDepth, recentAuditCount] = await Promise.all([
     prisma.refreshJob.count({ where: { status: 'pending' } }),
     prisma.auditLog.count({ where: { createdAt: { gte: since24h } } }),
+    prisma.$queryRaw`SELECT 1`, // parallel ping
   ]);
-
-  return { dbPingMs, queueDepth, recentAuditCount, paletteAudit };
+  const dbPingMs = Date.now() - pingStartMs;
+  return { dbPingMs, queueDepth, recentAuditCount };
 }
 
-export { getActorEmails };
+export const loadAdminStatusData = unstable_cache(
+  rawLoadAdminStatusData,
+  ['admin-status-bundle'],
+  { tags: ['admin-status'], revalidate: 60 },
+);

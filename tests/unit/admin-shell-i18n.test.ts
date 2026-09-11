@@ -31,9 +31,38 @@ vi.mock('next-intl/server', () => ({
   },
 }));
 
+// M30 — AdminSidebar is a client component that calls useTranslations
+// from next-intl and usePathname from next/navigation. The test renders
+// it server-side via renderToStaticMarkup, so both need deterministic
+// stubs.
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/admin',
+}));
+
 vi.mock('next-intl', () => ({
   useTranslations: (ns: string) => {
     const labels: Record<string, Record<string, string>> = {
+      'admin.shell': {
+        sidebarAria: 'Admin sections',
+        'sections.dashboard': 'Dashboard',
+        'sections.users': 'Users',
+        'sections.api-keys': 'API Keys',
+        'sections.github-tokens': 'GitHub Tokens',
+        'sections.reports': 'Reports',
+        'sections.audit': 'Audit',
+        'sections.refresh': 'Refresh',
+        'sections.queue': 'Queue',
+        'sections.queries': 'Queries',
+        'sections.ingestion': 'Ingestion',
+        'sections.providers': 'Providers',
+        'sections.repositories': 'Imported nodes',
+        'sections.webhooks': 'Webhooks',
+        'sections.database': 'Database',
+        'sections.api-settings': 'API Settings',
+        'sections.insights': 'Insights',
+        'sections.email': 'Email',
+        'sections.email-log': 'Email log',
+      },
       'admin.shell.statusbar': { db: 'DB', ms: 'ms', queue: 'Queue', scheduler: 'Scheduler', audit24h: 'Audit 24h', operator: 'Operator' },
       'admin.shell.palette': { placeholder: 'Search admin — sections, recent actions…', noMatches: 'No matches for "{query}"', sections: 'Sections', recentAudit: 'Recent audit', hintNav: 'navigate', hintOpen: 'open', hintClose: 'close' },
     };
@@ -48,9 +77,9 @@ vi.mock('next-intl', () => ({
 import { AdminSidebar } from '@/app/admin/_components/admin-sidebar';
 
 describe('AdminSidebar i18n', () => {
-  it('renders translated section titles from messages', async () => {
+  it('renders translated section titles from messages', () => {
     const html = renderToStaticMarkup(
-      await AdminSidebar({ current: 'dashboard', userRole: 'admin' }),
+      AdminSidebar({ userRole: 'admin' }),
     );
     expect(html).toContain('Dashboard');
     expect(html).toContain('Users');
@@ -62,9 +91,9 @@ describe('AdminSidebar i18n', () => {
     expect(html).toContain('Queue');
   });
 
-  it('hides admin-only sections for operator role', async () => {
+  it('hides admin-only sections for operator role', () => {
     const html = renderToStaticMarkup(
-      await AdminSidebar({ current: 'dashboard', userRole: 'operator' }),
+      AdminSidebar({ userRole: 'operator' }),
     );
     expect(html).toContain('Dashboard');
     expect(html).not.toContain('Users');  // admin-only

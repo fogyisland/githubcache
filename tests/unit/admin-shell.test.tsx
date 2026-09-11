@@ -2,6 +2,14 @@ import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createElement } from 'react';
 
+// M30 — AdminSidebar is now a client component that reads the current
+// pathname via usePathname(). Tests render AdminShell server-side via
+// renderToStaticMarkup, so we have to stub next/navigation with a
+// deterministic value.
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/admin',
+}));
+
 vi.mock('next-intl/server', () => ({
   getTranslations: async (ns: string) => {
     const labels: Record<string, Record<string, string>> = {
@@ -23,6 +31,27 @@ vi.mock('next-intl/server', () => ({
 vi.mock('next-intl', () => ({
   useTranslations: (ns: string) => {
     const labels: Record<string, Record<string, string>> = {
+      'admin.shell': {
+        sidebarAria: 'Admin sections',
+        'sections.dashboard': 'Dashboard',
+        'sections.users': 'Users',
+        'sections.api-keys': 'API Keys',
+        'sections.github-tokens': 'GitHub Tokens',
+        'sections.reports': 'Reports',
+        'sections.audit': 'Audit',
+        'sections.refresh': 'Refresh',
+        'sections.queries': 'Queries',
+        'sections.ingestion': 'Ingestion',
+        'sections.providers': 'Providers',
+        'sections.repositories': 'Imported nodes',
+        'sections.queue': 'Queue',
+        'sections.webhooks': 'Webhooks',
+        'sections.database': 'Database',
+        'sections.api-settings': 'API Settings',
+        'sections.insights': 'Insights',
+        'sections.email': 'Email',
+        'sections.email-log': 'Email log',
+      },
       'admin.shell.statusbar': { db: 'DB', ms: 'ms', queue: 'Queue', scheduler: 'Scheduler', audit24h: 'Audit 24h', operator: 'Operator' },
       'admin.shell.palette': { placeholder: 'Search admin — sections, recent actions…', noMatches: 'No matches for "{query}"', sections: 'Sections', recentAudit: 'Recent audit', hintNav: 'navigate', hintOpen: 'open', hintClose: 'close' },
     };
@@ -53,7 +82,6 @@ describe('AdminShell', () => {
   it('renders children inside the main content area', async () => {
     const html = renderToStaticMarkup(
       await AdminShell({
-        current: 'dashboard',
         variant: 'mission_control',
         mode: 'dark' as AdminModeId,
         user,
@@ -68,7 +96,6 @@ describe('AdminShell', () => {
   it('renders sidebar with 7 sections', async () => {
     const html = renderToStaticMarkup(
       await AdminShell({
-        current: 'dashboard',
         variant: 'mission_control',
         mode: 'dark' as AdminModeId,
         user: { email: 'a@b', role: 'admin' as const },
@@ -88,7 +115,6 @@ describe('AdminShell', () => {
   it('marks the current section with an indicator', async () => {
     const html = renderToStaticMarkup(
       await AdminShell({
-        current: 'users',
         variant: 'mission_control',
         mode: 'dark' as AdminModeId,
         user: { email: 'a@b', role: 'admin' as const },
@@ -96,15 +122,16 @@ describe('AdminShell', () => {
         children: createElement('span', null, 'x'),
       }),
     );
-    // current section gets ghc-admin-sidebar-current class
+    // M30 — the active section is now derived by the sidebar from the
+    // pathname (usePathname()). The mock above returns '/admin', so the
+    // dashboard link should be the one carrying the current indicator.
     expect(html).toContain('ghc-admin-sidebar-current');
-    expect(html).toMatch(/ghc-admin-sidebar-current[^>]*href="\/admin\/users"/);
+    expect(html).toMatch(/ghc-admin-sidebar-current[^>]*href="\/admin"/);
   });
 
   it('hides admin-only sections from operators', async () => {
     const html = renderToStaticMarkup(
       await AdminShell({
-        current: 'dashboard',
         variant: 'mission_control',
         mode: 'dark' as AdminModeId,
         user, // role: operator
@@ -123,7 +150,6 @@ describe('AdminShell', () => {
   it('renders status bar only for mission_control variant', async () => {
     const mcHtml = renderToStaticMarkup(
       await AdminShell({
-        current: 'dashboard',
         variant: 'mission_control',
         mode: 'dark' as AdminModeId,
         user,
@@ -135,7 +161,6 @@ describe('AdminShell', () => {
 
     const insHtml = renderToStaticMarkup(
       await AdminShell({
-        current: 'dashboard',
         variant: 'inspector',
         mode: 'dark' as AdminModeId,
         user,
@@ -147,7 +172,6 @@ describe('AdminShell', () => {
 
     const wbHtml = renderToStaticMarkup(
       await AdminShell({
-        current: 'dashboard',
         variant: 'workbench',
         mode: 'dark' as AdminModeId,
         user,
@@ -163,7 +187,6 @@ describe('AdminShell', () => {
   it('emits data-admin-mode="dark" by default', async () => {
     const html = renderToStaticMarkup(
       await AdminShell({
-        current: 'dashboard',
         variant: 'mission_control',
         mode: 'dark' as AdminModeId,
         user,
@@ -177,7 +200,6 @@ describe('AdminShell', () => {
   it('emits data-admin-mode="light" when mode=light', async () => {
     const html = renderToStaticMarkup(
       await AdminShell({
-        current: 'dashboard',
         variant: 'inspector',
         mode: 'light' as AdminModeId,
         user,

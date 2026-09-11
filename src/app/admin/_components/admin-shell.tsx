@@ -1,12 +1,10 @@
 import type { ReactElement, ReactNode } from 'react';
 import type { AdminVariantId } from '@/lib/admin/variant';
 import type { AdminModeId } from '@/lib/admin/mode';
-import { AdminSidebar, type AdminSectionSlug } from './admin-sidebar';
+import { AdminSidebar } from './admin-sidebar';
 import { AdminStatusBar, type AdminStatusBarData } from './admin-status-bar';
 
 interface Props {
-  /** Active section slug (drives the sidebar indicator). */
-  current: AdminSectionSlug;
   /** Active admin variant — drives the chrome treatment (typography, radius). */
   variant: AdminVariantId;
   /** Active admin color mode (light | dark) — drives all color tokens. */
@@ -32,19 +30,24 @@ interface Props {
  * "Daylight + Mission Control" or "Nightfall + Workbench" all render with
  * consistent palettes.
  *
+ * M30 — sidebar is now a client component that derives its own active
+ * section from `usePathname()`; the shell no longer passes `current`
+ * down. Previously the server-side `current` slug was frozen on first
+ * render and didn't update on soft-nav. (The `x-pathname` middleware
+ * header is still set — the shell just stops reading it.)
+ *
  * Styling is delegated to `[data-admin="…"]` + `[data-admin-mode="…"]`
  * blocks in globals.css — the shell just sets the attributes on the
  * wrapper.
  */
 export async function AdminShell({
-  current,
   variant,
   mode,
   user,
   initialStatus,
   children,
 }: Props): Promise<ReactElement> {
-  const sidebar = await AdminSidebar({ current, userRole: user.role });
+  const sidebar = AdminSidebar({ userRole: user.role });
   return (
     <div className="ghc-admin-shell" data-admin={variant} data-admin-mode={mode}>
       {sidebar}
