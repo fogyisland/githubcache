@@ -15,6 +15,7 @@ function flattenDict(obj: Record<string, unknown>, prefix = ''): Record<string, 
 }
 
 const getStartedDict = flattenDict({
+  getStarted: {
   meta: {
     title: 'Use the API in 4 steps',
     description: 'A 4-step walkthrough.',
@@ -23,6 +24,7 @@ const getStartedDict = flattenDict({
   title: 'Use the API in 4 steps',
   lede: 'githubcache is a cache for GitHub repository metadata.',
   copy: { copy: 'Copy', copied: 'Copied' },
+  tabs: { curl: 'curl', python: 'Python', nodejs: 'Node.js', powershell: 'PowerShell' },
   step1: {
     heading: 'Create an account',
     body: 'Public signup is open. Email + password.',
@@ -69,6 +71,7 @@ const getStartedDict = flattenDict({
     yourKeys: 'Your API keys',
     yourKeysBody: 'manage + revoke at /account/keys',
     specBody: 'machine-readable JSON',
+  },
   },
 });
 
@@ -140,12 +143,22 @@ describe('GetStartedPage — vertical 4-step walkthrough', () => {
     expect(html).toContain('>warning<');
   });
 
-  it('renders 3 curl example blocks inside step 4', async () => {
+  it('renders 3 multi-language code example blocks inside step 4', async () => {
     const html = renderToStaticMarkup(await GetStartedPage());
-    const blocks = html.match(/ghc-getstarted-curl-block/g) ?? [];
-    expect(blocks.length).toBe(3);
-    // Each block has a tag chip + copy button.
-    expect(html).toContain('ghc-getstarted-curl-tag');
+    // Three example wrappers (one per code example in step 4).
+    const wrappers = html.match(/ghc-getstarted-example-wrapper/g) ?? [];
+    expect(wrappers.length).toBe(3);
+    // Each holds a tablist with 4 tabs (curl, Python, Node.js, PowerShell).
+    const tablists = html.match(/<div role="tablist"/g) ?? [];
+    expect(tablists.length).toBe(3);
+    const tabs = html.match(/role="tab"/g) ?? [];
+    expect(tabs.length).toBe(12);
+    // Each tablist shows all 4 language labels.
+    expect(html).toContain('>curl<');
+    expect(html).toContain('>Python<');
+    expect(html).toContain('>Node.js<');
+    expect(html).toContain('>PowerShell<');
+    // Copy button + curl pre + status chip remain.
     expect(html).toContain('ghc-getstarted-copy-btn');
     expect(html).toContain('ghc-getstarted-curl');
   });

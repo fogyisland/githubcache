@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { CopyButton } from './_components/copy-button';
+import { CodeTabs } from './_components/code-tabs';
 
 /**
  * `/get-started` — public-facing walkthrough for a brand-new visitor.
@@ -25,9 +26,10 @@ import { CopyButton } from './_components/copy-button';
  * array automatically re-numbers them.
  */
 
-// --- inline curl-example (was extracted to docs/_components in M17, but the
-// docs site is no longer shipped and get-started is the only consumer) ---
-interface CurlExampleProps {
+// --- inline code-example: builds curl / python / nodejs / powershell
+// snippets for one HTTP request and wraps them in a client-side tab
+// component. Docs site was retired in M17; this is the only consumer.
+interface CodeExampleProps {
   method: string;
   url: string;
   headers?: Record<string, string>;
@@ -35,8 +37,15 @@ interface CurlExampleProps {
   tag: 'public' | 'single' | 'batch';
   copyLabel: string;
   copiedLabel: string;
+  tagLabel: string;
+  tabLabels: Record<'curl' | 'python' | 'nodejs' | 'powershell', string>;
 }
-function buildCurlCommand({ method, url, headers, body }: CurlExampleProps): string {
+
+function shellQuote(s: string): string {
+  return `'${s.replace(/'/g, `'\\''`)}'`;
+}
+
+function buildCurlCommand({ method, url, headers, body }: CodeExampleProps): string {
   const parts = ['curl', '-X', method, shellQuote(url)];
   for (const [k, v] of Object.entries(headers ?? {})) {
     parts.push('-H', shellQuote(`${k}: ${v}`));
@@ -47,30 +56,86 @@ function buildCurlCommand({ method, url, headers, body }: CurlExampleProps): str
   }
   return parts.join(' ');
 }
-function shellQuote(s: string): string {
-  return `'${s.replace(/'/g, `'\\''`)}'`;
+
+function buildPython({ method, url, headers, body }: CodeExampleProps): string {
+  const lines: string[] = ['import requests', ''];
+  lines.push(`response = requests.${method.toLowerCase()}(`);
+  lines.push(`    ${shellQuote(url)},`);
+  if (headers && Object.keys(headers).length > 0) {
+    lines.push('    headers={');
+    for (const [k, v] of Object.entries(headers)) {
+      lines.push(`        ${shellQuote(k)}: ${shellQuote(v)},`);
+    }
+    lines.push('    },');
+  }
+  if (body !== undefined) {
+    lines.push(`    json=${JSON.stringify(body, null, 4).replace(/\n/g, '\n    ')},`);
+  }
+  lines.push(')');
+  lines.push('print(response.json())');
+  return lines.join('\n');
 }
 
-const TAG_LABEL_KEY: Record<CurlExampleProps['tag'], string> = {
-  public: 'tagPublic',
-  single: 'tagSingle',
-  batch: 'tagBatch',
-};
+function buildNodejs({ method, url, headers, body }: CodeExampleProps): string {
+  const opts: Record<string, unknown> = { method };
+  if (headers && Object.keys(headers).length > 0) {
+    opts.headers = headers;
+  }
+  if (body !== undefined) {
+    opts.body = JSON.stringify(body, null, 2);
+  }
+  const optsJson = JSON.stringify(opts, null, 2);
+  return [
+    `const response = await fetch(${JSON.stringify(url)}, ${optsJson});`,
+    'const data = await response.json();',
+    'console.log(data);',
+  ].join('\n');
+}
 
-async function CurlExample(props: CurlExampleProps): Promise<ReactElement> {
-  const cmd = buildCurlCommand(props);
+function buildPowershell({ method, url, headers, body }: CodeExampleProps): string {
+  const lines: string[] = [];
+  const hasHeaders = headers && Object.keys(headers).length > 0;
+  if (hasHeaders) {
+    lines.push('$headers = @{');
+    for (const [k, v] of Object.entries(headers ?? {})) {
+      lines.push(`    ${shellQuote(k)} = ${shellQuote(v)}`);
+    }
+    lines.push('}');
+    lines.push('');
+  }
+  if (body !== undefined) {
+    lines.push(`$body = ${JSON.stringify(body)} | ConvertTo-Json -Compress`);
+    lines.push('');
+  }
+  const cmdlet = hasHeaders ? 'Invoke-RestMethod' : 'Invoke-WebRequest';
+  const args = ['-Method', method.toUpperCase(), '-Uri', shellQuote(url)];
+  if (hasHeaders) args.push('-Headers', '$headers');
+  if (body !== undefined) args.push('-Body', '$body', '-ContentType', "'application/json'");
+  lines.push(`$response = ${cmdlet} ${args.join(' ')}`);
+  lines.push('$response | ConvertTo-Json');
+  return lines.join('\n');
+}
+
+async function CodeExample(props: CodeExampleProps): Promise<ReactElement> {
   const tTags = await getTranslations('getStarted.step4');
+  const snippets = [
+    { lang: 'curl' as const, code: buildCurlCommand(props) },
+    { lang: 'python' as const, code: buildPython(props) },
+    { lang: 'nodejs' as const, code: buildNodejs(props) },
+    { lang: 'powershell' as const, code: buildPowershell(props) },
+  ];
   return (
-    <div className="ghc-getstarted-curl-block">
-      <div className="ghc-getstarted-curl-meta">
-        <span className={`ghc-getstarted-curl-tag ghc-getstarted-curl-tag-${props.tag}`}>
-          {tTags(TAG_LABEL_KEY[props.tag])}
-        </span>
-        <CopyButton text={cmd} label={props.copyLabel} copiedLabel={props.copiedLabel} />
-      </div>
-      <pre className="ghc-getstarted-curl">
-        <code>{cmd}</code>
-      </pre>
+    <div className="ghc-getstarted-example-wrapper">
+      <span className={`ghc-getstarted-curl-tag ghc-getstarted-curl-tag-${props.tag}`}>
+        {tTags(props.tagLabel)}
+      </span>
+      <CodeTabs
+        snippets={snippets}
+        tabLabels={props.tabLabels}
+        copyLabel={props.copyLabel}
+        copiedLabel={props.copiedLabel}
+        ariaLabel={`${props.method} ${props.url}`}
+      />
     </div>
   );
 }
@@ -99,23 +164,35 @@ export default async function GetStartedPage(): Promise<ReactElement> {
   const t = await getTranslations('getStarted');
   const tCopy = await getTranslations('getStarted.copy');
   const tStep4 = await getTranslations('getStarted.step4');
+  const tTabs = await getTranslations('getStarted.tabs');
 
-  const statusCurl = await CurlExample({
+  const tabLabels = {
+    curl: tTabs('curl'),
+    python: tTabs('python'),
+    nodejs: tTabs('nodejs'),
+    powershell: tTabs('powershell'),
+  };
+
+  const statusExample = await CodeExample({
     method: 'GET',
     url: 'https://githubcache.example.com/api/v1/status',
     tag: 'public',
     copyLabel: tCopy('copy'),
     copiedLabel: tCopy('copied'),
+    tagLabel: 'tagPublic',
+    tabLabels,
   });
-  const repoCurl = await CurlExample({
+  const repoExample = await CodeExample({
     method: 'GET',
     url: 'https://githubcache.example.com/api/v1/repos/facebook/react',
     headers: { 'X-API-Key': 'YOUR_KEY_HERE' },
     tag: 'single',
     copyLabel: tCopy('copy'),
     copiedLabel: tCopy('copied'),
+    tagLabel: 'tagSingle',
+    tabLabels,
   });
-  const batchCurl = await CurlExample({
+  const batchExample = await CodeExample({
     method: 'POST',
     url: 'https://githubcache.example.com/api/query',
     headers: { 'X-API-Key': 'YOUR_KEY_HERE' },
@@ -123,6 +200,8 @@ export default async function GetStartedPage(): Promise<ReactElement> {
     tag: 'batch',
     copyLabel: tCopy('copy'),
     copiedLabel: tCopy('copied'),
+    tagLabel: 'tagBatch',
+    tabLabels,
   });
 
   const steps: Step[] = [
@@ -161,15 +240,15 @@ export default async function GetStartedPage(): Promise<ReactElement> {
         <>
           <h3 className="ghc-getstarted-example-heading">{tStep4('example1Heading')}</h3>
           <p className="ghc-getstarted-example-body">{tStep4('example1Body')}</p>
-          {statusCurl}
+          {statusExample}
 
           <h3 className="ghc-getstarted-example-heading">{tStep4('example2Heading')}</h3>
           <p className="ghc-getstarted-example-body">{tStep4('example2Body')}</p>
-          {repoCurl}
+          {repoExample}
 
           <h3 className="ghc-getstarted-example-heading">{tStep4('example3Heading')}</h3>
           <p className="ghc-getstarted-example-body">{tStep4('example3Body')}</p>
-          {batchCurl}
+          {batchExample}
 
           <h3 className="ghc-getstarted-example-heading">{tStep4('errorsHeading')}</h3>
           <table className="ghc-getstarted-error-table">

@@ -2368,6 +2368,12 @@
       "copy": "Copy",
       "copied": "Copied"
     },
+    "tabs": {
+      "curl": "curl",
+      "python": "Python",
+      "nodejs": "Node.js",
+      "powershell": "PowerShell"
+    },
     "step1": {
       "heading": "Create an account at /signup",
       "body": "Open /signup, enter an email + password (≥8 chars) and an optional display name. The account is created immediately — no email verification, no waiting on an admin. You land in /account as a signed-in operator.",

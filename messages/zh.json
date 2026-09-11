@@ -2368,6 +2368,12 @@
       "copy": "复制",
       "copied": "已复制"
     },
+    "tabs": {
+      "curl": "curl",
+      "python": "Python",
+      "nodejs": "Node.js",
+      "powershell": "PowerShell"
+    },
     "step1": {
       "heading": "在 /signup 创建账号",
       "body": "打开 /signup，填入邮箱 + 密码（≥8 个字符）+ 可选的显示名。账号立即生效 — 无需邮件验证，无需等管理员。提交后自动登录并跳转到 /account。",
