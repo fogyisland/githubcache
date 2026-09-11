@@ -55,7 +55,7 @@ export async function AdminJobCard({ job, userTz }: Props): Promise<ReactElement
         <div>
           <dt>{t('status')}</dt>
           <dd>
-            <span className={`ghc-admin-chip ghc-admin-chip-${job.status === 'pending' ? 'info' : job.status === 'in_progress' ? 'warn' : job.status === 'failed' ? 'danger' : 'ok'}`}>
+            <span className={`ghc-admin-chip ghc-admin-chip-${job.status === 'pending' ? 'info' : job.status === 'in_progress' ? 'warn' : job.status === 'failed' ? 'danger' : 'neutral'}`}>
               {job.status}
             </span>
           </dd>

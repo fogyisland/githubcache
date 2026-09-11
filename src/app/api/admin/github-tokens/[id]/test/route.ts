@@ -8,6 +8,7 @@ import { apiError } from '@/lib/api/errors';
 import { logger } from '@/lib/logger';
 
 const GITHUB_API_USER = 'https://api.github.com/user';
+const UPSTREAM_MESSAGE_MAX = 256;
 
 /**
  * POST /api/admin/github-tokens/[id]/test
@@ -27,6 +28,11 @@ const GITHUB_API_USER = 'https://api.github.com/user';
  *          surface the reason.
  *
  * Audit: 'test_token' on success/failure (targetType=github_token).
+ *
+ * Note on `lastUsedAt`: a successful test does NOT update the row's
+ * lastUsedAt column. The test endpoint is a verification, not a real
+ * GitHub API call from the cache; the column should reflect actual
+ * cache traffic only.
  */
 export async function POST(
   req: Request,
@@ -94,7 +100,14 @@ export async function POST(
   }
 
   if (!upstream.ok) {
-    const upstreamMessage = await upstream.text().catch(() => '');
+    const rawMessage = await upstream.text().catch(() => '');
+    // Truncate to a bounded length so a future upstream that echoes
+    // auth headers / oversized payloads back through a proxy doesn't
+    // blow up our response or the audit log.
+    const upstreamMessage =
+      rawMessage.length > UPSTREAM_MESSAGE_MAX
+        ? `${rawMessage.slice(0, UPSTREAM_MESSAGE_MAX)}…`
+        : rawMessage;
     void writeAudit({
       action: 'test_token',
       targetType: 'github_token',
@@ -126,7 +139,12 @@ export async function POST(
     action: 'test_token',
     targetType: 'github_token',
     targetId: String(id),
-    metadata: { label: row.label, ok: true, login },
+    // Note: `login` is intentionally NOT included in audit metadata.
+    // The audit log feeds downstream webhook subscribers; including the
+    // GitHub login here would change the payload contract for any
+    // subscriber that doesn't expect it. The login is still surfaced
+    // to the admin via the response body below.
+    metadata: { label: row.label, ok: true },
     actorUserId: user.id,
     ...(fwd !== null && fwd !== '' ? { ip: fwd } : {}),
   });

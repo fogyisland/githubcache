@@ -63,6 +63,8 @@ export function AdminSchedulerControls({ currentState: initial }: Props): ReactE
     <div className="ghc-admin-scheduler-controls" data-state={state}>
       <span
         data-state={state}
+        role="status"
+        aria-live="polite"
         className={`ghc-admin-chip ghc-admin-chip-${state === 'RUNNING' ? 'ok' : 'warn'}`}
       >
         {state === 'RUNNING' ? t('running') : t('paused')}

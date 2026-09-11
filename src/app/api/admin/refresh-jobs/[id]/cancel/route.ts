@@ -17,12 +17,19 @@ import { logger } from '@/lib/logger';
  *
  * Body / CSRF: see `/retry`.
  *
+ * TOCTOU: a scheduler worker may transition the row to 'done' between
+ * our findUnique and the update. Without atomic check-and-set, the
+ * in-flight worker would then write 'done' AFTER our 'failed' write,
+ * silently losing the cancellation. We use a conditional updateMany
+ * (`where: { id, status: { in: [...] } }`) so the DB rejects the write
+ * if the row has moved on. Affected count === 0 → 409.
+ *
  * Response codes:
  *   200 — { ok: true, jobId }
  *   400 — invalid id
  *   403 — not admin / invalid CSRF
  *   404 — refresh_job not found
- *   409 — job is in a terminal status (already done or failed)
+ *   409 — job is in a terminal status, or its status changed under us
  */
 export async function POST(
   req: Request,
@@ -66,14 +73,32 @@ export async function POST(
   }
 
   try {
-    const updated = await prisma.refreshJob.update({
-      where: { id },
+    // Only flip from the status we observed. If the row has been
+    // advanced to 'done' (or another admin retried to 'pending') in
+    // between, the DB rejects the write and we 409.
+    const { count } = await prisma.refreshJob.updateMany({
+      where: { id, status: existing.status },
       data: {
         status: 'failed',
         lastError: 'cancelled by admin',
         lockedUntil: null,
       },
     });
+
+    if (count === 0) {
+      const fresh = await prisma.refreshJob.findUnique({ where: { id } });
+      return apiError(
+        'conflict',
+        `job status changed under us (now: ${fresh?.status ?? 'unknown'})`,
+        {},
+        req,
+      );
+    }
+
+    const updated = await prisma.refreshJob.findUnique({ where: { id } });
+    if (!updated) {
+      return apiError('not_found', 'vanished after update', {}, req);
+    }
 
     const fwd = req.headers.get('x-forwarded-for');
     void writeAudit({

@@ -109,6 +109,13 @@ export default async function AdminGithubTokensPage({
       key: 'quotaRemaining',
       header: t('list.column.quotaRemaining'),
       render: (tok) => {
+        // tokensLimit === 0 means "disabled / legacy" — the
+        // requestsUsed / requestsLimit ratio on the same row reads
+        // `42 / 0 (0%)`. Showing `0` for remaining would contradict
+        // that, so we render an em-dash for consistency.
+        if (tok.requestsLimit === 0) {
+          return <span className="ghc-admin-mono">—</span>;
+        }
         const remaining = Math.max(0, tok.requestsLimit - tok.requestsUsed);
         return <span className="ghc-admin-usage">{remaining.toLocaleString()}</span>;
       },
@@ -121,6 +128,9 @@ export default async function AdminGithubTokensPage({
     },
     {
       key: 'lastError',
+      // TODO(M30.5): githubToken.lastError is not tracked in the schema.
+      // This column is reserved for the future field. When the schema
+      // gains it, replace the em-dash with the row's lastError string.
       header: t('list.column.lastError'),
       render: () => <span className="ghc-admin-mono">—</span>,
     },

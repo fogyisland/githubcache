@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, type ReactElement } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { adminFetch } from '@/lib/api/admin-fetch';
 
@@ -18,6 +19,7 @@ interface Props {
  */
 export function AdminJobActionButton({ jobId, action }: Props): ReactElement {
   const t = useTranslations('admin.queue');
+  const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,11 +31,9 @@ export function AdminJobActionButton({ jobId, action }: Props): ReactElement {
       await adminFetch(`/api/admin/refresh-jobs/${jobId}/${action}`, {
         method: 'POST',
       });
-      // Soft-revalidate so the parent server component re-fetches the
-      // queue and the card flips to its new status (or disappears).
-      if (typeof window !== 'undefined') {
-        window.location.reload();
-      }
+      // Soft-revalidate: re-fetches the server component data without a
+      // full page reload. Same UX as RefreshControls on /admin/refresh.
+      router.refresh();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       setError(msg);

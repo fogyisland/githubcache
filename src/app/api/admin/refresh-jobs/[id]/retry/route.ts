@@ -18,12 +18,19 @@ import { logger } from '@/lib/logger';
  * Body: { csrf: string } (adminFetch injects the header too, but the
  * route accepts the header OR the body field for symmetry with M7.1).
  *
+ * TOCTOU: the row status can change between the pre-flight findUnique
+ * and the update (the scheduler may flip it to 'done' or another admin
+ * may click again). We use a conditional update
+ * (`where: { id, status: { in: [...] } }`) so the DB itself rejects
+ * the write if the row has moved on. If the conditional update reports
+ * 0 affected rows, we surface a 409.
+ *
  * Response codes:
  *   200 — { ok: true, jobId }
  *   400 — invalid id
  *   403 — not admin / invalid CSRF
  *   404 — refresh_job not found
- *   409 — job is already pending (operator should wait)
+ *   409 — job is already pending, or its status changed under us
  */
 export async function POST(
   req: Request,
@@ -62,13 +69,17 @@ export async function POST(
   if (!existing) {
     return apiError('not_found', 'not found', {}, req);
   }
-  if (existing.status === 'pending') {
-    return apiError('conflict', 'job already pending', {}, req);
+  // Only retry failed/in_progress rows. pending → no-op; done → refuse.
+  if (existing.status === 'pending' || existing.status === 'done') {
+    return apiError('conflict', 'job already in non-retryable status', {}, req);
   }
 
   try {
-    const updated = await prisma.refreshJob.update({
-      where: { id },
+    // Conditional update: only flip if the status is still what we
+    // observed. If the scheduler/another admin raced us, the update
+    // touches 0 rows and we 409.
+    const { count } = await prisma.refreshJob.updateMany({
+      where: { id, status: existing.status },
       data: {
         status: 'pending',
         scheduledFor: new Date(),
@@ -76,6 +87,21 @@ export async function POST(
         lockedUntil: null,
       },
     });
+
+    if (count === 0) {
+      const fresh = await prisma.refreshJob.findUnique({ where: { id } });
+      return apiError(
+        'conflict',
+        `job status changed under us (now: ${fresh?.status ?? 'unknown'})`,
+        {},
+        req,
+      );
+    }
+
+    const updated = await prisma.refreshJob.findUnique({ where: { id } });
+    if (!updated) {
+      return apiError('not_found', 'vanished after update', {}, req);
+    }
 
     const fwd = req.headers.get('x-forwarded-for');
     void writeAudit({

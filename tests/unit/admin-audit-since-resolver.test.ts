@@ -47,4 +47,13 @@ describe('resolveSince', () => {
     expect(resolveSince('15', now)).toBeUndefined();
     expect(resolveSince('m15', now)).toBeUndefined();
   });
+
+  it('returns undefined for n above the 365-unit cap', () => {
+    // 99999999d would otherwise compute near MAX_SAFE_INTEGER.
+    expect(resolveSince('99999999d', now)).toBeUndefined();
+    expect(resolveSince('1000h', now)).toBeUndefined();
+    expect(resolveSince('100000m', now)).toBeUndefined();
+    // 365 is exactly the cap and should pass.
+    expect(resolveSince('365d', now)).toBeDefined();
+  });
 });

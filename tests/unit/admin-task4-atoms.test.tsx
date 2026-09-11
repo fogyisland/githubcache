@@ -42,6 +42,10 @@ vi.mock('@/lib/api/admin-fetch', () => ({
   adminFetch: adminFetchMock,
 }));
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
+}));
+
 afterEach(() => {
   adminFetchMock.mockReset();
 });
