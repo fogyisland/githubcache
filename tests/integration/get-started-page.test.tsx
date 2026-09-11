@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { createElement } from 'react';
 
 function flattenDict(obj: Record<string, unknown>, prefix = ''): Record<string, string> {
   const out: Record<string, string> = {};
@@ -23,20 +22,15 @@ const getStartedDict = flattenDict({
   eyebrow: 'Quickstart',
   title: 'Use the API in 4 steps',
   lede: 'githubcache is a cache for GitHub repository metadata.',
+  copy: { copy: 'Copy', copied: 'Copied' },
   step1: {
     heading: 'Create an account',
     body: 'Public signup is open. Email + password.',
-    action1: 'Open /signup.',
-    action2: 'Enter email + password.',
-    action3: 'You are auto-logged in to /account.',
     cta: 'Go to /signup →',
   },
   step2: {
     heading: 'Request an API key',
     body: 'Logged-in users request their own keys from /account.',
-    action1: 'Open /account/keys.',
-    action2: 'Click Request a key.',
-    action3: 'Wait for admin approval.',
     cta: 'Go to /account/keys/request →',
   },
   step3: {
@@ -48,11 +42,14 @@ const getStartedDict = flattenDict({
   step4: {
     heading: 'Make your first call',
     body: 'Three examples.',
-    example1Heading: 'no auth required — sanity check',
+    tagPublic: 'Public · no auth',
+    tagSingle: 'Auth · 1 repo',
+    tagBatch: 'Auth · batch of 50',
+    example1Heading: 'Sanity check',
     example1Body: 'Status endpoint.',
-    example2Heading: 'no auth required — single repo',
+    example2Heading: 'Fetch one',
     example2Body: 'Public read.',
-    example3Heading: 'auth required — batch',
+    example3Heading: 'Batch',
     example3Body: 'Authenticated.',
     errorsHeading: 'common error codes',
     errorCol: { code: 'code', status: 'http', meaning: 'meaning' },
@@ -85,19 +82,10 @@ vi.mock('next-intl/server', () => ({
   },
 }));
 
-vi.mock('@/app/docs/_components/curl-example', () => ({
-  CurlExample: ({ method, url }: { method: string; url: string }) =>
-    createElement(
-      'div',
-      { 'data-testid': 'curl', 'data-method': method, 'data-url': url },
-      createElement('code', null, `curl ${method} ${url}`),
-    ),
-}));
-
 import GetStartedPage from '@/app/get-started/page';
 
-describe('GetStartedPage — Wulan-aligned step cards', () => {
-  it('renders the page wrapper with Wulan eyebrow + h1 + lede', async () => {
+describe('GetStartedPage — vertical 4-step walkthrough', () => {
+  it('renders the page wrapper with eyebrow + h1 + lede', async () => {
     const html = renderToStaticMarkup(await GetStartedPage());
     expect(html).toContain('ghc-getstarted');
     expect(html).toContain('ghc-getstarted-eyebrow');
@@ -107,18 +95,25 @@ describe('GetStartedPage — Wulan-aligned step cards', () => {
     expect(html).toContain('ghc-getstarted-lede');
   });
 
-  it('renders 4 step cards in order with sky-blue number pills', async () => {
+  it('renders 4 step cards inside an <ol> with counter-reset', async () => {
+    const html = renderToStaticMarkup(await GetStartedPage());
+    // The step list is a single ordered list, not a 4-column grid.
+    expect(html).toContain('ghc-getstarted-steps');
+    const ol = html.match(/<ol class="ghc-getstarted-steps"/);
+    expect(ol).not.toBeNull();
+    // No more 4-col grid wrapper.
+    expect(html).not.toContain('grid-cols-1 md:grid-cols-2 lg:grid-cols-4');
+  });
+
+  it('renders 4 step cards with their heading + auto-numbered circles', async () => {
     const html = renderToStaticMarkup(await GetStartedPage());
     const cards = html.match(/ghc-getstarted-step\b/g) ?? [];
     expect(cards.length).toBeGreaterThanOrEqual(4);
 
-    const nums = html.match(/ghc-getstarted-step-num">\d+</g) ?? [];
-    expect(nums).toEqual([
-      'ghc-getstarted-step-num">1<',
-      'ghc-getstarted-step-num">2<',
-      'ghc-getstarted-step-num">3<',
-      'ghc-getstarted-step-num">4<',
-    ]);
+    // Number circles no longer carry digit text — the digit is rendered
+    // by the CSS counter, so the markup just has the empty <span>.
+    const numSpans = html.match(/<span class="ghc-getstarted-step-num" aria-hidden="true"><\/span>/g) ?? [];
+    expect(numSpans.length).toBe(4);
   });
 
   it('renders all 4 step headings in order', async () => {
@@ -138,47 +133,54 @@ describe('GetStartedPage — Wulan-aligned step cards', () => {
     }
   });
 
-  it('renders step 2 sublist with counter-reset items', async () => {
-    const html = renderToStaticMarkup(await GetStartedPage());
-    expect(html).toContain('ghc-getstarted-sublist');
-    expect(html).toContain('Open /account/keys');
-    expect(html).toContain('Click Request a key');
-    expect(html).toContain('Wait for admin approval');
-  });
-
   it('renders step 3 callout with mono uppercase label', async () => {
     const html = renderToStaticMarkup(await GetStartedPage());
     expect(html).toContain('ghc-getstarted-callout');
-    // calloutLabel renders uppercase via CSS (text-transform); mock returns
-    // the literal — assert the label structure + content.
     expect(html).toContain('ghc-getstarted-callout-label');
     expect(html).toContain('>warning<');
   });
 
-  it('renders 3 curl examples inside step 4 (GET GET POST)', async () => {
+  it('renders 3 curl example blocks inside step 4', async () => {
     const html = renderToStaticMarkup(await GetStartedPage());
-    const getMatches = html.match(/data-method="GET"/g) ?? [];
-    const postMatches = html.match(/data-method="POST"/g) ?? [];
-    expect(getMatches.length).toBe(2);
-    expect(postMatches.length).toBe(1);
+    const blocks = html.match(/ghc-getstarted-curl-block/g) ?? [];
+    expect(blocks.length).toBe(3);
+    // Each block has a tag chip + copy button.
+    expect(html).toContain('ghc-getstarted-curl-tag');
+    expect(html).toContain('ghc-getstarted-copy-btn');
+    expect(html).toContain('ghc-getstarted-curl');
   });
 
-  it('renders the error code table with all 4 rows', async () => {
+  it('renders the error code table with all 4 rows + status chips', async () => {
     const html = renderToStaticMarkup(await GetStartedPage());
     expect(html).toContain('ghc-getstarted-error-table');
     expect(html).toContain('unauthorized');
     expect(html).toContain('forbidden');
     expect(html).toContain('rate_limited');
     expect(html).toContain('not_found');
+    // Status chips wrap the HTTP code.
+    expect(html).toContain('ghc-getstarted-status');
     expect(html).toContain('>401<');
     expect(html).toContain('>429<');
   });
 
-  it('renders the deeper-reading section with 3 links', async () => {
+  it('renders the deeper-reading definition list (not em-dash bullets)', async () => {
     const html = renderToStaticMarkup(await GetStartedPage());
     expect(html).toContain('ghc-getstarted-deeper');
+    expect(html).toContain('ghc-getstarted-deeper-list');
+    // 4 <dt>/<dd> pairs.
+    const dts = html.match(/<dt>/g) ?? [];
+    const dds = html.match(/<dd>/g) ?? [];
+    expect(dts.length).toBe(4);
+    expect(dds.length).toBe(4);
     expect(html).toContain('/docs');
     expect(html).toContain('/docs/development');
     expect(html).toContain('/api-docs.json');
+  });
+
+  // Smoke: copy button is a real client component (no JSX errors when
+  // rendered through the server boundary).
+  it('does not throw when rendered with the CopyButton island', async () => {
+    const html = await GetStartedPage();
+    expect(() => renderToStaticMarkup(html)).not.toThrow();
   });
 });

@@ -2359,10 +2359,14 @@
   "getStarted": {
     "eyebrow": "Quickstart",
     "title": "From sign-up to your first API call in 4 steps",
-    "lede": "githubcache is a cache for GitHub repository metadata. Self-signup is open — you create your own account, request a key, and an admin reviews it. This page walks you through the whole path.",
+    "lede": "A cache for GitHub repository metadata — sign up, request a key, and start querying in a few minutes.",
     "meta": {
       "title": "Quickstart · GitHub Metadata Cache",
       "description": "Sign up, request an API key, get approved, and make your first call in four steps."
+    },
+    "copy": {
+      "copy": "Copy",
+      "copied": "Copied"
     },
     "step1": {
       "heading": "Create an account at /signup",
@@ -2389,13 +2393,16 @@
     "step4": {
       "heading": "Make your first call",
       "body": "All three calls require your `X-API-Key` header. The status endpoint is the only exception — it's a public health check. Copy and paste; replace `YOUR_KEY_HERE` with the token from step 3.",
-      "example1Heading": "public — sanity check",
+      "tagPublic": "Public · no auth",
+      "tagSingle": "Auth · 1 repo",
+      "tagBatch": "Auth · batch of 50",
+      "example1Heading": "Sanity check the service",
       "example1Body": "Status endpoint confirms the service is up and reports cache stats. No auth required.",
-      "example2Heading": "auth required — fetch one repo",
+      "example2Heading": "Fetch one repo",
       "example2Body": "Authenticated read of the cache for a single repo. Send your key as the `X-API-Key` header. Cache miss queues a refresh and waits synchronously. Rate limit: 50 000 / hour / key.",
-      "example3Heading": "auth required — batch up to 50",
+      "example3Heading": "Batch up to 50",
       "example3Body": "Authenticated batch lookup. Send your key as the `X-API-Key` header; pass up to 50 owner/name pairs in the body.",
-      "errorsHeading": "common error codes",
+      "errorsHeading": "Common error codes",
       "errorCol": {
         "code": "code",
         "status": "http",
@@ -2411,12 +2418,12 @@
     "deeper": {
       "heading": "Deeper reading",
       "apiRef": "API reference",
-      "apiRefBody": "every endpoint, every error code, sample responses",
+      "apiRefBody": "Every endpoint, every error code, sample responses.",
       "devGuide": "Development & contributing guide",
-      "devGuideBody": "run locally, fork, send a PR",
+      "devGuideBody": "Run locally, fork, send a PR.",
       "yourKeys": "Your API keys",
-      "yourKeysBody": "the /account/keys list — revoke, inspect status, or copy the active key",
-      "specBody": "machine-readable JSON spec for client codegen"
+      "yourKeysBody": "The /account/keys list — revoke, inspect status, or copy the active key.",
+      "specBody": "Machine-readable JSON spec for client codegen."
     }
   }
 }

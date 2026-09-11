@@ -2359,10 +2359,14 @@
   "getStarted": {
     "eyebrow": "快速开始",
     "title": "4 步开始使用 API",
-    "lede": "githubcache 是 GitHub 仓库元数据缓存服务。注册开放 — 你自助创建账号、申请 key，管理员审核后即可调用。本页演示完整路径。",
+    "lede": "GitHub 仓库元数据缓存服务 — 注册、申请 key，几分钟内即可调用接口。",
     "meta": {
       "title": "快速开始 · GitHub 元数据缓存",
       "description": "四步搞定账号、API key 申请与首次调用。"
+    },
+    "copy": {
+      "copy": "复制",
+      "copied": "已复制"
     },
     "step1": {
       "heading": "在 /signup 创建账号",
@@ -2389,11 +2393,14 @@
     "step4": {
       "heading": "发起首次调用",
       "body": "下面三个调用都需要带 `X-API-Key` 头（status 端点除外 —— 它是公开的健康检查）。复制粘贴，把 `YOUR_KEY_HERE` 替换为第 3 步拿到的 token。",
-      "example1Heading": "公开 — 健康检查",
+      "tagPublic": "公开 · 无需认证",
+      "tagSingle": "认证 · 单个仓库",
+      "tagBatch": "认证 · 批量 50 个",
+      "example1Heading": "健康检查服务",
       "example1Body": "Status 接口确认服务在线，返回缓存统计。无需认证。",
-      "example2Heading": "需认证 — 拉取单个仓库",
+      "example2Heading": "拉取单个仓库",
       "example2Body": "认证读取单个仓库的缓存。把 key 放在 `X-API-Key` 头。缓存未命中会排队刷新并同步等待。限流：每 key 50 000 / 小时。",
-      "example3Heading": "需认证 — 批量最多 50",
+      "example3Heading": "批量查询 50 个",
       "example3Body": "认证批量查询。把 key 放在 `X-API-Key` 头，body 里传最多 50 个 owner/name 对。",
       "errorsHeading": "常见错误码",
       "errorCol": {
@@ -2411,12 +2418,12 @@
     "deeper": {
       "heading": "深入阅读",
       "apiRef": "API 参考",
-      "apiRefBody": "每个端点、每个错误码、示例响应",
+      "apiRefBody": "每个端点、每个错误码、示例响应。",
       "devGuide": "开发与贡献指南",
-      "devGuideBody": "本地运行、fork、提 PR",
+      "devGuideBody": "本地运行、fork、提 PR。",
       "yourKeys": "我的 API key",
-      "yourKeysBody": "/account/keys 列表 — 撤销、查看状态、复制当前 key",
-      "specBody": "机器可读 JSON 规格，供客户端代码生成"
+      "yourKeysBody": "/account/keys 列表 — 撤销、查看状态、复制当前 key。",
+      "specBody": "机器可读 JSON 规格，供客户端代码生成。"
     }
   }
 }
