@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import { fileURLToPath } from 'node:url';
 import next from 'next';
 import { env } from '@/lib/config/env';
 import { logger } from '@/lib/logger';
@@ -128,3 +129,43 @@ export function shutdownScheduler(): void {
 // below it ran too late because ES module imports are hoisted. The
 // new bootstrap.ts sets the env FIRST, then dynamic-imports this file
 // and calls bootServer directly.)
+//
+// Dev entrypoint: `npm run dev:server` boots this file directly with tsx
+// (NODE_ENV should be 'development' or unset — Next.js needs it BEFORE
+// the `import next from 'next'` line above fires). The block below
+// auto-invokes bootServer() when this file is the main module AND
+// NODE_ENV is not 'production'. Production runs (start:server) bypass
+// this block because bootstrap.ts already called bootServer() and the
+// NODE_ENV is 'production' (which would otherwise fire a second boot).
+const isMainModule = (() => {
+  try {
+    const argv1 = process.argv[1];
+    if (!argv1) return false;
+    // Loose equality covers both Windows backslash and POSIX slash.
+    return argv1 === fileURLToPath(import.meta.url) || argv1.endsWith('src/server.ts');
+  } catch {
+    return false;
+  }
+})();
+
+if (isMainModule && env.NODE_ENV !== 'production') {
+  const handle = await bootServer();
+  console.log(`[dev:server] listening on port ${env.PORT}`);
+
+  const shutdown = async (signal: string): Promise<void> => {
+    console.log(`[dev:server] received ${signal}`);
+    try {
+      await handle.shutdown();
+    } catch (e) {
+      console.error('[dev:server] shutdown error:', e);
+    }
+    process.exit(0);
+  };
+
+  process.on('SIGTERM', () => {
+    void shutdown('SIGTERM');
+  });
+  process.on('SIGINT', () => {
+    void shutdown('SIGINT');
+  });
+}
