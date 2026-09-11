@@ -4298,4 +4298,75 @@ a {
 .ghc-uptime-bars-label { font-family: var(--font-mono-active); font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--color-ink-muted); }
 .ghc-uptime-bars-grid { display: grid; grid-auto-flow: column; grid-template-columns: repeat(90, minmax(0, 1fr)); gap: 2px; height: 1.5rem; }
 .ghc-uptime-bar { background: color-mix(in srgb, var(--color-ok, #16a34a) 70%, transparent); border-radius: 2px; height: 100%; }
+
+/* --- M30: inspector variant — forensic paper trail --- */
+[data-admin="inspector"] {
+  --ghc-admin-row-height: 3.4rem;          /* row-height: 1.7 */
+  --ghc-admin-radius: 2px;                  /* hairline, not chunky */
+  --ghc-admin-shadow: none;                 /* no shadows, only rules */
+  --ghc-admin-number-font-variant: tabular-nums slashed-zero;
+}
+[data-admin="inspector"] .ghc-admin-table tbody tr { line-height: 1.7; }
+[data-admin="inspector"] .ghc-admin-card,
+[data-admin="inspector"] .ghc-admin-page-header,
+[data-admin="inspector"] .ghc-admin-shell,
+[data-admin="inspector"] .ghc-admin-statusbar {
+  border-radius: 2px;
+}
+[data-admin="inspector"] .ghc-admin-table tbody tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--color-surface-2) 50%, transparent);
+}
+[data-admin="inspector"] .ghc-admin-chip,
+[data-admin="inspector"] .ghc-admin-stat-number,
+[data-admin="inspector"] .ghc-admin-kpi-value,
+[data-admin="inspector"] code {
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-feature-settings: "ss01" on;
+}
+[data-admin="inspector"] .ghc-admin-table tbody tr td:first-child {
+  position: sticky;
+  left: 0;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-rule);
+  font-family: var(--font-mono);
+}
+
+/* --- M30: workbench variant — IKEA assembly manual --- */
+[data-admin="workbench"] {
+  --ghc-admin-row-height: 3.5rem;          /* 56px */
+  --ghc-admin-radius: 4px;
+  --ghc-admin-button-fill: transparent;     /* outline buttons by default */
+}
+[data-admin="workbench"] .ghc-admin-kpi-value {
+  font-size: 32px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+[data-admin="workbench"] .ghc-admin-table tbody tr { min-height: 56px; }
+[data-admin="workbench"] .ghc-admin-section-title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  counter-increment: ghc-workbench-step;
+}
+[data-admin="workbench"] .ghc-admin-section-title::before {
+  content: counter(ghc-workbench-step, decimal-leading-zero);
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  color: var(--color-accent);
+}
+[data-admin="workbench"] { counter-reset: ghc-workbench-step; }
+[data-admin="workbench"] .ghc-btn-primary {
+  background: transparent;
+  color: var(--color-accent);
+  border: 1.5px solid var(--color-accent);
+}
+[data-admin="workbench"] .ghc-btn-primary:hover {
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+[data-admin="workbench"] .ghc-admin-page-actions {
+  position: sticky;
+  bottom: 1.5rem;
+  justify-content: flex-end;
+}
 .ghc-uptime-bar[data-state="fail"] { background: var(--color-danger); }
