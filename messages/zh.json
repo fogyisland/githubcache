@@ -501,7 +501,10 @@
           "status": "状态",
           "poolState": "池状态",
           "usedLimit": "已用 / 限额",
-          "lastUsed": "最后使用"
+          "lastUsed": "最后使用",
+          "quotaRemaining": "剩余",
+          "lastError": "最近错误",
+          "test": "测试"
         },
         "empty": {
           "title": "暂无已注册的 GitHub 令牌",
@@ -561,6 +564,12 @@
           "dash": "—",
           "created": "创建时间"
         }
+      },
+      "test": {
+        "idle": "测试",
+        "pending": "测试中…",
+        "ok": "通过",
+        "fail": "失败"
       }
     },
     "webhooks": {
@@ -735,6 +744,14 @@
         "exportCsv": "导出 CSV",
         "exportJson": "导出 JSON"
       },
+      "timeRange": {
+        "label": "快捷范围：",
+        "15m": "15 分钟",
+        "1h": "1 小时",
+        "24h": "24 小时",
+        "7d": "7 天",
+        "all": "全部"
+      },
       "table": {
         "empty": "没有匹配的条目。",
         "dash": "—",
@@ -760,6 +777,13 @@
         "admin": "管理",
         "refresh": "刷新"
       },
+      "quickRefresh": {
+        "placeholder": "owner/name",
+        "submit": "刷新",
+        "invalid": "请以 owner/name 形式输入仓库",
+        "queued": "已为 {owner}/{name} 排队刷新。",
+        "failed": "失败：{error}"
+      },
       "trigger": {
         "heading": "触发手动刷新",
         "repoLabel": "仓库",
@@ -777,6 +801,13 @@
         "multiProcessNote": "注：暂停是进程本地的。多进程部署需要数据库级暂停（M5.5 已超出范围）。",
         "pause": "暂停",
         "resume": "继续"
+      },
+      "controls": {
+        "running": "运行中",
+        "paused": "已暂停",
+        "pause": "暂停",
+        "resume": "继续",
+        "pending": "处理中…"
       },
       "pendingJobs": {
         "heading": "待处理刷新任务（最多 20 个）",
@@ -837,7 +868,23 @@
           "attempts": "尝试次数",
           "error": "最近错误"
         }
-      }
+      },
+      "card": {
+        "status": "状态",
+        "attempts": "尝试次数",
+        "enqueued": "入队时间",
+        "ageMin": "{min} 分钟前",
+        "ageNow": "刚刚",
+        "error": "最近错误"
+      },
+      "retry": {
+        "btn": "重试"
+      },
+      "cancel": {
+        "btn": "取消"
+      },
+      "emptyTitle": "暂无待处理任务",
+      "emptyDescription": "调度器已追上。待处理刷新任务在入队后会显示在此处。"
     },
     "queries": {
       "title": "查询",

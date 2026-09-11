@@ -2397,6 +2397,151 @@ a {
     color: var(--text-secondary);
     font-variant-numeric: tabular-nums;
   }
+
+  /* M30 task 4 — scheduler controls (chip + button island) */
+  .ghc-admin-scheduler-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+  }
+  .ghc-admin-scheduler-controls-error {
+    font-size: 0.75rem;
+    color: var(--color-danger, #DC2626);
+  }
+
+  /* M30 task 4 — github-tokens per-row Test button states */
+  .ghc-btn-test-idle { color: var(--text-secondary); }
+  .ghc-btn-test-pending { color: var(--text-secondary); opacity: 0.7; cursor: progress; }
+  .ghc-btn-test-ok { color: #047857; border-color: rgba(16, 185, 129, 0.35); }
+  .ghc-btn-test-fail { color: #B91C1C; border-color: rgba(239, 68, 68, 0.35); }
+  [data-admin-mode="dark"] .ghc-btn-test-ok { color: #6EE7B7; }
+  [data-admin-mode="dark"] .ghc-btn-test-fail { color: #FCA5A5; }
+
+  /* M30 task 4 — audit page quick-range pills */
+  .ghc-admin-audit-time-range {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--color-surface-2, #F9FAFB);
+    border: 1px solid var(--color-rule, #E5E7EB);
+    border-radius: 0.5rem;
+  }
+  .ghc-admin-audit-time-range-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-right: 0.25rem;
+  }
+
+  /* M30 task 4 — refresh page inline owner/name form */
+  .ghc-admin-quick-refresh {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--color-surface-2, #F9FAFB);
+    border: 1px solid var(--color-rule, #E5E7EB);
+    border-radius: 0.5rem;
+  }
+  .ghc-admin-quick-refresh-label {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    min-width: 12rem;
+  }
+  .ghc-admin-quick-refresh-input {
+    margin-top: 0.25rem;
+    padding: 0.375rem 0.5rem;
+    border: 1px solid var(--color-rule, #E5E7EB);
+    border-radius: 0.375rem;
+    background: var(--color-surface, #FFFFFF);
+    color: var(--text-primary);
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 0.8125rem;
+  }
+  .ghc-admin-quick-refresh-error {
+    font-size: 0.8125rem;
+    color: var(--color-danger, #DC2626);
+  }
+  .ghc-admin-quick-refresh-ok {
+    font-size: 0.8125rem;
+    color: #047857;
+  }
+  [data-admin-mode="dark"] .ghc-admin-quick-refresh-ok { color: #6EE7B7; }
+
+  /* M30 task 4 — queue page job card grid */
+  .ghc-admin-job-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+    gap: 0.75rem;
+  }
+  .ghc-admin-job-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    padding: 0.875rem 1rem;
+    background: var(--color-surface, #FFFFFF);
+    border: 1px solid var(--color-rule, #E5E7EB);
+    border-radius: 0.5rem;
+  }
+  .ghc-admin-job-card[data-status="failed"] {
+    border-color: rgba(239, 68, 68, 0.45);
+  }
+  .ghc-admin-job-card-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+  }
+  .ghc-admin-job-card-repo {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+  }
+  .ghc-admin-job-card-age {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+  .ghc-admin-job-card-meta {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.375rem 0.625rem;
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+  .ghc-admin-job-card-meta dt {
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-tertiary);
+  }
+  .ghc-admin-job-card-meta dd {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--text-primary);
+  }
+  .ghc-admin-job-card-error {
+    margin: 0;
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 0.75rem;
+    color: var(--color-danger, #DC2626);
+    background: rgba(239, 68, 68, 0.06);
+    padding: 0.375rem 0.5rem;
+    border-radius: 0.25rem;
+    word-break: break-word;
+  }
+  .ghc-admin-job-card-actions {
+    display: flex;
+    gap: 0.375rem;
+    margin-top: auto;
+  }
+  .ghc-btn-retry { color: var(--color-accent, #2563EB); }
+  .ghc-btn-cancel { color: var(--color-danger, #DC2626); }
   .ghc-admin-hint {
     margin: 0;
     padding: 0.5rem 0.75rem;

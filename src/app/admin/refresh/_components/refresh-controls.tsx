@@ -7,6 +7,7 @@ import { formatDateTime } from '@/lib/format/datetime';
 import type { TimezoneId } from '@/lib/timezone/registry';
 import { adminFetch } from '@/lib/api/admin-fetch';
 import { fetchCsrfToken } from '@/lib/csrf/client';
+import { AdminSchedulerControls } from '@/app/admin/_components/admin-scheduler-controls';
 
 interface Repo {
   id: string;
@@ -22,13 +23,15 @@ interface Props {
 }
 
 /**
- * Client component for /admin/refresh (M7.6).
+ * Client component for /admin/refresh (M7.6, M30 task 4).
  *
- * Owns three controls:
+ * Owns:
  *   1. Manual refresh trigger form — repo <select> + submit button. Calls
  *      /api/admin/refresh with action=trigger.
- *   2. Scheduler pause button — action=pause (rendered when running).
- *   3. Scheduler resume button — action=resume (rendered when paused).
+ *   2. Scheduler pause/resume chip — delegated to the
+ *      `AdminSchedulerControls` atom so the chip + button is rendered
+ *      consistently with the rest of the admin surface (M30 task 4).
+ *   3. The pausedAt timestamp + multi-process note.
  *
  * CSRF: adminFetch injects the x-csrf-token header. The route schema
  * also requires csrf as a body field, which we provide via
@@ -75,16 +78,6 @@ export function RefreshControls({ isPaused, pausedAt, repos, tz }: Props) {
     await postAction({ action: 'trigger', repoId });
   }
 
-  async function handlePause(): Promise<void> {
-    setError(null);
-    await postAction({ action: 'pause' });
-  }
-
-  async function handleResume(): Promise<void> {
-    setError(null);
-    await postAction({ action: 'resume' });
-  }
-
   return (
     <div className="space-y-4">
       {/* Trigger form */}
@@ -121,51 +114,19 @@ export function RefreshControls({ isPaused, pausedAt, repos, tz }: Props) {
         </div>
       </div>
 
-      {/* Pause/resume */}
+      {/* Pause/resume — chip + button delegated to AdminSchedulerControls */}
       <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
         <h2 className="mb-3 text-lg font-semibold">{tSched('heading')}</h2>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <div className="text-sm">
-              {tSched('statusLabel')}{' '}
-              <span
-                className={
-                  isPaused ? 'font-semibold text-red-600' : 'font-semibold text-green-600'
-                }
-              >
-                {isPaused ? tSched('paused') : tSched('running')}
-              </span>
-            </div>
-            {pausedAt && (
+            <div className="text-sm text-gray-600">{tSched('multiProcessNote')}</div>
+            {pausedAt ? (
               <div className="text-xs text-gray-500">
                 {tSched('pausedAt', { timestamp: formatDateTime(pausedAt, tz) })}
               </div>
-            )}
-            <div className="mt-1 text-xs text-gray-500">
-              {tSched('multiProcessNote')}
-            </div>
+            ) : null}
           </div>
-          <div>
-            {isPaused ? (
-              <button
-                type="button"
-                onClick={handleResume}
-                disabled={submitting}
-                className="rounded bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
-              >
-                {tSched('resume')}
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handlePause}
-                disabled={submitting}
-                className="rounded bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
-              >
-                {tSched('pause')}
-              </button>
-            )}
-          </div>
+          <AdminSchedulerControls currentState={isPaused ? 'PAUSED' : 'RUNNING'} />
         </div>
       </div>
 

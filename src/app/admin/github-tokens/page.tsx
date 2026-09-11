@@ -7,6 +7,7 @@ import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { AdminPagination } from '@/app/admin/_components/admin-pagination';
 import { AdminTable, type AdminColumn } from '@/app/admin/_components/admin-table';
 import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
+import { AdminTokenTestButton } from '@/app/admin/_components/admin-token-test-button';
 import { AddTokenForm } from './_components/add-token-form';
 import { TokenActions } from './_components/token-actions';
 import { formatDate } from '@/lib/format/datetime';
@@ -105,9 +106,28 @@ export default async function AdminGithubTokensPage({
       align: 'right',
     },
     {
+      key: 'quotaRemaining',
+      header: t('list.column.quotaRemaining'),
+      render: (tok) => {
+        const remaining = Math.max(0, tok.requestsLimit - tok.requestsUsed);
+        return <span className="ghc-admin-usage">{remaining.toLocaleString()}</span>;
+      },
+      align: 'right',
+    },
+    {
       key: 'lastUsed',
       header: t('list.column.lastUsed'),
       render: (tok) => (tok.lastUsedAt ? formatDate(tok.lastUsedAt, userTz) : t('list.never')),
+    },
+    {
+      key: 'lastError',
+      header: t('list.column.lastError'),
+      render: () => <span className="ghc-admin-mono">—</span>,
+    },
+    {
+      key: 'test',
+      header: t('list.column.test'),
+      render: (tok) => <AdminTokenTestButton tokenId={tok.id.toString()} />,
     },
     {
       key: 'actions',

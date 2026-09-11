@@ -56,6 +56,9 @@ export function AuditFilters() {
     const u = new URL(window.location.href);
     const p = u.searchParams;
     p.delete('offset'); // reset pagination on filter change
+    // Clear the since shortcut when the operator switches to manual date
+    // inputs — they're now redundant and would otherwise silently win.
+    p.delete('since');
     if (action) p.set('action', action); else p.delete('action');
     if (actorUserId) p.set('actorUserId', actorUserId); else p.delete('actorUserId');
     if (targetType) p.set('targetType', targetType); else p.delete('targetType');

@@ -5,15 +5,17 @@ import { listPendingJobs, listRepositoriesForPicker } from '@/lib/db/refresh-job
 import { isPaused, getPausedAt } from '@/lib/scheduler';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { RefreshControls } from './_components/refresh-controls';
+import { QuickRefreshForm } from './_components/quick-refresh-form';
 import { PendingJobsTable } from './_components/pending-jobs-table';
 import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 
 /**
- * Admin → Manual refresh + queue pause (M7.6).
+ * Admin → Manual refresh + queue pause (M7.6, M30 task 4).
  *
  * Admin-only per spec §9.1.
  *
  * Shows:
+ *   - Inline "owner/name" quick-refresh form (M30 task 4)
  *   - Scheduler state (RUNNING/PAUSED + pausedAt timestamp)
  *   - Manual refresh trigger form (repo picker + button)
  *   - Pending refresh jobs (top 20)
@@ -47,6 +49,7 @@ export default async function AdminRefreshPage(): Promise<ReactElement> {
         title={t('title')}
         description={t('description')}
       />
+      <QuickRefreshForm />
       <RefreshControls
         isPaused={paused}
         pausedAt={pausedAt?.toISOString() ?? null}

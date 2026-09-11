@@ -5,6 +5,7 @@ import { requireAdmin } from '@/lib/auth/require-admin';
 import { isPaused, getPausedAt } from '@/lib/scheduler';
 import { getOldestPending, listJobsByStatus, listJobsInRange } from '@/lib/db/refresh-jobs';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
+import { AdminJobCardGrid } from '@/app/admin/_components/admin-job-card-grid';
 import { QueueControls } from './_components/queue-controls';
 import { QueueKpis } from './_components/queue-kpis';
 import { QueueSections, type QueueJobRow } from './_components/queue-sections';
@@ -19,10 +20,10 @@ const WINDOW_24H_MS = 24 * 60 * 60 * 1000;
  * Read-only view of the GitHub refresh queue, with a manual "Run tick now"
  * trigger. Admin-only per spec.
  *
- * Shows four status sections (pending / in_progress / done 24h / failed 24h)
- * capped at 50 each, KPI cards above them, scheduler state, and a control
- * that fires a single scheduler tick on demand. The page auto-refreshes
- * every 2s via the QueueControls client island.
+ * Shows the pending queue as a card grid (M30 task 4 polish — each
+ * card exposes inline retry / cancel), with the in_progress / done /
+ * failed sections retained as compact tables beneath. KPI cards +
+ * scheduler controls render above the grid as before.
  */
 export default async function AdminQueuePage(_props: object = {}): Promise<ReactElement> {
   // Auth gate — admin only (per spec).
@@ -63,8 +64,17 @@ export default async function AdminQueuePage(_props: object = {}): Promise<React
         failedCount={failed.length}
         oldestPendingAt={oldest?.toISOString() ?? null}
       />
+      <section>
+        <h2 className="ghc-admin-section-title">
+          {t('sections.pendingHeading')}{' '}
+          <span className="ghc-admin-section-count">({pending.length.toLocaleString()})</span>
+        </h2>
+        <AdminJobCardGrid
+          pending={pending.map(serializePendingJob)}
+          userTz={userTz}
+        />
+      </section>
       <QueueSections
-        pending={pending.map(serializeJob)}
         inProgress={inProgress.map(serializeJob)}
         done24h={done.map(serializeJob)}
         failed24h={failed.map(serializeJob)}
@@ -86,5 +96,25 @@ function serializeJob(j: RefreshJobRow): QueueJobRow {
     attempts: j.attempts,
     updatedAt: j.updatedAt.toISOString(),
     lastError: j.lastError,
+  };
+}
+
+function serializePendingJob(j: RefreshJobRow): {
+  id: bigint;
+  repositoryId: bigint;
+  status: string;
+  attempts: number;
+  createdAt: Date;
+  lastError: string | null;
+  repository: { owner: string; name: string };
+} {
+  return {
+    id: j.id,
+    repositoryId: j.repositoryId,
+    status: j.status,
+    attempts: j.attempts,
+    createdAt: j.createdAt,
+    lastError: j.lastError,
+    repository: { owner: j.repository.owner, name: j.repository.name },
   };
 }

@@ -15,27 +15,28 @@ export interface QueueJobRow {
 }
 
 interface Props {
-  pending: QueueJobRow[];
+  /** Pending is rendered separately as a card grid (M30 task 4). */
+  pending?: QueueJobRow[];
   inProgress: QueueJobRow[];
   done24h: QueueJobRow[];
   failed24h: QueueJobRow[];
   tz: TimezoneId;
 }
 
-const STATUS_LABEL_KEY: Record<'pending' | 'inProgress' | 'done' | 'failed', string> = {
-  pending: 'pendingHeading',
+const STATUS_LABEL_KEY: Record<'inProgress' | 'done' | 'failed', string> = {
   inProgress: 'inProgressHeading',
   done: 'doneHeading',
   failed: 'failedHeading',
 };
 
 /**
- * Four status sections stacked vertically for /admin/queue (M20.7).
- * Each capped at 50 rows by the caller. Each row shows:
+ * Three status sections stacked vertically for /admin/queue (M20.7,
+ * M30 task 4). Pending jobs now render as a card grid above via
+ * `AdminJobCardGrid` — this component handles the in_progress / done /
+ * failed tables. Each capped at 50 rows by the caller. Each row shows:
  *   job id · owner/name · priority · scheduled/updated · attempts · last error
  */
 export async function QueueSections({
-  pending,
   inProgress,
   done24h,
   failed24h,
@@ -44,11 +45,10 @@ export async function QueueSections({
   const t = await getTranslations('admin.queue.sections');
 
   const sections: Array<{
-    key: 'pending' | 'inProgress' | 'done' | 'failed';
+    key: 'inProgress' | 'done' | 'failed';
     rows: QueueJobRow[];
-    when: 'scheduled' | 'updated';
+    when: 'updated';
   }> = [
-    { key: 'pending', rows: pending, when: 'scheduled' },
     { key: 'inProgress', rows: inProgress, when: 'updated' },
     { key: 'done', rows: done24h, when: 'updated' },
     { key: 'failed', rows: failed24h, when: 'updated' },

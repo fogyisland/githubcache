@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react';
+import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { queryAuditLog, getActorEmails } from '@/lib/db/audit';
@@ -6,6 +7,7 @@ import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { AuditFilters } from './_components/audit-filters';
 import { AuditTable } from './_components/audit-table';
 import { resolveRequestTimezone } from '@/lib/timezone/resolve';
+import { resolveSince } from './since-resolver';
 
 /**
  * Admin → Audit log search (M7.5).
@@ -27,6 +29,7 @@ export default async function AdminAuditPage({
   searchParams: Promise<{ [k: string]: string | undefined }> }): Promise<ReactElement> {
   const sp = await searchParams;
   const t = await getTranslations('admin.audit');
+  const tRange = await getTranslations('admin.audit.timeRange');
 
   // Admin-only gate (per spec §9.1)
   const { user } = await requireAdmin();
@@ -45,8 +48,14 @@ export default async function AdminAuditPage({
     }
   }
 
-  let from: Date | undefined;
-  if (sp.from) {
+  // M30 task 4 — quick-range filter via `?since=<token>`. Resolves to a
+  // `from` Date that's passed into queryAuditLog. Takes precedence over
+  // an explicit `from` only when both are present (since is the shorter
+  // operator-friendly alias).
+  const now = new Date();
+  const sinceFrom = resolveSince(sp.since, now);
+  let from: Date | undefined = sinceFrom;
+  if (!from && sp.from) {
     const d = new Date(sp.from);
     if (!isNaN(d.getTime())) from = d;
   }
@@ -86,6 +95,15 @@ export default async function AdminAuditPage({
     metadata: r.metadata,
   }));
 
+  const currentSince = sp.since ?? '';
+  const sinceTokens: Array<{ token: string; label: string }> = [
+    { token: '15m', label: tRange('15m') },
+    { token: '1h', label: tRange('1h') },
+    { token: '24h', label: tRange('24h') },
+    { token: '7d', label: tRange('7d') },
+    { token: '', label: tRange('all') },
+  ];
+
   return (
     <div className="ghc-admin-page">
       <AdminPageHeader
@@ -96,6 +114,23 @@ export default async function AdminAuditPage({
         title={t('title')}
         description={t('description')}
       />
+      <nav className="ghc-admin-audit-time-range" aria-label={tRange('label')}>
+        <span className="ghc-admin-audit-time-range-label">{tRange('label')}</span>
+        {sinceTokens.map(({ token, label }) => {
+          const href = token ? `/admin/audit?since=${token}` : '/admin/audit';
+          const active = currentSince === token;
+          return (
+            <Link
+              key={token || 'all'}
+              href={href}
+              className={`ghc-admin-chip ${active ? 'ghc-admin-chip-info' : 'ghc-admin-chip-neutral'}`}
+              aria-current={active ? 'page' : undefined}
+            >
+              {label}
+            </Link>
+          );
+        })}
+      </nav>
       <AuditFilters />
       <AuditTable rows={tableRows} total={total} limit={limit} offset={offset} tz={userTz} />
     </div>
