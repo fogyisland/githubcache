@@ -47,10 +47,13 @@ export async function AdminShell({
   initialStatus,
   children,
 }: Props): Promise<ReactElement> {
-  const sidebar = AdminSidebar({ userRole: user.role });
+  // AdminSidebar is a client component (uses usePathname + useTranslations).
+  // Render it directly as JSX — calling it as a function here would
+  // invoke client code in this server context, which is the React 19
+  // "Attempted to call client function from server" error.
   return (
     <div className="ghc-admin-shell" data-admin={variant} data-admin-mode={mode}>
-      {sidebar}
+      <AdminSidebar userRole={user.role} />
       <div className="ghc-admin-main">
         <main className="ghc-admin-main-inner">{children}</main>
         {variant === 'mission_control' ? <AdminStatusBar initialData={initialStatus} /> : null}
