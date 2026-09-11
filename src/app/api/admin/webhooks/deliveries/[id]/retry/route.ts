@@ -17,10 +17,8 @@ export async function POST(req: Request, { params }: Params): Promise<Response> 
     return apiError('forbidden', 'admin role required', {}, req);
   }
 
-  let id: bigint;
-  try {
-    id = BigInt(params.id);
-  } catch {
+  const id = params.id;
+  if (!/^[a-z0-9]{20,}$/.test(id)) {
     return apiError('bad_request', 'invalid id', {}, req);
   }
 

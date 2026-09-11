@@ -399,10 +399,10 @@ model WebhookSubscription {
 // delivery worker picks up `pending` rows where `nextRetryAt <= now()`
 // and processes them FIFO (oldest first).
 model WebhookDelivery {
-  id              BigInt    @id @default(autoincrement())
+  id              String    @id @default(cuid()) @db.VarChar(191)
   subscriptionId  String    @map("subscription_id") @db.VarChar(191)
   subscription    WebhookSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  eventId         BigInt    @map("event_id")
+  eventId         String    @map("event_id") @db.VarChar(191)
   eventAction     String    @map("event_action") @db.VarChar(100)
   eventTargetType String    @map("event_target_type") @db.VarChar(50)
   eventTargetId   String    @map("event_target_id") @db.VarChar(100)

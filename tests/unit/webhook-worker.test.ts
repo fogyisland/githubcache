@@ -1,15 +1,16 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { WebhookDelivery, WebhookSubscription } from '@prisma/client';
 
-// M30.7 — WebhookSubscription.id is a cuid string (was bigint).
-// WebhookDelivery.id stays bigint (only the parent changed). Test
-// fixtures use a cuid-shaped SUB_ID string and bigint delivery ids.
+// M30.7+ — WebhookSubscription.id AND WebhookDelivery.id are both cuid
+// strings (the deliveries table had the same drift as the subscriptions
+// table; both id and eventId were varchar in DB but BigInt in schema).
+// Test fixtures use cuid-shaped SUB_ID + DEL_ID strings.
 const mocks = vi.hoisted(() => ({
   subscriptions: [] as WebhookSubscription[],
   calls: {
-    markDelivered: [] as bigint[],
-    markFailed: [] as Array<{ id: bigint; nextRetryAt: Date }>,
-    markDead: [] as Array<{ id: bigint; error: string }>,
+    markDelivered: [] as string[],
+    markFailed: [] as Array<{ id: string; nextRetryAt: Date }>,
+    markDead: [] as Array<{ id: string; error: string }>,
     recordResult: [] as Array<{ id: string; status: string }>,
     disabled: [] as string[],
   },
@@ -18,15 +19,15 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/lib/webhooks/db', () => ({
   getSubscriptionById: (id: string) =>
     Promise.resolve(mocks.subscriptions.find((s) => s.id === id) ?? null),
-  markDeliveryDelivered: (id: bigint, _now: Date) => {
+  markDeliveryDelivered: (id: string, _now: Date) => {
     mocks.calls.markDelivered.push(id);
     return Promise.resolve();
   },
-  markDeliveryFailed: (id: bigint, _now: Date, nextRetryAt: Date) => {
+  markDeliveryFailed: (id: string, _now: Date, nextRetryAt: Date) => {
     mocks.calls.markFailed.push({ id, nextRetryAt });
     return Promise.resolve();
   },
-  markDeliveryDead: (id: bigint, _now: Date, error: string) => {
+  markDeliveryDead: (id: string, _now: Date, error: string) => {
     mocks.calls.markDead.push({ id, error });
     return Promise.resolve();
   },
@@ -45,6 +46,11 @@ import { attemptDelivery, processOneDelivery } from '@/lib/webhooks/worker';
 
 const SUB_ID = 'sub00000000000000000001';
 const DEL_PREFIX = 'del000000000000000000';
+function mkDeliveryId(seq: number): string {
+  // Pad sequence to 19 chars to make a cuid-shaped string (mirrors what
+  // MySQL stores when the column is varchar(191)).
+  return DEL_PREFIX + String(seq).padStart(2, '0');
+}
 function mkSub(id: string = SUB_ID, active = true, url = 'https://example.com/wh'): WebhookSubscription {
   return {
     id,
@@ -61,9 +67,9 @@ function mkSub(id: string = SUB_ID, active = true, url = 'https://example.com/wh
 
 function mkDelivery(seq: number, subId: string = SUB_ID, attemptCount = 0): WebhookDelivery {
   return {
-    id: BigInt(seq),
+    id: mkDeliveryId(seq),
     subscriptionId: subId,
-    eventId: BigInt(100),
+    eventId: 'evt00000000000000000100',
     eventAction: 'repo.refresh.succeeded',
     eventTargetType: 'repository',
     eventTargetId: 'owner/repo',
@@ -159,7 +165,7 @@ describe('webhook worker — processOneDelivery', () => {
       now: NOW,
     });
     expect(out).toBe('delivered');
-    expect(mocks.calls.markDelivered).toContain(BigInt(10));
+    expect(mocks.calls.markDelivered).toContain(mkDeliveryId(10));
     expect(mocks.calls.markDead).toHaveLength(0);
   });
 
@@ -171,7 +177,7 @@ describe('webhook worker — processOneDelivery', () => {
       now: NOW,
     });
     expect(out).toBe('dead');
-    expect(mocks.calls.markDead[0]?.id).toEqual(BigInt(11));
+    expect(mocks.calls.markDead[0]?.id).toEqual(mkDeliveryId(11));
     expect(mocks.calls.disabled).toContain(SUB_ID);
   });
 
@@ -184,7 +190,7 @@ describe('webhook worker — processOneDelivery', () => {
     });
     expect(out).toBe('failed');
     expect(mocks.calls.markFailed).toHaveLength(1);
-    expect(mocks.calls.markFailed[0]?.id).toEqual(BigInt(12));
+    expect(mocks.calls.markFailed[0]?.id).toEqual(mkDeliveryId(12));
     // 1m after NOW
     expect(mocks.calls.markFailed[0]?.nextRetryAt.toISOString()).toBe(
       new Date(NOW.getTime() + 60_000).toISOString(),
@@ -226,7 +232,7 @@ describe('webhook worker — processOneDelivery', () => {
     });
     expect(out).toBe('failed');
     expect(fetchSpy).not.toHaveBeenCalled();
-    expect(mocks.calls.markFailed[0]?.id).toEqual(BigInt(15));
+    expect(mocks.calls.markFailed[0]?.id).toEqual(mkDeliveryId(15));
     // 365 days out
     const expected = new Date(NOW.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString();
     expect(mocks.calls.markFailed[0]?.nextRetryAt.toISOString()).toBe(expected);

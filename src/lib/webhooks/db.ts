@@ -102,7 +102,7 @@ export async function reArmSubscription(id: string): Promise<WebhookSubscription
 export async function enqueueDelivery(opts: {
   subscriptionId: string;
   event: {
-    id: bigint;
+    id: string;
     action: string;
     targetType: string;
     targetId: string;
@@ -153,7 +153,7 @@ export async function claimDueDeliveries(opts: {
 
 /** Mark a delivery as successfully delivered (terminal state). */
 export async function markDeliveryDelivered(
-  id: bigint,
+  id: string,
   now: Date,
 ): Promise<WebhookDelivery> {
   return prisma.webhookDelivery.update({
@@ -175,7 +175,7 @@ export async function markDeliveryDelivered(
  * `attemptCount >= MAX_ATTEMPTS`.
  */
 export async function markDeliveryFailed(
-  id: bigint,
+  id: string,
   now: Date,
   nextRetryAt: Date,
   error: string,
@@ -195,7 +195,7 @@ export async function markDeliveryFailed(
 /** Terminal state — no more retries. Subscription is auto-disabled by
  *  the caller so the admin UI makes the failure visible. */
 export async function markDeliveryDead(
-  id: bigint,
+  id: string,
   now: Date,
   error: string,
 ): Promise<WebhookDelivery> {
@@ -229,7 +229,7 @@ export async function listDeliveriesForSubscription(
  * subscription's `active` flag — operators may want to retry without
  * re-arming the whole subscription.
  */
-export async function retryDelivery(id: bigint, now: Date): Promise<WebhookDelivery> {
+export async function retryDelivery(id: string, now: Date): Promise<WebhookDelivery> {
   return prisma.webhookDelivery.update({
     where: { id },
     data: {

@@ -58,7 +58,7 @@ async function fanOutAuditEvent(row: AuditLog): Promise<void> {
       enqueueDelivery({
         subscriptionId: sub.id,
         event: {
-          id: row.id,
+          id: row.id.toString(),
           action: row.action,
           targetType: row.targetType,
           targetId: row.targetId,
