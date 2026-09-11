@@ -36,12 +36,16 @@ export default async function AdminWebhookDetailPage({
 
   const userTz = await resolveRequestTimezone({ dbValue: user.timezone });
 
-  let id: bigint;
-  try {
-    id = BigInt(p.id);
-  } catch {
+  let id: string;
+  // M30.7 — WebhookSubscription.id is a cuid string (matches the live
+  // DB column). Older callers parsed `params.id` through BigInt() which
+  // throws on cuid-shaped strings and bounces every detail page.
+  // Reject anything that doesn't look like a cuid: lowercase alphanums
+  // only, length 20+. Anything else → notFound.
+  if (!/^[a-z0-9]{20,}$/.test(p.id)) {
     notFound();
   }
+  id = p.id;
 
   const sub = await getSubscriptionById(id);
   if (!sub) notFound();

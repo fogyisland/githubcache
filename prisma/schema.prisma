@@ -374,7 +374,7 @@ model IpRateLimitBucket {
 // automatically when a delivery hits `dead` so the admin UI shows the
 // failure clearly without silently swallowing new events.
 model WebhookSubscription {
-  id                 BigInt    @id @default(autoincrement())
+  id                 String    @id @default(cuid()) @db.VarChar(191)
   url                String    @db.VarChar(500)
   secret             String    @db.Char(64)
   eventFilter        Json      @map("event_filter")
@@ -400,7 +400,7 @@ model WebhookSubscription {
 // and processes them FIFO (oldest first).
 model WebhookDelivery {
   id              BigInt    @id @default(autoincrement())
-  subscriptionId  BigInt    @map("subscription_id")
+  subscriptionId  String    @map("subscription_id") @db.VarChar(191)
   subscription    WebhookSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
   eventId         BigInt    @map("event_id")
   eventAction     String    @map("event_action") @db.VarChar(100)

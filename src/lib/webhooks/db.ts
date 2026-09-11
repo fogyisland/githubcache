@@ -58,14 +58,14 @@ export async function listAllSubscriptions(opts: {
   return { rows, total };
 }
 
-export function getSubscriptionById(id: bigint): Promise<WebhookSubscription | null> {
+export function getSubscriptionById(id: string): Promise<WebhookSubscription | null> {
   return prisma.webhookSubscription.findUnique({ where: { id } });
 }
 
 /** Rotate the signing secret on an existing subscription. Caller
  *  surfaces the new plaintext once before discarding. */
 export async function rotateSubscriptionSecret(
-  id: bigint,
+  id: string,
   newSecret: string,
 ): Promise<WebhookSubscription> {
   return prisma.webhookSubscription.update({
@@ -75,7 +75,7 @@ export async function rotateSubscriptionSecret(
 }
 
 /** Disable a subscription without deleting its delivery history. */
-export async function disableSubscription(id: bigint): Promise<WebhookSubscription> {
+export async function disableSubscription(id: string): Promise<WebhookSubscription> {
   return prisma.webhookSubscription.update({
     where: { id },
     data: { active: false },
@@ -85,7 +85,7 @@ export async function disableSubscription(id: bigint): Promise<WebhookSubscripti
 /** Re-arm a subscription after an operator has investigated failures.
  *  Resets `active=true` and clears the `lastDeliveryStatus` so the
  *  admin UI stops shouting. Delivery history is preserved. */
-export async function reArmSubscription(id: bigint): Promise<WebhookSubscription> {
+export async function reArmSubscription(id: string): Promise<WebhookSubscription> {
   return prisma.webhookSubscription.update({
     where: { id },
     data: { active: true, lastDeliveryStatus: null },
@@ -100,7 +100,7 @@ export async function reArmSubscription(id: bigint): Promise<WebhookSubscription
  * pruned by retention policy).
  */
 export async function enqueueDelivery(opts: {
-  subscriptionId: bigint;
+  subscriptionId: string;
   event: {
     id: bigint;
     action: string;
@@ -213,7 +213,7 @@ export async function markDeliveryDead(
 
 /** List recent deliveries for one subscription — admin detail page. */
 export async function listDeliveriesForSubscription(
-  subscriptionId: bigint,
+  subscriptionId: string,
   limit: number,
 ): Promise<WebhookDelivery[]> {
   return prisma.webhookDelivery.findMany({
@@ -258,7 +258,7 @@ export async function findMatchingSubscriptions(
  * each delivery attempt so the admin list page shows fresh status.
  */
 export async function recordDeliveryResult(
-  id: bigint,
+  id: string,
   status: 'delivered' | 'failed' | 'dead',
   now: Date,
 ): Promise<WebhookSubscription> {

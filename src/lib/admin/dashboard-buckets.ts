@@ -71,10 +71,18 @@ interface DashboardCountsRow {
 }
 
 export async function getDashboardCounts(): Promise<DashboardCounts> {
+  // Column names match the live schema:
+  //   users.status         → DB column `user_status` (User.status @map)
+  //   api_keys.status      → DB column `status`       (ApiKeyStatus enum)
+  //   github_tokens.status → DB column `status`       (GithubTokenStatus enum)
+  //   repositories         → no status column at all; we count the full cache
+  //     (the dashboard tile is labelled 'Cached repos', so the total is
+  //     the right figure — there's no 'active/inactive' toggle on this
+  //     table; `disabled` is a separate boolean for arch purposes only.)
   const rows = await prisma.$queryRaw<DashboardCountsRow[]>`
     SELECT
       (SELECT COUNT(*) FROM repositories) AS cached_repos,
-      (SELECT COUNT(*) FROM users WHERE status = 'active') AS active_users,
+      (SELECT COUNT(*) FROM users WHERE user_status = 'active') AS active_users,
       (SELECT COUNT(*) FROM api_keys WHERE status = 'active') AS active_api_keys,
       (SELECT COUNT(*) FROM github_tokens WHERE status = 'active') AS active_github_tokens
   `;

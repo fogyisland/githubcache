@@ -218,8 +218,18 @@ export function isSetupComplete(): boolean {
   const m = /^DATABASE_URL=(.+)$/m.exec(content);
   if (!m || !m[1]) return false;
   const url = m[1].trim();
-  // Reject the .env.example placeholder that init used to leak through
-  if (/^mysql:\/\/(user|root|admin|stub):[^@]+@(localhost|127\.0\.0\.1|db):\d+\//.test(url)) {
+  // Reject the .env.example placeholder (user:pass@localhost:3306/...) and
+  // other clearly-stub URLs. The previous regex also rejected any
+  // `root@127.0.0.1` URL, which is a valid local-dev pattern and forced
+  // a useless /init round-trip every time the operator used the
+  // documented MySQL credentials. Now: reject only when the URL exactly
+  // matches the placeholder in .env.example, OR when the host is one of
+  // `localhost|127.0.0.1|db` AND the user is one of the well-known stub
+  // names (user|admin|stub — NOT root, which is the default real
+  // local-MySQL superuser).
+  const EXAMPLE_URL = 'mysql://user:pass@localhost:3306/githubcache';
+  if (url === EXAMPLE_URL) return false;
+  if (/^mysql:\/\/(user|admin|stub):[^@]+@(localhost|127\.0\.0\.1|db):\d+\//.test(url)) {
     return false;
   }
   return url.length > 0;

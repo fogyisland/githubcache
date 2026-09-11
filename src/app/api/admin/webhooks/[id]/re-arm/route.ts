@@ -16,12 +16,12 @@ export async function POST(req: Request, { params }: Params): Promise<Response> 
     return apiError('forbidden', 'admin role required', {}, req);
   }
 
-  let id: bigint;
-  try {
-    id = BigInt(params.id);
-  } catch {
+  // M30.7 — WebhookSubscription.id is a cuid string; reject anything
+  // that doesn't match the cuid shape.
+  if (!/^[a-z0-9]{20,}$/.test(params.id)) {
     return apiError('bad_request', 'invalid id', {}, req);
   }
+  const id = params.id;
 
   const row = await reArmSubscription(id);
   return NextResponse.json({ id: row.id.toString(), active: row.active });

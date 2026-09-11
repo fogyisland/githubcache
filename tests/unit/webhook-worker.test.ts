@@ -1,19 +1,22 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { WebhookDelivery, WebhookSubscription } from '@prisma/client';
 
+// M30.7 — WebhookSubscription.id is a cuid string (was bigint).
+// WebhookDelivery.id stays bigint (only the parent changed). Test
+// fixtures use a cuid-shaped SUB_ID string and bigint delivery ids.
 const mocks = vi.hoisted(() => ({
   subscriptions: [] as WebhookSubscription[],
   calls: {
     markDelivered: [] as bigint[],
     markFailed: [] as Array<{ id: bigint; nextRetryAt: Date }>,
     markDead: [] as Array<{ id: bigint; error: string }>,
-    recordResult: [] as Array<{ id: bigint; status: string }>,
-    disabled: [] as bigint[],
+    recordResult: [] as Array<{ id: string; status: string }>,
+    disabled: [] as string[],
   },
 }));
 
 vi.mock('@/lib/webhooks/db', () => ({
-  getSubscriptionById: (id: bigint) =>
+  getSubscriptionById: (id: string) =>
     Promise.resolve(mocks.subscriptions.find((s) => s.id === id) ?? null),
   markDeliveryDelivered: (id: bigint, _now: Date) => {
     mocks.calls.markDelivered.push(id);
@@ -27,11 +30,11 @@ vi.mock('@/lib/webhooks/db', () => ({
     mocks.calls.markDead.push({ id, error });
     return Promise.resolve();
   },
-  recordDeliveryResult: (id: bigint, status: string, _now: Date) => {
+  recordDeliveryResult: (id: string, status: string, _now: Date) => {
     mocks.calls.recordResult.push({ id, status });
     return Promise.resolve();
   },
-  disableSubscription: (id: bigint) => {
+  disableSubscription: (id: string) => {
     mocks.calls.disabled.push(id);
     return Promise.resolve();
   },
@@ -40,7 +43,9 @@ vi.mock('@/lib/webhooks/db', () => ({
 
 import { attemptDelivery, processOneDelivery } from '@/lib/webhooks/worker';
 
-function mkSub(id: bigint, active = true, url = 'https://example.com/wh'): WebhookSubscription {
+const SUB_ID = 'sub00000000000000000001';
+const DEL_PREFIX = 'del000000000000000000';
+function mkSub(id: string = SUB_ID, active = true, url = 'https://example.com/wh'): WebhookSubscription {
   return {
     id,
     url,
@@ -54,9 +59,9 @@ function mkSub(id: bigint, active = true, url = 'https://example.com/wh'): Webho
   };
 }
 
-function mkDelivery(id: bigint, subId: bigint, attemptCount = 0): WebhookDelivery {
+function mkDelivery(seq: number, subId: string = SUB_ID, attemptCount = 0): WebhookDelivery {
   return {
-    id,
+    id: BigInt(seq),
     subscriptionId: subId,
     eventId: BigInt(100),
     eventAction: 'repo.refresh.succeeded',
@@ -147,9 +152,9 @@ describe('webhook worker — attemptDelivery', () => {
 
 describe('webhook worker — processOneDelivery', () => {
   it('marks delivered on 200', async () => {
-    const sub = mkSub(BigInt(1));
+    const sub = mkSub(SUB_ID);
     mocks.subscriptions.push(sub);
-    const out = await processOneDelivery(mkDelivery(BigInt(10), BigInt(1)), {
+    const out = await processOneDelivery(mkDelivery(10), {
       fetchImpl: stubFetch(200),
       now: NOW,
     });
@@ -159,21 +164,21 @@ describe('webhook worker — processOneDelivery', () => {
   });
 
   it('marks dead (and disables sub) on 401 — bad signature is permanent', async () => {
-    const sub = mkSub(BigInt(1));
+    const sub = mkSub(SUB_ID);
     mocks.subscriptions.push(sub);
-    const out = await processOneDelivery(mkDelivery(BigInt(11), BigInt(1)), {
+    const out = await processOneDelivery(mkDelivery(11), {
       fetchImpl: stubFetch(401),
       now: NOW,
     });
     expect(out).toBe('dead');
     expect(mocks.calls.markDead[0]?.id).toEqual(BigInt(11));
-    expect(mocks.calls.disabled).toContain(BigInt(1));
+    expect(mocks.calls.disabled).toContain(SUB_ID);
   });
 
   it('marks failed (schedules retry) on 500 with attemptCount=0', async () => {
-    const sub = mkSub(BigInt(1));
+    const sub = mkSub(SUB_ID);
     mocks.subscriptions.push(sub);
-    const out = await processOneDelivery(mkDelivery(BigInt(12), BigInt(1), 0), {
+    const out = await processOneDelivery(mkDelivery(12, SUB_ID, 0), {
       fetchImpl: stubFetch(500),
       now: NOW,
     });
@@ -188,21 +193,21 @@ describe('webhook worker — processOneDelivery', () => {
   });
 
   it('marks dead when attemptCount reaches MAX_ATTEMPTS on transient failure', async () => {
-    const sub = mkSub(BigInt(1));
+    const sub = mkSub(SUB_ID);
     mocks.subscriptions.push(sub);
     // attemptCount=4 + this 500 = 5 (max)
-    const out = await processOneDelivery(mkDelivery(BigInt(13), BigInt(1), 4), {
+    const out = await processOneDelivery(mkDelivery(13, SUB_ID, 4), {
       fetchImpl: stubFetch(500),
       now: NOW,
     });
     expect(out).toBe('dead');
     expect(mocks.calls.markDead).toHaveLength(1);
-    expect(mocks.calls.disabled).toContain(BigInt(1));
+    expect(mocks.calls.disabled).toContain(SUB_ID);
   });
 
   it('marks dead (without disabling) when subscription was deleted', async () => {
     // No sub in mocks.subscriptions
-    const out = await processOneDelivery(mkDelivery(BigInt(14), BigInt(99)), {
+    const out = await processOneDelivery(mkDelivery(14, 'sub99999999999999999999'), {
       fetchImpl: stubFetch(200),
       now: NOW,
     });
@@ -212,10 +217,10 @@ describe('webhook worker — processOneDelivery', () => {
   });
 
   it('treats inactive subscription as failed (far-future retry, no HTTP call)', async () => {
-    const sub = mkSub(BigInt(1), false);
+    const sub = mkSub(SUB_ID, false);
     mocks.subscriptions.push(sub);
     const fetchSpy = vi.fn();
-    const out = await processOneDelivery(mkDelivery(BigInt(15), BigInt(1)), {
+    const out = await processOneDelivery(mkDelivery(15), {
       fetchImpl: fetchSpy as unknown as typeof fetch,
       now: NOW,
     });
