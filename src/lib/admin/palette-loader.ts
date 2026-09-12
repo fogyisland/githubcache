@@ -37,7 +37,7 @@ export async function loadPaletteData(
 ): Promise<PaletteData> {
   const t = await getTranslations('admin.shell');
 
-  const visible = ADMIN_SECTIONS.filter((s) => s.roles.includes(userRole));
+  const visible = Object.values(ADMIN_SECTIONS).filter((s) => s.roles.includes(userRole));
   const sections: PaletteSection[] = visible.map((s) => ({
     slug: s.slug,
     title: t(`sections.${s.slug}`),

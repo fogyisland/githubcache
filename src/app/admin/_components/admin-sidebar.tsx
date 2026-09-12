@@ -34,28 +34,36 @@ export interface AdminSection {
   roles: Array<'admin' | 'operator'>;
 }
 
-export const ADMIN_SECTIONS: AdminSection[] = [
-  { slug: 'dashboard', icon: 'dashboard', href: '/admin', roles: ['admin', 'operator'] },
-  { slug: 'users', icon: 'users', href: '/admin/users', roles: ['admin'] },
-  { slug: 'api-keys', icon: 'api-keys', href: '/admin/api-keys', roles: ['admin', 'operator'] },
-  { slug: 'github-tokens', icon: 'github-tokens', href: '/admin/github-tokens', roles: ['admin', 'operator'] },
-  { slug: 'reports', icon: 'reports', href: '/admin/reports', roles: ['admin', 'operator'] },
-  { slug: 'queries', icon: 'queries', href: '/admin/queries', roles: ['admin', 'operator'] },
-  { slug: 'ingestion', icon: 'ingestion', href: '/admin/ingestion', roles: ['admin'] },
-  { slug: 'providers', icon: 'providers', href: '/admin/providers', roles: ['admin'] },
-  { slug: 'repositories', icon: 'repositories', href: '/admin/repositories', roles: ['admin', 'operator'] },
-  { slug: 'audit', icon: 'audit', href: '/admin/audit', roles: ['admin'] },
-  { slug: 'refresh', icon: 'refresh', href: '/admin/refresh', roles: ['admin'] },
-  { slug: 'queue', icon: 'queue', href: '/admin/queue', roles: ['admin'] },
-  { slug: 'webhooks', icon: 'webhooks', href: '/admin/webhooks', roles: ['admin'] },
-  { slug: 'database', icon: 'database', href: '/admin/database', roles: ['admin'] },
-  { slug: 'api-settings', icon: 'queries', href: '/admin/api-settings', roles: ['admin'] },
-  { slug: 'insights', icon: 'insights', href: '/admin/insights', roles: ['admin'] },
+/**
+ * Section registry keyed by slug. Order is NOT preserved here — callers
+ * that need a specific render order use `ADMIN_GROUPS` (defined below).
+ *
+ * M30.8 — converted from `AdminSection[]` to `Record<AdminSectionSlug, AdminSection>`
+ * so group definitions can look up sections by slug. `palette-loader.ts`
+ * uses `Object.values()` to recover the flat list.
+ */
+export const ADMIN_SECTIONS: Record<AdminSectionSlug, AdminSection> = {
+  dashboard:      { slug: 'dashboard',      icon: 'dashboard',      href: '/admin',              roles: ['admin', 'operator'] },
+  users:          { slug: 'users',          icon: 'users',          href: '/admin/users',        roles: ['admin'] },
+  'api-keys':     { slug: 'api-keys',       icon: 'api-keys',       href: '/admin/api-keys',     roles: ['admin', 'operator'] },
+  'github-tokens':{ slug: 'github-tokens',  icon: 'github-tokens',  href: '/admin/github-tokens',roles: ['admin', 'operator'] },
+  reports:        { slug: 'reports',        icon: 'reports',        href: '/admin/reports',      roles: ['admin', 'operator'] },
+  queries:        { slug: 'queries',        icon: 'queries',        href: '/admin/queries',      roles: ['admin', 'operator'] },
+  ingestion:      { slug: 'ingestion',      icon: 'ingestion',      href: '/admin/ingestion',    roles: ['admin'] },
+  providers:      { slug: 'providers',      icon: 'providers',      href: '/admin/providers',    roles: ['admin'] },
+  repositories:   { slug: 'repositories',   icon: 'repositories',   href: '/admin/repositories', roles: ['admin', 'operator'] },
+  audit:          { slug: 'audit',          icon: 'audit',          href: '/admin/audit',        roles: ['admin'] },
+  refresh:        { slug: 'refresh',        icon: 'refresh',        href: '/admin/refresh',      roles: ['admin'] },
+  queue:          { slug: 'queue',          icon: 'queue',          href: '/admin/queue',        roles: ['admin'] },
+  webhooks:       { slug: 'webhooks',       icon: 'webhooks',       href: '/admin/webhooks',     roles: ['admin'] },
+  database:       { slug: 'database',       icon: 'database',       href: '/admin/database',     roles: ['admin'] },
+  'api-settings': { slug: 'api-settings',   icon: 'queries',        href: '/admin/api-settings', roles: ['admin'] },
+  insights:       { slug: 'insights',       icon: 'insights',       href: '/admin/insights',     roles: ['admin'] },
   // M25 — SMTP config + send log. Admin only because misconfiguration
   // can leak credentials to attackers who phish the form.
-  { slug: 'email', icon: 'email', href: '/admin/email', roles: ['admin'] },
-  { slug: 'email-log', icon: 'email-log', href: '/admin/email/log', roles: ['admin'] },
-];
+  email:          { slug: 'email',          icon: 'email',          href: '/admin/email',        roles: ['admin'] },
+  'email-log':    { slug: 'email-log',      icon: 'email-log',      href: '/admin/email/log',    roles: ['admin'] },
+};
 
 /**
  * Pick the active sidebar slug from the current pathname. Returns
@@ -73,7 +81,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
  */
 export function sectionFromPath(pathname: string): AdminSectionSlug {
   if (pathname === '/admin' || pathname === '/admin/') return 'dashboard';
-  const candidates = ADMIN_SECTIONS.filter((s) => s.slug !== 'dashboard');
+  const candidates = Object.values(ADMIN_SECTIONS).filter((s) => s.slug !== 'dashboard');
   let best: AdminSection | null = null;
   for (const s of candidates) {
     if (pathname === s.href) return s.slug;
@@ -99,7 +107,7 @@ interface Props {
 export function AdminSidebar({ userRole }: Props): ReactElement {
   const pathname = usePathname();
   const t = useTranslations('admin.shell');
-  const visible = ADMIN_SECTIONS.filter((s) => s.roles.includes(userRole));
+  const visible = Object.values(ADMIN_SECTIONS).filter((s) => s.roles.includes(userRole));
   const current = sectionFromPath(pathname);
   return (
     <nav className="ghc-admin-sidebar" aria-label={t('sidebarAria')}>
