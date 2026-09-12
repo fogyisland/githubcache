@@ -68,6 +68,12 @@ describe('GET /api/v1/status — full endpoint', () => {
         startedAt: expect.any(String),
         nodeVersion: expect.any(String),
       }),
+      // M30.7c — scheduler config is now exposed so clients can compute ETA.
+      scheduler: expect.objectContaining({
+        paused: expect.any(Boolean),
+        tick_ms: expect.any(Number),
+        batch_size: expect.any(Number),
+      }),
       timestamp: expect.any(String),
     });
 
@@ -376,5 +382,15 @@ describe('GET /api/v1/status — full endpoint', () => {
     } finally {
       spy.mockRestore();
     }
+  });
+
+  it('9) scheduler.tick_ms and batch_size match env defaults', async () => {
+    const res = await GET();
+    const body = await res.json();
+    expect(body.scheduler.tick_ms).toBeGreaterThan(0);
+    expect(body.scheduler.batch_size).toBeGreaterThan(0);
+    // Round-trip check: tick_ms is at least 1000 (env floor) and at most 1h.
+    expect(body.scheduler.tick_ms).toBeGreaterThanOrEqual(1_000);
+    expect(body.scheduler.tick_ms).toBeLessThanOrEqual(60 * 60_000);
   });
 });

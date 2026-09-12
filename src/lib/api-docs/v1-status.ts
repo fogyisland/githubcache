@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db/client';
 import { poolSize } from '@/lib/github/pool';
 import { isPaused } from '@/lib/scheduler/state';
 import { checkDrift, DRIFT_CHECK_TABLES } from '@/lib/database/drift-check';
+import { env } from '@/lib/config/env';
 import type { z } from 'zod';
 import type { v1StatusSchema } from './schemas/v1-status';
 
@@ -99,6 +100,9 @@ export async function collectV1Status(): Promise<V1Status | null> {
     },
     scheduler: {
       paused: isPaused(),
+      // M30.7c — expose scheduler config so clients can compute ETA on cache-miss.
+      tick_ms: env.SCHEDULER_TICK_MS,
+      batch_size: env.SCHEDULER_BATCH_SIZE,
     },
     version: {
       commit: process.env.GIT_COMMIT ?? 'unknown',
