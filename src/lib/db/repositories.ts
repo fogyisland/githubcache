@@ -26,6 +26,26 @@ export const upsertRepo = (data: Prisma.RepositoryUncheckedCreateInput): Promise
 };
 
 /**
+ * Create a new repository row. Returns the inserted row.
+ * Caller MUST be sure the row does not already exist; this is enforced
+ * by the @@unique([owner, name]) constraint. The M31 queue-on-miss path
+ * no longer creates stub rows — so when refresh-one.ts gets a 200/304
+ * from GitHub for the first time, it calls createRepo here.
+ */
+export const createRepo = (data: Prisma.RepositoryUncheckedCreateInput): Promise<Repository> =>
+  prisma.repository.create({ data });
+
+/**
+ * Update an existing repository row by id. Same shape as createRepo.
+ * Used by refresh-one.ts after the first fetch for in-place updates.
+ */
+export const updateRepo = (args: {
+  id: bigint;
+  data: Prisma.RepositoryUncheckedUpdateInput;
+}): Promise<Repository> =>
+  prisma.repository.update({ where: { id: args.id }, data: args.data });
+
+/**
  * Top N most-recently-fetched 'ok' repositories. Used by the homepage
  * recent-lookups list (M9.5). Skips not_found / forbidden / error rows
  * since those would be misleading as "recently browsed" entries.

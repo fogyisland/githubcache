@@ -1,7 +1,7 @@
 import type { Prisma, Repository } from '@prisma/client';
 import type { FetchStatus } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
-import { upsertRepo } from '@/lib/db/repositories';
+import { findRepoByCanonical, createRepo, updateRepo } from '@/lib/db/repositories';
 import { logger } from '@/lib/logger';
 import type { ReleaseSummary, BranchSummary } from '@/lib/github/client';
 
@@ -45,7 +45,11 @@ export async function storeRepoMetadata(args: {
     const d = new Date(v);
     return Number.isFinite(d.getTime()) ? d : null;
   };
-  const row = await upsertRepo({
+  // M31 — split create vs update. Pending refresh_jobs may not have a
+  // backing repositories row (GitHub hasn't returned yet). When the first
+  // fetch succeeds, we CREATE here; subsequent fetches UPDATE in place.
+  const existing = await findRepoByCanonical(args.owner, args.name);
+  const baseData = {
     owner: args.owner,
     name: args.name,
     node: args.node as Prisma.InputJsonValue,
@@ -68,7 +72,16 @@ export async function storeRepoMetadata(args: {
     lastFetchedAt: new Date(),
     fetchStatus: args.fetchStatus,
     fetchError: args.fetchError ?? null,
-  });
+  };
+
+  const row = existing
+    ? await updateRepo({
+        id: existing.id,
+        // Update branch: keep the same create-data fields but allow partial
+        // — Prisma's UncheckedUpdateInput type accepts the same shape.
+        data: baseData,
+      })
+    : await createRepo(baseData);
   logger.info(
     { owner: args.owner, name: args.name, fetchStatus: args.fetchStatus },
     'repo stored',
