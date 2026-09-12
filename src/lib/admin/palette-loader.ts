@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import { prisma } from '@/lib/db/client';
 import { queryAuditLog, getActorEmails } from '@/lib/db/audit';
-import { ADMIN_SECTIONS } from '@/app/admin/_components/admin-sidebar';
+import { ADMIN_SECTIONS } from '@/lib/admin/sections';
 import type {
   PaletteData,
   PaletteSection,
