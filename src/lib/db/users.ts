@@ -2,6 +2,33 @@ import type { User, Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
 
 /**
+ * User status — numeric Int (NOT a Prisma enum — that was deleted in M31.x).
+ * 0 = active (default; new users start here without any explicit action)
+ * 2 = disabled (only set when an admin explicitly clicks Disable)
+ *
+ * The Prisma column type is `Int`, so reads from `prisma.user.findX` return
+ * `number`, not `'active' | 'disabled'`. Compare via these constants:
+ *
+ *     if (user.status === UserStatus.Active) { ... }
+ *
+ * i18n label rendering goes through `userStatusI18nKey` (added in T5).
+ */
+export const UserStatus = {
+  Active: 0,
+  Disabled: 2,
+} as const;
+
+export type UserStatus = typeof UserStatus[keyof typeof UserStatus];
+
+export function isUserActive(status: number): boolean {
+  return status === UserStatus.Active;
+}
+
+export function isUserDisabled(status: number): boolean {
+  return status === UserStatus.Disabled;
+}
+
+/**
  * List users (admin view), newest first. Returns a page + the total
  * matching count so callers can render pagination controls. M14.2
  * replaced the unbounded `listUsers()` shape — callers that need the
@@ -12,7 +39,7 @@ import { prisma } from '@/lib/db/client';
  */
 export async function listUsers(opts: {
   role?: 'admin' | 'operator';
-  status?: 'active' | 'disabled';
+  status?: UserStatus;
   signupSource?: 'invited' | 'self';
   skip: number;
   take: number;
@@ -41,7 +68,7 @@ export async function getUserById(id: bigint): Promise<User | null> {
 }
 
 /**
- * Update a user's status (active / disabled). No cascade — does not
+ * Update a user's status (numeric: UserStatus.Active | UserStatus.Disabled). No cascade — does not
  * invalidate sessions. The caller is responsible for that (e.g., the
  * logout-all endpoint invalidates sessions explicitly).
  *
@@ -59,7 +86,7 @@ export async function getUserById(id: bigint): Promise<User | null> {
  */
 export async function updateUserStatus(
   id: bigint,
-  status: 'active' | 'disabled',
+  status: UserStatus,
   actorUserId: bigint,
 ): Promise<void> {
   if (actorUserId <= 0n) {
