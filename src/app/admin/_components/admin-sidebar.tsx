@@ -200,6 +200,11 @@ export function AdminSidebar({ userRole }: Props): ReactElement {
                 className="ghc-admin-sidebar-group-header"
                 aria-expanded={expanded}
                 aria-controls={`ghc-admin-sidebar-group-${g.slug}`}
+                aria-label={
+                  expanded
+                    ? tt('collapse', { group: tg(`${g.slug}.label`) })
+                    : tt('expand', { group: tg(`${g.slug}.label`) })
+                }
                 onClick={() =>
                   setCollapsed((prev) => ({ ...prev, [g.slug]: expanded }))
                 }
