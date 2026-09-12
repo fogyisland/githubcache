@@ -3,6 +3,7 @@ import { revokeKey } from '@/lib/api-keys/workflow';
 import { validateSession } from '@/lib/auth/session';
 import { logger } from '@/lib/logger';
 import { apiError } from '@/lib/api/errors';
+import { UserStatus } from '@/lib/db/users';
 
 interface Params {
   params: { id: string };
@@ -27,7 +28,7 @@ export async function POST(req: Request, { params }: Params): Promise<Response> 
     // Hide endpoint existence from unauthenticated callers
     return new NextResponse(null, { status: 404 });
   }
-  if (user.status !== 'active') {
+  if (user.status !== UserStatus.Active) {
     return apiError('forbidden', 'account_disabled', {}, req);
   }
 

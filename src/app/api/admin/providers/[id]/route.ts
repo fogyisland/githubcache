@@ -14,12 +14,13 @@ import {
   updateProvider,
   deleteProvider,
 } from '@/lib/ingestion/providers/db';
+import { UserStatus } from '@/lib/db/users';
 
 async function authenticate(req: Request) {
   const cookies = cookiesFromRequest(req);
   const user = await validateSession({ headers: req.headers, cookies });
   if (!user) return { error: apiError('forbidden', 'forbidden', {}, req) } as const;
-  if (user.status !== 'active') {
+  if (user.status !== UserStatus.Active) {
     return { error: apiError('forbidden', 'account_disabled', {}, req) } as const;
   }
   return { user } as const;

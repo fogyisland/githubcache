@@ -10,6 +10,7 @@ import { writeAudit } from '@/lib/audit/writer';
 import { sendSignupWelcomeEmail } from '@/lib/email/triggers/signup-welcome';
 import { logger } from '@/lib/logger';
 import { getSignupRateLimit } from '@/lib/auth/signup-rate';
+import { UserStatus } from '@/lib/db/users';
 
 export interface SignupState {
   status: 'idle' | 'ok' | 'invalid' | 'duplicate' | 'rate_limited' | 'error';
@@ -167,7 +168,7 @@ export async function signupAction(
         email: raw.email,
         passwordHash,
         role: 'operator',
-        status: 'active',
+        status: UserStatus.Active,
         signupSource: 'self',
         ...(raw.name ? { /* no displayName column yet — preserve in audit */ } : {}),
       },

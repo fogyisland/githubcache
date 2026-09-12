@@ -9,6 +9,7 @@ import {
   getProviderById,
   updateProvider,
 } from '@/lib/ingestion/providers/db';
+import { UserStatus } from '@/lib/db/users';
 
 /**
  * POST /api/admin/providers/[id]/toggle
@@ -26,7 +27,7 @@ export async function POST(
   if (!user || user.role !== 'admin') {
     return apiError('forbidden', 'admin role required', {}, req);
   }
-  if (user.status !== 'active') {
+  if (user.status !== UserStatus.Active) {
     return apiError('forbidden', 'account_disabled', {}, req);
   }
 

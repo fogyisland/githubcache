@@ -4,6 +4,7 @@ import { logger } from '@/lib/logger';
 import { createSubscription } from '@/lib/webhooks/db';
 import { generateWebhookSecret } from '@/lib/webhooks/signer';
 import { apiError } from '@/lib/api/errors';
+import { UserStatus } from '@/lib/db/users';
 
 /**
  * POST /api/admin/webhooks
@@ -19,7 +20,7 @@ export async function POST(req: Request): Promise<Response> {
   if (user.role !== 'admin') {
     return apiError('forbidden', 'admin role required', {}, req);
   }
-  if (user.status !== 'active') {
+  if (user.status !== UserStatus.Active) {
     return apiError('forbidden', 'account_disabled', {}, req);
   }
 

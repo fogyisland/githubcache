@@ -6,6 +6,7 @@ import { validateSession } from '@/lib/auth/session';
 import { formatDate } from '@/lib/format/datetime';
 import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 import { prisma } from '@/lib/db/client';
+import { userStatusI18nKey } from '@/lib/admin/user-status-render';
 
 /**
  * M26 — /account overview.
@@ -55,7 +56,7 @@ export default async function AccountOverviewPage(): Promise<ReactElement> {
         style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(13rem, 1fr))' }}
       >
         <Tile label={t('tiles.role')} value={t(`role.${user.role}`)} />
-        <Tile label={t('tiles.status')} value={t(`status.${user.status}`)} />
+        <Tile label={t('tiles.status')} value={t(userStatusI18nKey(user.status))} />
         <Tile label={t('tiles.memberSince')} value={formatDate(user.createdAt, userTz)} />
         <Tile label={t('tiles.apiKeys')} value={String(keyCount)} />
         <Tile

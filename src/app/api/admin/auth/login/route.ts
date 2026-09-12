@@ -12,6 +12,7 @@ import { isLocale } from '@/lib/lang/registry';
 import { readTimezoneFromCookieHeader } from '@/lib/timezone/cookie';
 import { isTimezone } from '@/lib/timezone/registry';
 import { apiError } from '@/lib/api/errors';
+import { UserStatus } from '@/lib/db/users';
 
 const loginSchema = z.object({
   email: z.string().email().max(255),
@@ -122,7 +123,7 @@ export async function POST(req: Request): Promise<Response> {
   }
 
   // 7. User status check (password OK but disabled)
-  if (user.status !== 'active') {
+  if (user.status !== UserStatus.Active) {
     void writeAudit({
       action: 'login_failed',
       targetType: 'user',

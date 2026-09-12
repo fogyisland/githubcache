@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db/client';
 import { logger } from '@/lib/logger';
 import { sendEmail } from '@/lib/email/sender';
 import { buildDailyReport } from '@/lib/email/reports/build-daily';
+import { UserStatus } from '@/lib/db/users';
 
 /**
  * M25 — daily report cron tick.
@@ -32,7 +33,7 @@ export async function runDailyReportTick(now: Date = new Date()): Promise<void> 
   }
 
   const users = await prisma.user.findMany({
-    where: { status: 'active' },
+    where: { status: UserStatus.Active },
     select: { id: true, email: true },
   });
 

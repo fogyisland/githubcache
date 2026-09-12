@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import type { ReactElement } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { requireAdmin } from '@/lib/auth/require-admin';
-import { getUserById } from '@/lib/db/users';
+import { getUserById, UserStatus } from '@/lib/db/users';
 import { prisma } from '@/lib/db/client';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
@@ -11,6 +11,7 @@ import { UserActions } from './_components/user-actions';
 import { queryAuditLog } from '@/lib/db/audit';
 import { formatDate, formatDateTime } from '@/lib/format/datetime';
 import { resolveRequestTimezone } from '@/lib/timezone/resolve';
+import { userStatusI18nKey } from '@/lib/admin/user-status-render';
 
 interface KeyRow {
   id: bigint;
@@ -133,8 +134,8 @@ export default async function AdminUserDetailPage({
           <div className="ghc-admin-detail-row">
             <dt>{t('profile.status')}</dt>
             <dd>
-              <AdminStatusChip variant={user.status === 'active' ? 'ok' : 'warn'}>
-                {t(`status.${user.status}` as 'status.active' | 'status.disabled')}
+              <AdminStatusChip variant={user.status === UserStatus.Active ? 'ok' : 'warn'}>
+                {t(userStatusI18nKey(user.status))}
               </AdminStatusChip>
             </dd>
           </div>

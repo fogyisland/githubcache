@@ -8,6 +8,7 @@ import { ENV_PATH } from '@/lib/setup';
 import { ensureFreshSchemaWith } from '@/lib/db/init-schema';
 import { readAdminStash, clearAdminStash } from './submit-admin-config';
 import { logger } from '@/lib/logger';
+import { UserStatus } from '@/lib/db/users';
 
 /**
  * Step 3 wizard actions — M28.bug17 split into per-subtask server actions
@@ -131,7 +132,7 @@ export async function createAdminSubtask(): Promise<SubtaskResult> {
     if (existing) {
       await oneShot.user.update({
         where: { id: existing.id },
-        data: { passwordHash, role: 'admin', status: 'active' },
+        data: { passwordHash, role: 'admin', status: UserStatus.Active },
       });
     } else {
       await oneShot.user.create({
@@ -139,7 +140,7 @@ export async function createAdminSubtask(): Promise<SubtaskResult> {
           email,
           passwordHash,
           role: 'admin',
-          status: 'active',
+          status: UserStatus.Active,
           theme: 'terminal',
           adminVariant: 'mission_control',
           lang: 'zh',

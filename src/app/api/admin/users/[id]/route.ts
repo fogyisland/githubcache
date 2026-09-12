@@ -3,25 +3,26 @@ import { z } from 'zod';
 import { requireAdminFromRequest } from '@/lib/auth/require-admin';
 import { verifyCsrf } from '@/lib/auth/csrf';
 import { getUserById, updateUserStatus } from '@/lib/db/users';
+import { UserStatus } from '@/lib/db/users';
 import { invalidateAllSessionsForUser } from '@/lib/db/sessions';
 import { writeAudit } from '@/lib/audit/writer';
 import { apiError } from '@/lib/api/errors';
 
 const PatchBody = z.object({
-  status: z.enum(['active', 'disabled']),
+  status: z.union([z.literal(UserStatus.Active), z.literal(UserStatus.Disabled)]),
   csrf: z.string().min(1),
 });
 
 /**
  * PATCH /api/admin/users/[id]
  *
- * Body: { status: 'active' | 'disabled', csrf }
+ * Body: { status: UserStatus.Active | UserStatus.Disabled, csrf }
  *
  * Admin-only. Flips the user's status. Does NOT invalidate sessions —
  * the `DELETE` handler below is the explicit "logout everywhere" action.
  * Disabling a user alone lets existing sessions time out naturally (they
  * are deleted on next `findSessionById` because the user's status is no
- * longer 'active').
+ * longer UserStatus.Active).
  *
  * Response codes:
  *   200 — { ok: true }
@@ -61,7 +62,7 @@ export async function PATCH(
   // next request) and there is no admin self-recovery path. Re-enable
   // requires another admin or a direct SQL fix. The UI hides the button
   // too; this is defense-in-depth.
-  if (parsed.data.status === 'disabled' && target.id === auth.user.id) {
+  if (parsed.data.status === UserStatus.Disabled && target.id === auth.user.id) {
     return apiError('bad_request', 'cannot disable self', {}, req);
   }
 
@@ -69,7 +70,7 @@ export async function PATCH(
 
   const fwdPatch = req.headers.get('x-forwarded-for');
   void writeAudit({
-    action: parsed.data.status === 'disabled' ? 'disable_user' : 'enable_user',
+    action: parsed.data.status === UserStatus.Disabled ? 'disable_user' : 'enable_user',
     targetType: 'user',
     targetId: String(id),
     metadata: { previousStatus: target.status, newStatus: parsed.data.status },

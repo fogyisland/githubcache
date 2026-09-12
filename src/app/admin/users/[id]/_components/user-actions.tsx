@@ -3,6 +3,7 @@ import { useState, useEffect, type ReactElement } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { fetchCsrfToken } from '@/lib/csrf/client';
+import { UserStatus } from '@/lib/db/users';
 
 /**
  * Client component: per-user admin actions (M13.4 i18n).
@@ -36,7 +37,7 @@ export function UserActions({
   isSelf = false,
 }: {
   userId: string;
-  currentStatus: 'active' | 'disabled';
+  currentStatus: number;
   /** True when the target user === the currently-signed-in admin. */
   isSelf?: boolean;
 }): ReactElement {
@@ -54,16 +55,16 @@ export function UserActions({
     void fetchCsrfToken().then(setCsrf).catch(() => undefined);
   }, []);
 
-  async function patchStatus(status: 'active' | 'disabled'): Promise<void> {
+  async function patchStatus(status: UserStatus): Promise<void> {
     if (!csrf) return;
     // Defense-in-depth: the server route blocks self-disable too, but
     // refuse here so the admin doesn't get an opaque 403 toast.
-    if (status === 'disabled' && isSelf) return;
+    if (status === UserStatus.Disabled && isSelf) return;
     // M28.bug4d — typed-confirm replaces the native confirm() dialog.
     // The submit button is disabled until the input matches exactly;
     // this check is belt-and-braces in case the button is somehow
     // clicked programmatically.
-    if (status === 'disabled' && disableConfirm.trim().toUpperCase() !== 'DISABLE') return;
+    if (status === UserStatus.Disabled && disableConfirm.trim().toUpperCase() !== 'DISABLE') return;
     setBusy(true);
     setMessage(null);
     const res = await fetch(`/api/admin/users/${userId}`, {
@@ -76,7 +77,7 @@ export function UserActions({
       setMessage(t('failedWithStatus', { status: res.status }));
       return;
     }
-    setMessage(status === 'disabled' ? t('disabledOk') : t('enabledOk'));
+    setMessage(status === UserStatus.Disabled ? t('disabledOk') : t('enabledOk'));
     setDisableConfirm('');
     router.refresh();
   }
@@ -124,7 +125,7 @@ export function UserActions({
   // direction stays a one-click action (re-enabling a disabled user
   // is reversible; disabling is not).
   const disableReady =
-    currentStatus === 'active' &&
+    currentStatus === UserStatus.Active &&
     !isSelf &&
     !busy &&
     csrf !== '' &&
@@ -139,7 +140,7 @@ export function UserActions({
           have a separate "Logout" button in the admin top bar; if they
           need to disable their own account, an explicit CLI / SQL action
           is the right escape hatch (and documented in the runbook). */}
-      {!isSelf && currentStatus === 'active' && (
+      {!isSelf && currentStatus === UserStatus.Active && (
         <div className="ghc-admin-form-row">
           <label className="ghc-admin-label" htmlFor="disable-confirm">
             {t('disableConfirmPrompt')}
@@ -157,7 +158,7 @@ export function UserActions({
             />
             <button
               type="button"
-              onClick={() => void patchStatus('disabled')}
+              onClick={() => void patchStatus(UserStatus.Disabled)}
               disabled={!disableReady}
               className="ghc-btn ghc-btn-danger"
             >
@@ -166,8 +167,8 @@ export function UserActions({
           </div>
         </div>
       )}
-      {!isSelf && currentStatus === 'disabled' && (
-        <button onClick={() => void patchStatus('active')} disabled={busy || !csrf}>
+      {!isSelf && currentStatus === UserStatus.Disabled && (
+        <button onClick={() => void patchStatus(UserStatus.Active)} disabled={busy || !csrf}>
           {t('enable')}
         </button>
       )}

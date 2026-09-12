@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { requireAdmin } from '@/lib/auth/require-admin';
-import { listUsers } from '@/lib/db/users';
+import { listUsers, UserStatus } from '@/lib/db/users';
 import { listInvitations } from '@/lib/db/invitations';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { AdminFilterBar } from '@/app/admin/_components/admin-filter-bar';
@@ -11,6 +11,7 @@ import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
 import { InviteForm } from './_components/invite-form';
 import { formatDate } from '@/lib/format/datetime';
 import { resolveRequestTimezone } from '@/lib/timezone/resolve';
+import { userStatusI18nKey } from '@/lib/admin/user-status-render';
 import type { User } from '@prisma/client';
 
 const PAGE_SIZE_DEFAULT = 25;
@@ -62,7 +63,8 @@ export default async function AdminUsersPage({
 
   const { rows: filteredUsers, total: totalUsers } = await listUsers({
     ...(filterRole ? { role: filterRole } : {}),
-    ...(filterStatus ? { status: filterStatus } : {}),
+    ...(filterStatus === 'active' ? { status: UserStatus.Active } : {}),
+    ...(filterStatus === 'disabled' ? { status: UserStatus.Disabled } : {}),
     ...(filterSource ? { signupSource: filterSource } : {}),
     skip: offset,
     take: limit,
@@ -85,8 +87,8 @@ export default async function AdminUsersPage({
       key: 'status',
       header: t('list.column.status'),
       render: (u) => (
-        <AdminStatusChip variant={u.status === 'active' ? 'ok' : 'warn'}>
-          {t(`status.${u.status}` as 'status.active' | 'status.disabled')}
+        <AdminStatusChip variant={u.status === UserStatus.Active ? 'ok' : 'warn'}>
+          {t(userStatusI18nKey(u.status))}
         </AdminStatusChip>
       ),
     },

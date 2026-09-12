@@ -5,6 +5,7 @@ import { logger } from '@/lib/logger';
 import { apiError } from '@/lib/api/errors';
 import { sendApiKeyApprovedEmail } from '@/lib/email/triggers/api-key-approved';
 import { prisma } from '@/lib/db/client';
+import { UserStatus } from '@/lib/db/users';
 
 interface Params {
   params: { id: string };
@@ -34,7 +35,7 @@ export async function POST(req: Request, { params }: Params): Promise<Response> 
     // Hide endpoint existence from unauthenticated callers
     return new NextResponse(null, { status: 404 });
   }
-  if (user.status !== 'active') {
+  if (user.status !== UserStatus.Active) {
     return apiError('forbidden', 'account_disabled', {}, req);
   }
 

@@ -1,5 +1,6 @@
 import type { Session, User } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
+import { UserStatus } from '@/lib/db/users';
 
 export const SESSION_TTL_HOURS = 8;
 export const SESSION_RENEWAL_THRESHOLD_HOURS = 4; // renew if <4h remaining
@@ -75,7 +76,7 @@ export async function findSessionById(id: string): Promise<(Session & { user: Us
     });
     return null;
   }
-  if (row.user.status !== 'active') {
+  if (row.user.status !== UserStatus.Active) {
     // User disabled — delete session and return null
     await prisma.session.delete({ where: { id } }).catch(() => {
       /* ignore race */

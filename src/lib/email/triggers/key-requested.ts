@@ -3,6 +3,7 @@ import { prisma } from '@/lib/db/client';
 import { keyRequestedTemplate } from '@/lib/email/templates/key-requested';
 import { sendEmail } from '@/lib/email/sender';
 import type { SendEmailResult } from '@/lib/email/sender';
+import { UserStatus } from '@/lib/db/users';
 
 export interface SendKeyRequestedArgs {
   apiKey: Pick<ApiKey, 'id' | 'name'>;
@@ -29,7 +30,7 @@ export async function sendKeyRequestedEmail(
   args: SendKeyRequestedArgs,
 ): Promise<{ sent: number; failed: number; results: SendEmailResult[] }> {
   const admins = await prisma.user.findMany({
-    where: { role: 'admin', status: 'active' },
+    where: { role: 'admin', status: UserStatus.Active },
     select: { id: true, email: true },
   });
   if (admins.length === 0) {

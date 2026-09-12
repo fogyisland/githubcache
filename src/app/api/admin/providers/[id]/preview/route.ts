@@ -13,6 +13,7 @@ import {
 } from '@/lib/ingestion/providers/run';
 import { ProviderSourceError } from '@/lib/ingestion/providers/source';
 import { poolSize } from '@/lib/github/pool';
+import { UserStatus } from '@/lib/db/users';
 
 /**
  * POST /api/admin/providers/[id]/preview
@@ -39,7 +40,7 @@ export async function POST(
   if (!user || (user.role !== 'admin' && user.role !== 'operator')) {
     return apiError('forbidden', 'forbidden', {}, req);
   }
-  if (user.status !== 'active') {
+  if (user.status !== UserStatus.Active) {
     return apiError('forbidden', 'account_disabled', {}, req);
   }
 
