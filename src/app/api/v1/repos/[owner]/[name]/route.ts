@@ -114,6 +114,13 @@ export async function GET(req: Request, ctx: RouteContext): Promise<Response> {
         fetch_status: 'pending',
         queued_at: result.queuedAt,
         scheduled_for: result.scheduledFor,
+        // M30.7c — when scheduler fetch completes, re-GET this URL.
+        // For not_found/forbidden/error the same URL returns the terminal
+        // status (4xx) — caller treats it as "done, check status".
+        expected_at: result.expectedAt,
+        scheduler_tick_ms: result.schedulerTickMs,
+        scheduler_batch_size: result.schedulerBatchSize,
+        result_url: `/api/v1/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`,
       },
       { status: 202 },
     );
