@@ -61,6 +61,8 @@ async function seedRepo(name: string): Promise<bigint> {
 
 async function seedJob(
   repositoryId: bigint,
+  owner: string,
+  name: string,
   status: 'pending' | 'in_progress' | 'done' | 'failed',
   overrides: { scheduledFor?: Date; priority?: number; updatedAt?: Date; lastError?: string | null } = {},
 ): Promise<void> {
@@ -68,6 +70,8 @@ async function seedJob(
   await prisma.refreshJob.create({
     data: {
       repositoryId,
+      owner,
+      name,
       priority: overrides.priority ?? 50,
       scheduledFor: overrides.scheduledFor ?? new Date(now - 1000),
       status,
@@ -85,18 +89,18 @@ describe('listJobsByStatus', () => {
     const r3 = await seedRepo('pending-c');
 
     // Mix of priorities + scheduledFor to assert the order.
-    await seedJob(r1, 'pending', { priority: 50, scheduledFor: new Date(1000) });
-    await seedJob(r2, 'pending', { priority: 10, scheduledFor: new Date(2000) });
-    await seedJob(r3, 'pending', { priority: 10, scheduledFor: new Date(1500) });
+    await seedJob(r1, TEST_OWNER, 'pending-a', 'pending', { priority: 50, scheduledFor: new Date(1000) });
+    await seedJob(r2, TEST_OWNER, 'pending-b', 'pending', { priority: 10, scheduledFor: new Date(2000) });
+    await seedJob(r3, TEST_OWNER, 'pending-c', 'pending', { priority: 10, scheduledFor: new Date(1500) });
 
     const rows = await listJobsByStatus('pending', 50);
-    const mine = rows.filter((r) => r.repository.owner === TEST_OWNER);
+    const mine = rows.filter((r) => r.owner === TEST_OWNER);
     expect(mine).toHaveLength(3);
     // priority=10 (most urgent) come first; ties broken by earlier scheduledFor.
     expect(mine.map((r) => r.priority)).toEqual([10, 10, 50]);
-    expect(mine[0]?.repository.name).toBe('pending-c');
-    expect(mine[1]?.repository.name).toBe('pending-b');
-    expect(mine[2]?.repository.name).toBe('pending-a');
+    expect(mine[0]?.name).toBe('pending-c');
+    expect(mine[1]?.name).toBe('pending-b');
+    expect(mine[2]?.name).toBe('pending-a');
   });
 
   it('returns only in_progress jobs, sorted by updatedAt DESC', async () => {
@@ -104,14 +108,14 @@ describe('listJobsByStatus', () => {
     const r2 = await seedRepo('inprog-b');
     const older = new Date(Date.now() - 60_000);
     const newer = new Date(Date.now() - 1000);
-    await seedJob(r1, 'in_progress', { updatedAt: older });
-    await seedJob(r2, 'in_progress', { updatedAt: newer });
+    await seedJob(r1, TEST_OWNER, 'inprog-a', 'in_progress', { updatedAt: older });
+    await seedJob(r2, TEST_OWNER, 'inprog-b', 'in_progress', { updatedAt: newer });
 
     const rows = await listJobsByStatus('in_progress', 50);
-    const mine = rows.filter((r) => r.repository.owner === TEST_OWNER);
+    const mine = rows.filter((r) => r.owner === TEST_OWNER);
     expect(mine).toHaveLength(2);
-    expect(mine[0]?.repository.name).toBe('inprog-b');
-    expect(mine[1]?.repository.name).toBe('inprog-a');
+    expect(mine[0]?.name).toBe('inprog-b');
+    expect(mine[1]?.name).toBe('inprog-a');
   });
 
   it('returns only done jobs, sorted by updatedAt DESC', async () => {
@@ -119,18 +123,18 @@ describe('listJobsByStatus', () => {
     const r2 = await seedRepo('done-b');
     const older = new Date(Date.now() - 60_000);
     const newer = new Date(Date.now() - 1000);
-    await seedJob(r1, 'done', { updatedAt: older });
-    await seedJob(r2, 'done', { updatedAt: newer });
+    await seedJob(r1, TEST_OWNER, 'done-a', 'done', { updatedAt: older });
+    await seedJob(r2, TEST_OWNER, 'done-b', 'done', { updatedAt: newer });
 
     const rows = await listJobsByStatus('done', 50);
-    const mine = rows.filter((r) => r.repository.owner === TEST_OWNER);
+    const mine = rows.filter((r) => r.owner === TEST_OWNER);
     expect(mine).toHaveLength(2);
-    expect(mine[0]?.repository.name).toBe('done-b');
+    expect(mine[0]?.name).toBe('done-b');
   });
 
   it('respects the limit', async () => {
     const r = await seedRepo('many');
-    for (let i = 0; i < 5; i += 1) await seedJob(r, 'pending', { priority: 50 });
+    for (let i = 0; i < 5; i += 1) await seedJob(r, TEST_OWNER, 'many', 'pending', { priority: 50 });
     const rows = await listJobsByStatus('pending', 3);
     // The DB is shared; we only check that the result was capped at 3.
     expect(rows.length).toBeLessThanOrEqual(3);
@@ -138,9 +142,9 @@ describe('listJobsByStatus', () => {
 
   it('listPendingJobs (legacy) still works for /admin/refresh backward compat', async () => {
     const r = await seedRepo('legacy');
-    await seedJob(r, 'pending', { priority: 5 });
+    await seedJob(r, TEST_OWNER, 'legacy', 'pending', { priority: 5 });
     const rows = await listPendingJobs(50);
-    expect(rows.some((j) => j.repository.owner === TEST_OWNER && j.repository.name === 'legacy')).toBe(true);
+    expect(rows.some((j) => j.owner === TEST_OWNER && j.name === 'legacy')).toBe(true);
   });
 });
 
@@ -152,22 +156,22 @@ describe('listJobsInRange', () => {
     const inWindow1 = new Date(Date.now() - 60_000); // 1 min ago — inside window
     const inWindow2 = new Date(Date.now() - 60 * 60_000); // 1h ago — inside window
     const outWindow = new Date(Date.now() - 26 * 60 * 60_000); // 26h ago — outside 24h
-    await seedJob(r1, 'done', { updatedAt: inWindow1 });
-    await seedJob(r2, 'done', { updatedAt: inWindow2 });
-    await seedJob(r3, 'done', { updatedAt: outWindow });
+    await seedJob(r1, TEST_OWNER, 'r-a', 'done', { updatedAt: inWindow1 });
+    await seedJob(r2, TEST_OWNER, 'r-b', 'done', { updatedAt: inWindow2 });
+    await seedJob(r3, TEST_OWNER, 'r-c', 'done', { updatedAt: outWindow });
 
     const from = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const to = new Date();
     const rows = await listJobsInRange('done', from, to, 50);
-    const mine = rows.filter((r) => r.repository.owner === TEST_OWNER);
+    const mine = rows.filter((r) => r.owner === TEST_OWNER);
     expect(mine).toHaveLength(2);
-    expect(mine.map((r) => r.repository.name).sort()).toEqual(['r-a', 'r-b']);
+    expect(mine.map((r) => r.name).sort()).toEqual(['r-a', 'r-b']);
   });
 
   it('respects the limit', async () => {
     const r = await seedRepo('many-done');
     for (let i = 0; i < 5; i += 1) {
-      await seedJob(r, 'done', { updatedAt: new Date(Date.now() - 1000 - i * 100) });
+      await seedJob(r, TEST_OWNER, 'many-done', 'done', { updatedAt: new Date(Date.now() - 1000 - i * 100) });
     }
     const to = new Date();
     const from = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -177,14 +181,14 @@ describe('listJobsInRange', () => {
 
   it('returns failed jobs in the window', async () => {
     const r = await seedRepo('failed-in-window');
-    await seedJob(r, 'failed', { updatedAt: new Date(Date.now() - 1000), lastError: 'boom' });
+    await seedJob(r, TEST_OWNER, 'failed-in-window', 'failed', { updatedAt: new Date(Date.now() - 1000), lastError: 'boom' });
     const rows = await listJobsInRange(
       'failed',
       new Date(Date.now() - 60_000),
       new Date(),
       50,
     );
-    expect(rows.some((j) => j.repository.owner === TEST_OWNER && j.repository.name === 'failed-in-window')).toBe(true);
+    expect(rows.some((j) => j.owner === TEST_OWNER && j.name === 'failed-in-window')).toBe(true);
   });
 });
 
@@ -195,7 +199,7 @@ describe('getOldestPending', () => {
     // there are no OUR pending jobs.
     const r = await seedRepo('no-pending');
     // Seed a done job instead — should not affect oldest-pending.
-    await seedJob(r, 'done', { updatedAt: new Date() });
+    await seedJob(r, TEST_OWNER, 'no-pending', 'done', { updatedAt: new Date() });
     const oldest = await getOldestPending();
     // We can't assert == null because other tests may have left pending
     // rows in the shared DB. Instead, assert that the returned value is
@@ -211,8 +215,8 @@ describe('getOldestPending', () => {
     const r2 = await seedRepo('oldest-b');
     const earlier = new Date(Date.now() - 60 * 60_000); // 1h ago
     const later = new Date(Date.now() - 1000); // 1s ago
-    await seedJob(r1, 'pending', { priority: 99, scheduledFor: later });
-    await seedJob(r2, 'pending', { priority: 99, scheduledFor: earlier });
+    await seedJob(r1, TEST_OWNER, 'oldest-a', 'pending', { priority: 99, scheduledFor: later });
+    await seedJob(r2, TEST_OWNER, 'oldest-b', 'pending', { priority: 99, scheduledFor: earlier });
 
     const oldest = await getOldestPending();
     // Can't assert == earlier exactly because other tests may have left an

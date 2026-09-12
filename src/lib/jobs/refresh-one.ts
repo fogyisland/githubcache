@@ -8,6 +8,7 @@ import {
 } from '@/lib/github/client';
 import { parseRepoResponse } from '@/lib/github/fields';
 import { storeRepoMetadata, storeRepoReleases, storeRepoBranches } from '@/lib/cache';
+import { findRepoByCanonical } from '@/lib/db/repositories';
 import { nextDelay } from '@/lib/scheduler/aging';
 import { writeAudit } from '@/lib/audit/writer';
 import {
@@ -61,16 +62,20 @@ const ESCALATION_AUDIT_ACTION = 'refresh.failed_review';
  * Branching rules (spec §6.5):
  *   200 OK  → parse+upsert, status='done', schedule next via successDelay
  *   304     → skip parse/upsert, status='done', schedule next via successDelay
- *   404/410 → fetchStatus='not_found', increment attempts, failureDelay
- *   403     → fetchStatus='forbidden', audit log, status='failed' (terminal)
+ *   404/410 → increment attempts, failureDelay (NO repository row update)
+ *   403     → audit log, status='failed' (terminal, NO repository row update)
  *   429     → transient, no attempt increment, 30s reschedule
  *   5xx     → transient, no attempt increment, 5s reschedule
  *   Unavail → transient, no attempt increment, 30s reschedule
  *   Other   → increment attempts, failureDelay; if attempts >= 5 → failed + audit
+ *
+ * M31 — refresh_jobs rows may exist without a backing `repositories` row
+ * (queue-on-miss no longer pre-creates a stub). `refreshOne` looks the row
+ * up by `(owner, name)` on the 200/304 paths; on 404/410/403 the row is
+ * NOT touched (failure is recorded only on the refresh_jobs row + audit
+ * log).
  */
-export async function refreshOne(
-  job: RefreshJob & { repository: Repository },
-): Promise<RefreshJobResult> {
+export async function refreshOne(job: RefreshJob): Promise<RefreshJobResult> {
   // M27.4 — feature-flagged dispatch by job kind.
   if (env.M27_REFRESH_BY_KIND) {
     switch (job.kind) {
@@ -93,24 +98,31 @@ export async function refreshOne(
  * repo_releases table + releasesFetchedAt + releasesEtag. Does NOT
  * touch core metadata or repo_branches.
  */
-async function refreshReleases(
-  job: RefreshJob & { repository: Repository },
-): Promise<RefreshJobResult> {
-  const repo = job.repository;
+async function refreshReleases(job: RefreshJob): Promise<RefreshJobResult> {
+  // M31 — repository is no longer joined onto the claimed job; look it up
+  // by owner/name. Per-facet writers log a warning and bail if absent.
+  const repo = await findRepoByCanonical(job.owner, job.name);
   try {
     const result = await fetchReleasesOnly(
-      repo.owner,
-      repo.name,
-      repo.releasesEtag ?? undefined,
+      job.owner,
+      job.name,
+      repo?.releasesEtag ?? undefined,
     );
     if (!result.notModified) {
-      await storeRepoReleases(repo.owner, repo.name, result.releases, result.etag);
+      await storeRepoReleases(job.owner, job.name, result.releases, result.etag);
     } else {
       // 304 — just bump the freshness timestamp; data unchanged.
-      await prisma.repository.update({
-        where: { id: repo.id },
-        data: { releasesFetchedAt: new Date() },
-      });
+      if (repo) {
+        await prisma.repository.update({
+          where: { id: repo.id },
+          data: { releasesFetchedAt: new Date() },
+        });
+      } else {
+        logger.warn(
+          { jobId: job.id.toString(), owner: job.owner, name: job.name },
+          'refresh.releases: 304 received but no repositories row exists; skipping freshness update',
+        );
+      }
     }
     return finishJob(job, 'refresh.releases.200', 'releases: 200 ok');
   } catch (e: unknown) {
@@ -122,23 +134,30 @@ async function refreshReleases(
  * Per-facet refresh: hits only the /branches endpoint. Updates
  * repo_branches + branchesFetchedAt + branchesEtag.
  */
-async function refreshBranches(
-  job: RefreshJob & { repository: Repository },
-): Promise<RefreshJobResult> {
-  const repo = job.repository;
+async function refreshBranches(job: RefreshJob): Promise<RefreshJobResult> {
+  // M31 — repository is no longer joined onto the claimed job; look it up
+  // by owner/name. Per-facet writers log a warning and bail if absent.
+  const repo = await findRepoByCanonical(job.owner, job.name);
   try {
     const result = await fetchBranchesOnly(
-      repo.owner,
-      repo.name,
-      repo.branchesEtag ?? undefined,
+      job.owner,
+      job.name,
+      repo?.branchesEtag ?? undefined,
     );
     if (!result.notModified) {
-      await storeRepoBranches(repo.owner, repo.name, result.branches, result.etag);
+      await storeRepoBranches(job.owner, job.name, result.branches, result.etag);
     } else {
-      await prisma.repository.update({
-        where: { id: repo.id },
-        data: { branchesFetchedAt: new Date() },
-      });
+      if (repo) {
+        await prisma.repository.update({
+          where: { id: repo.id },
+          data: { branchesFetchedAt: new Date() },
+        });
+      } else {
+        logger.warn(
+          { jobId: job.id.toString(), owner: job.owner, name: job.name },
+          'refresh.branches: 304 received but no repositories row exists; skipping freshness update',
+        );
+      }
     }
     return finishJob(job, 'refresh.branches.200', 'branches: 200 ok');
   } catch (e: unknown) {
@@ -147,37 +166,51 @@ async function refreshBranches(
 }
 
 /**
- * Original full-refresh path, unchanged. Hits /repos/{o}/{n} +
+ * Original full-refresh path, unchanged in spirit. Hits /repos/{o}/{n} +
  * /releases + /branches in one call chain.
+ *
+ * M31 — looks up the Repository row by owner/name at the top. May be null
+ * (first-fetch cache-miss path).
  */
-async function refreshCore(
-  job: RefreshJob & { repository: Repository },
-): Promise<RefreshJobResult> {
-  const repo = job.repository;
+async function refreshCore(job: RefreshJob): Promise<RefreshJobResult> {
+  // M31 — repository is no longer joined onto the claimed job; look it up
+  // by owner/name. `repo` may be null — this is normal for the first-fetch
+  // case (GitHub hasn't returned yet, but a job was claimed from the queue).
+  const repo = await findRepoByCanonical(job.owner, job.name);
 
   // Count prior successful refreshes for the aging policy. Done before the
   // fetch so the scheduling decision is based on the count BEFORE this run.
+  // M31 — key on owner/name (works whether or not the Repository row exists).
   const refreshCount = await prisma.refreshJob.count({
-    where: { repositoryId: repo.id, status: 'done' },
+    where: { owner: job.owner, name: job.name, status: 'done' },
   });
 
   // Hot-bump override: lots of recent queries → keep refresh cadence tight.
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const recentQueryCount24h = await prisma.requestLog.count({
-    where: { repoRequested: `${repo.owner}/${repo.name}`, createdAt: { gte: since } },
+    where: { repoRequested: `${job.owner}/${job.name}`, createdAt: { gte: since } },
   });
 
   try {
-    const result = await fetchRepoCore(repo.owner, repo.name, repo.etag ?? undefined);
+    const result = await fetchRepoCore(job.owner, job.name, repo?.etag ?? undefined);
 
     if (result.notModified) {
       // 304 — content unchanged. Still counts as a successful refresh.
       // Spec §6.4: update last_fetched_at even on 304 (proves the cache is
-      // still fresh; no other fields touched).
-      await prisma.repository.update({
-        where: { id: repo.id },
-        data: { lastFetchedAt: new Date() },
-      });
+      // still fresh; no other fields touched). M31 — only update if the
+      // row exists (304-without-row is unusual but possible if the row
+      // was deleted between job enqueue and fetch).
+      if (repo) {
+        await prisma.repository.update({
+          where: { id: repo.id },
+          data: { lastFetchedAt: new Date() },
+        });
+      } else {
+        logger.warn(
+          { jobId: job.id.toString(), owner: job.owner, name: job.name },
+          'refresh: 304 received but no repositories row exists; skipping lastFetchedAt update',
+        );
+      }
       const delay = nextDelay(refreshCount, recentQueryCount24h);
       await prisma.refreshJob.update({
         where: { id: job.id },
@@ -189,7 +222,7 @@ async function refreshCore(
         },
       });
       logger.info(
-        { jobId: job.id.toString(), owner: repo.owner, name: repo.name },
+        { jobId: job.id.toString(), owner: job.owner, name: job.name },
         'refresh: 304 not modified',
       );
       return { status: 'done' };
@@ -205,9 +238,12 @@ async function refreshCore(
       result.releases ?? [],
       result.branches ?? [],
     );
+    // M31 — storeRepoMetadata handles both create (no row yet) and update
+    // (row already exists) internally via findRepoByCanonical → createRepo /
+    // updateRepo split.
     await storeRepoMetadata({
-      owner: repo.owner,
-      name: repo.name,
+      owner: job.owner,
+      name: job.name,
       node: result.data,
       metadata,
       ...(result.etag !== undefined ? { etag: result.etag } : {}),
@@ -225,12 +261,12 @@ async function refreshCore(
       },
     });
     logger.info(
-      { jobId: job.id.toString(), owner: repo.owner, name: repo.name },
+      { jobId: job.id.toString(), owner: job.owner, name: job.name },
       'refresh: 200 ok',
     );
     return { status: 'done' };
   } catch (e: unknown) {
-    return handleError(e, job, repo);
+    return handleError(e, job);
   }
 }
 
@@ -241,7 +277,7 @@ async function refreshCore(
  * (those are core-only heuristics).
  */
 async function finishJob(
-  job: RefreshJob & { repository: Repository },
+  job: RefreshJob,
   auditAction: string,
   logMsg: string,
 ): Promise<RefreshJobResult> {
@@ -258,10 +294,18 @@ async function finishJob(
     action: auditAction,
     targetType: 'refresh_job',
     targetId: job.id.toString(),
-    metadata: { kind: job.kind, repositoryId: job.repositoryId.toString() },
+    metadata: {
+      kind: job.kind,
+      // M31 — repositoryId may be null (queue-on-miss, first fetch). Audit
+      // captures whatever's set; consumers should rely on owner/name for
+      // stable identification.
+      ...(job.repositoryId !== null ? { repositoryId: job.repositoryId.toString() } : {}),
+      owner: job.owner,
+      name: job.name,
+    },
   });
   logger.info(
-    { jobId: job.id.toString(), owner: job.repository.owner, name: job.repository.name, kind: job.kind },
+    { jobId: job.id.toString(), owner: job.owner, name: job.name, kind: job.kind },
     logMsg,
   );
   return { status: 'done' };
@@ -275,24 +319,24 @@ async function finishJob(
  */
 async function handleReleasesError(
   e: unknown,
-  job: RefreshJob & { repository: Repository },
-  repo: Repository,
+  job: RefreshJob,
+  repo: Repository | null,
 ): Promise<RefreshJobResult> {
   return handlePerFacetError(e, job, repo, 'releases');
 }
 
 async function handleBranchesError(
   e: unknown,
-  job: RefreshJob & { repository: Repository },
-  repo: Repository,
+  job: RefreshJob,
+  repo: Repository | null,
 ): Promise<RefreshJobResult> {
   return handlePerFacetError(e, job, repo, 'branches');
 }
 
 async function handlePerFacetError(
   e: unknown,
-  job: RefreshJob & { repository: Repository },
-  repo: Repository,
+  job: RefreshJob,
+  repo: Repository | null,
   facet: 'releases' | 'branches',
 ): Promise<RefreshJobResult> {
   // Transient 5xx / 429 / pool exhausted — retry on the standard
@@ -351,7 +395,7 @@ async function handlePerFacetError(
       action: `refresh.${facet}.404`,
       targetType: 'refresh_job',
       targetId: job.id.toString(),
-      metadata: { facet, owner: repo.owner, name: repo.name, message: e.message },
+      metadata: { facet, owner: job.owner, name: job.name, message: e.message },
     });
     return { status: 'failed', error: e.message };
   }
@@ -374,24 +418,23 @@ async function handlePerFacetError(
   return { status: 'pending' };
 }
 
+/**
+ * Core error path. M31 — the `repo` parameter is dropped: failure paths
+ * (404 / 410 / 403) no longer touch the `repositories` row, and the
+ * refresh_job's owner/name are the only stable identifiers we need.
+ */
 async function handleError(
   e: unknown,
   job: RefreshJob,
-  repo: Repository,
 ): Promise<RefreshJobResult> {
   // 404 / 410 — repo missing or gone. Not terminal; keep trying per spec.
+  // M31 — DO NOT call storeRepoMetadata here. Pending refresh_jobs may not
+  // have a backing repositories row; failure is recorded only on the
+  // refresh_jobs row + audit log.
   if (
     e instanceof NotFoundError ||
     (e instanceof GitHubError && (e.httpStatus === 404 || e.httpStatus === 410))
   ) {
-    await storeRepoMetadata({
-      owner: repo.owner,
-      name: repo.name,
-      node: repo.node,
-      metadata: null,
-      fetchStatus: 'not_found',
-      fetchError: e.message,
-    });
     const attempts = job.attempts + 1;
     const delay = nextDelay(attempts, -1); // failure mode
     const terminal = attempts >= 5;
@@ -410,37 +453,31 @@ async function handleError(
       await writeAudit({
         action: ESCALATION_AUDIT_ACTION,
         targetType: 'repository',
-        targetId: `${repo.owner}/${repo.name}`,
-        metadata: { repoId: repo.id.toString(), attempts, message: e.message, kind: 'not_found' },
+        targetId: `${job.owner}/${job.name}`,
+        metadata: { attempts, message: e.message, kind: 'not_found' },
       });
       logger.warn(
-        { jobId: job.id.toString(), owner: repo.owner, name: repo.name, attempts },
+        { jobId: job.id.toString(), owner: job.owner, name: job.name, attempts },
         'refresh: 404 escalation, status=failed',
       );
       return { status: 'failed', error: e.message };
     }
     logger.info(
-      { jobId: job.id.toString(), owner: repo.owner, name: repo.name, attempts },
+      { jobId: job.id.toString(), owner: job.owner, name: job.name, attempts },
       'refresh: 404, will retry',
     );
     return { status: 'pending' };
   }
 
   // 403 — terminal. Admin must intervene.
+  // M31 — DO NOT call storeRepoMetadata here. Failure is recorded on the
+  // refresh_jobs row + audit log only.
   if (e instanceof GitHubError && e.httpStatus === 403) {
-    await storeRepoMetadata({
-      owner: repo.owner,
-      name: repo.name,
-      node: repo.node,
-      metadata: null,
-      fetchStatus: 'forbidden',
-      fetchError: e.message,
-    });
     await writeAudit({
       action: 'repo_forbidden',
       targetType: 'repository',
-      targetId: `${repo.owner}/${repo.name}`,
-      metadata: { repoId: repo.id.toString(), status: 403, message: e.message },
+      targetId: `${job.owner}/${job.name}`,
+      metadata: { status: 403, message: e.message },
     });
     await prisma.refreshJob.update({
       where: { id: job.id },
@@ -451,7 +488,7 @@ async function handleError(
       },
     });
     logger.warn(
-      { jobId: job.id.toString(), owner: repo.owner, name: repo.name },
+      { jobId: job.id.toString(), owner: job.owner, name: job.name },
       'refresh: 403 forbidden, terminal',
     );
     return { status: 'failed', error: e.message };
@@ -469,7 +506,7 @@ async function handleError(
       },
     });
     logger.info(
-      { jobId: job.id.toString(), owner: repo.owner, name: repo.name },
+      { jobId: job.id.toString(), owner: job.owner, name: job.name },
       'refresh: 429 rate limited, will retry in 30s',
     );
     return { status: 'pending' };
@@ -487,7 +524,7 @@ async function handleError(
       },
     });
     logger.info(
-      { jobId: job.id.toString(), owner: repo.owner, name: repo.name, status: e.httpStatus },
+      { jobId: job.id.toString(), owner: job.owner, name: job.name, status: e.httpStatus },
       'refresh: 5xx, will retry in 5s',
     );
     return { status: 'pending' };
@@ -505,7 +542,7 @@ async function handleError(
       },
     });
     logger.info(
-      { jobId: job.id.toString(), owner: repo.owner, name: repo.name },
+      { jobId: job.id.toString(), owner: job.owner, name: job.name },
       'refresh: github unavailable, will retry in 30s',
     );
     return { status: 'pending' };
@@ -532,17 +569,17 @@ async function handleError(
     await writeAudit({
       action: ESCALATION_AUDIT_ACTION,
       targetType: 'repository',
-      targetId: `${repo.owner}/${repo.name}`,
-      metadata: { repoId: repo.id.toString(), attempts, message, kind: 'unexpected' },
+      targetId: `${job.owner}/${job.name}`,
+      metadata: { attempts, message, kind: 'unexpected' },
     });
     logger.warn(
-      { jobId: job.id.toString(), owner: repo.owner, name: repo.name, attempts },
+      { jobId: job.id.toString(), owner: job.owner, name: job.name, attempts },
       'refresh: unexpected error escalation, status=failed',
     );
     return { status: 'failed', error: message };
   }
   logger.info(
-    { jobId: job.id.toString(), owner: repo.owner, name: repo.name, attempts },
+    { jobId: job.id.toString(), owner: job.owner, name: job.name, attempts },
     'refresh: unexpected error, will retry',
   );
   return { status: 'pending' };

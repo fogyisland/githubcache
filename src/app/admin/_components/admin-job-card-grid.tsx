@@ -6,12 +6,16 @@ import type { TimezoneId } from '@/lib/timezone/registry';
 
 export interface PendingJobRow {
   id: bigint;
-  repositoryId: bigint;
+  // M31 — repositoryId may be null (queue-on-miss, no repositories row).
+  repositoryId: bigint | null;
   status: string;
   attempts: number;
   createdAt: Date;
   lastError: string | null;
-  repository: { owner: string; name: string };
+  // M31 — owner/name live directly on the RefreshJob row (the relation
+  // to `repositories` was dropped in Task 1).
+  owner: string;
+  name: string;
 }
 
 interface Props {

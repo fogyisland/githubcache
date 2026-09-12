@@ -1,4 +1,4 @@
-import type { Prisma, RefreshJob, Repository } from '@prisma/client';
+import type { Prisma, RefreshJob } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
 
 const MANUAL_REFRESH_PRIORITY = 10; // outranks default 50 — high priority for admin triggers
@@ -12,11 +12,23 @@ const MANUAL_REFRESH_PRIORITY = 10; // outranks default 50 — high priority for
  * Status defaults to 'pending'; attempts starts at 0.
  *
  * Used by /api/admin/refresh (action=trigger).
+ *
+ * M31 — takes owner/name in addition to repositoryId. The scheduler now
+ * claims jobs by (owner, name) without joining the `repositories` table,
+ * so the columns MUST be populated at enqueue time. repositoryId is still
+ * written when known (manual triggers come from /api/v1/repos which has
+ * already resolved the id) but is nullable on the schema.
  */
-export async function enqueueManualRefresh(repositoryId: bigint): Promise<RefreshJob> {
+export async function enqueueManualRefresh(args: {
+  owner: string;
+  name: string;
+  repositoryId: bigint;
+}): Promise<RefreshJob> {
   return prisma.refreshJob.create({
     data: {
-      repositoryId,
+      owner: args.owner,
+      name: args.name,
+      repositoryId: args.repositoryId,
       priority: MANUAL_REFRESH_PRIORITY,
       scheduledFor: new Date(),
       status: 'pending',
@@ -31,16 +43,16 @@ export async function enqueueManualRefresh(repositoryId: bigint): Promise<Refres
  * List pending refresh jobs (not yet claimed), ordered by priority ASC then
  * scheduled_for ASC. Top N only.
  *
+ * M31 — drops the `include: { repository: true }`; callers now read
+ * `owner` / `name` directly off the `RefreshJob` row.
+ *
  * Used by /admin/refresh to render the pending-jobs table (top 20).
  */
-export async function listPendingJobs(
-  limit: number,
-): Promise<Array<RefreshJob & { repository: Repository }>> {
+export async function listPendingJobs(limit: number): Promise<Array<RefreshJob>> {
   return prisma.refreshJob.findMany({
     where: { status: 'pending' },
     orderBy: [{ priority: 'asc' }, { scheduledFor: 'asc' }],
     take: limit,
-    include: { repository: true },
   });
 }
 
@@ -70,12 +82,15 @@ export async function listRepositoriesForPicker(
  * For done/failed, use `listJobsInRange` to bound by a time window instead
  * (terminal states accumulate forever).
  *
+ * M31 — drops `include: { repository: true }`. UI surfaces owner/name from
+ * the `RefreshJob` row directly.
+ *
  * Used by /admin/queue (M20.7) to render the per-status sections.
  */
 export async function listJobsByStatus(
   status: 'pending' | 'in_progress' | 'done' | 'failed',
   limit: number,
-): Promise<Array<RefreshJob & { repository: Repository }>> {
+): Promise<Array<RefreshJob>> {
   const orderBy: Prisma.RefreshJobOrderByWithRelationInput | Prisma.RefreshJobOrderByWithRelationInput[] =
     status === 'pending'
       ? [{ priority: 'asc' }, { scheduledFor: 'asc' }]
@@ -84,7 +99,6 @@ export async function listJobsByStatus(
     where: { status },
     orderBy,
     take: limit,
-    include: { repository: true },
   });
 }
 
@@ -93,6 +107,9 @@ export async function listJobsByStatus(
  * window. Ordered by `updatedAt DESC` so the most-recently-completed row
  * comes first.
  *
+ * M31 — drops `include: { repository: true }`. UI surfaces owner/name from
+ * the `RefreshJob` row directly.
+ *
  * Used by /admin/queue (M20.7) to render the done 24h / failed 24h sections.
  */
 export async function listJobsInRange(
@@ -100,12 +117,11 @@ export async function listJobsInRange(
   from: Date,
   to: Date,
   limit: number,
-): Promise<Array<RefreshJob & { repository: Repository }>> {
+): Promise<Array<RefreshJob>> {
   return prisma.refreshJob.findMany({
     where: { status, updatedAt: { gte: from, lt: to } },
     orderBy: { updatedAt: 'desc' },
     take: limit,
-    include: { repository: true },
   });
 }
 

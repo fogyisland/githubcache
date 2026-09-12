@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react';
-import type { RefreshJob, Repository } from '@prisma/client';
+import type { RefreshJob } from '@prisma/client';
 import { getTranslations } from 'next-intl/server';
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { isPaused, getPausedAt } from '@/lib/scheduler';
@@ -84,13 +84,16 @@ export default async function AdminQueuePage(_props: object = {}): Promise<React
   );
 }
 
-type RefreshJobRow = RefreshJob & { repository: Repository };
+// M31 — RefreshJob no longer joins `repository`; owner/name are read from
+// the row itself.
+type RefreshJobRow = RefreshJob;
 
 function serializeJob(j: RefreshJobRow): QueueJobRow {
   return {
     id: j.id.toString(),
-    repositoryId: j.repositoryId.toString(),
-    repository: { owner: j.repository.owner, name: j.repository.name },
+    repositoryId: j.repositoryId?.toString() ?? '',
+    owner: j.owner,
+    name: j.name,
     priority: j.priority,
     scheduledFor: j.scheduledFor.toISOString(),
     attempts: j.attempts,
@@ -101,20 +104,23 @@ function serializeJob(j: RefreshJobRow): QueueJobRow {
 
 function serializePendingJob(j: RefreshJobRow): {
   id: bigint;
-  repositoryId: bigint;
+  repositoryId: bigint | null;
   status: string;
   attempts: number;
   createdAt: Date;
   lastError: string | null;
-  repository: { owner: string; name: string };
+  owner: string;
+  name: string;
 } {
   return {
     id: j.id,
+    // M31 — repositoryId may be null (queue-on-miss); pass through.
     repositoryId: j.repositoryId,
     status: j.status,
     attempts: j.attempts,
     createdAt: j.createdAt,
     lastError: j.lastError,
-    repository: { owner: j.repository.owner, name: j.repository.name },
+    owner: j.owner,
+    name: j.name,
   };
 }

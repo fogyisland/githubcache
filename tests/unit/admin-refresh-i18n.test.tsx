@@ -110,6 +110,9 @@ vi.mock('@/lib/db/refresh-jobs', () => ({
     {
       id: 1n,
       repositoryId: 100n,
+      // M31 — owner/name live directly on the RefreshJob row.
+      owner: 'vercel',
+      name: 'next.js',
       priority: 10,
       scheduledFor: new Date('2026-08-28T10:00:00Z'),
       attempts: 0,
@@ -202,7 +205,9 @@ vi.mock('@/app/admin/refresh/_components/pending-jobs-table', () => ({
   PendingJobsTable: ({ jobs }: {
     jobs: Array<{
       id: string;
-      repository: { owner: string; name: string };
+      // M31 — owner/name live directly on the RefreshJob row.
+      owner: string;
+      name: string;
     }>;
   }) => {
     const t = (k: string) => lookup('admin.refresh.pendingJobs', k);
@@ -237,7 +242,7 @@ vi.mock('@/app/admin/refresh/_components/pending-jobs-table', () => ({
                   'tr',
                   { key: j.id },
                   createElement('td', null, `#${j.id}`),
-                  createElement('td', null, `${j.repository.owner}/${j.repository.name}`),
+                  createElement('td', null, `${j.owner}/${j.name}`),
                 ),
               ),
             ),

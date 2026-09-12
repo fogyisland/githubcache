@@ -51,7 +51,9 @@ describe('refreshOne', () => {
   beforeEach(async () => {
     pickQueue.reset();
     server.resetHandlers();
-    await prisma.refreshJob.deleteMany({ where: { repository: { owner: TEST_OWNER } } });
+    // M31 — RefreshJob no longer has a `repository` relation; owner/name
+    // live on the row directly.
+    await prisma.refreshJob.deleteMany({ where: { owner: TEST_OWNER } });
     await prisma.auditLog.deleteMany({
       where: { targetType: 'repository', targetId: { startsWith: TEST_OWNER } },
     });
@@ -69,7 +71,7 @@ describe('refreshOne', () => {
   });
 
   afterEach(async () => {
-    await prisma.refreshJob.deleteMany({ where: { repository: { owner: TEST_OWNER } } });
+    await prisma.refreshJob.deleteMany({ where: { owner: TEST_OWNER } });
     await prisma.auditLog.deleteMany({
       where: { targetType: 'repository', targetId: { startsWith: TEST_OWNER } },
     });
@@ -82,12 +84,15 @@ describe('refreshOne', () => {
   });
 
   // Creates a job in 'in_progress' state with attempts:0 (matches what
-  // claimBatch would produce) and includes the parent repository.
+  // claimBatch would produce). M31 — no longer includes the parent
+  // repository; refreshOne looks it up by owner/name itself.
   async function claimAndMake(
     overrides: Partial<RefreshJob> = {},
-  ): Promise<RefreshJob & { repository: Repository }> {
+  ): Promise<RefreshJob> {
     return prisma.refreshJob.create({
       data: {
+        owner: TEST_OWNER,
+        name: 'r1',
         repositoryId: repo.id,
         priority: 50,
         scheduledFor: new Date(),
@@ -95,8 +100,7 @@ describe('refreshOne', () => {
         attempts: 0,
         ...overrides,
       },
-      include: { repository: true },
-    }) as unknown as RefreshJob & { repository: Repository };
+    });
   }
 
   function ghOk(name = 'r1') {
@@ -200,7 +204,7 @@ describe('refreshOne', () => {
     expect(refreshed?.status).toBe('done');
   });
 
-  it('on 404: stores fetch_status=not_found, status=pending, reschedules via failureDelay(1) = 5min', async () => {
+  it('on 404: leaves repository row UNCHANGED, status=pending, reschedules via failureDelay(1) = 5min', async () => {
     pickQueue.push({ id: BigInt(1), octokit: fakeOctokit() });
     server.use(ghNotFound());
     const job = await claimAndMake();
@@ -208,10 +212,10 @@ describe('refreshOne', () => {
 
     expect(result.status).toBe('pending');
 
+    // M31 — failure paths no longer mutate the repositories row. The row
+    // should still reflect the seeded 'ok' state from beforeEach.
     const updated = await prisma.repository.findUnique({ where: { id: repo.id } });
-    expect(updated?.fetchStatus).toBe('not_found');
-    // NotFoundError wraps the GitHub message; just verify it mentions the repo.
-    expect(updated?.fetchError?.toLowerCase()).toContain('not found');
+    expect(updated?.fetchStatus).toBe('ok');
 
     const refreshed = await prisma.refreshJob.findUnique({ where: { id: job.id } });
     expect(refreshed?.attempts).toBe(1);
@@ -219,7 +223,7 @@ describe('refreshOne', () => {
     expect(refreshed!.scheduledFor!.getTime() - Date.now()).toBeGreaterThan(5 * 60_000 - 10_000);
   });
 
-  it('on 403: stores fetch_status=forbidden, writes audit log, marks failed (no requeue)', async () => {
+  it('on 403: leaves repository row UNCHANGED, writes audit log, marks failed (no requeue)', async () => {
     pickQueue.push({ id: BigInt(1), octokit: fakeOctokit() });
     server.use(ghForbidden());
     const job = await claimAndMake();
@@ -230,8 +234,9 @@ describe('refreshOne', () => {
       expect(result.error).toContain('Forbidden');
     }
 
+    // M31 — failure paths no longer mutate the repositories row.
     const updated = await prisma.repository.findUnique({ where: { id: repo.id } });
-    expect(updated?.fetchStatus).toBe('forbidden');
+    expect(updated?.fetchStatus).toBe('ok');
 
     const refreshed = await prisma.refreshJob.findUnique({ where: { id: job.id } });
     expect(refreshed?.status).toBe('failed');
@@ -304,14 +309,14 @@ describe('refreshOne', () => {
     });
     expect(audits).toHaveLength(1);
     const metadata = audits[0]?.metadata as {
-      repoId: string;
       attempts: number;
       message: string;
       kind: string;
     };
     expect(metadata.kind).toBe('not_found');
     expect(metadata.attempts).toBe(5);
-    expect(metadata.repoId).toBe(repo.id.toString());
+    // M31 — metadata.repoId dropped (repositoryId may be null on the job row;
+    // owner/name on the audit targetId is the stable identifier).
   });
 
   it('on 5 consecutive unexpected errors: marks job failed, writes refresh.failed_review with kind=unexpected', async () => {
@@ -343,7 +348,6 @@ describe('refreshOne', () => {
     });
     expect(audits).toHaveLength(1);
     const metadata = audits[0]?.metadata as {
-      repoId: string;
       attempts: number;
       message: string;
       kind: string;
@@ -413,6 +417,8 @@ describe('refreshOne', () => {
     // Create a done refresh_job to give refreshCount=1
     await prisma.refreshJob.create({
       data: {
+        owner: TEST_OWNER,
+        name: 'r1',
         repositoryId: repo.id,
         priority: 50,
         scheduledFor: new Date(),

@@ -5,8 +5,11 @@ import type { TimezoneId } from '@/lib/timezone/registry';
 
 export interface QueueJobRow {
   id: string;
-  repositoryId: string;
-  repository: { owner: string; name: string };
+  // M31 — repositoryId may be null (queue-on-miss, no repositories row).
+  repositoryId: string | null;
+  // M31 — owner/name live directly on the RefreshJob row.
+  owner: string;
+  name: string;
   priority: number;
   scheduledFor: string;
   attempts: number;
@@ -121,7 +124,7 @@ async function QueueSection({
                 <tr key={r.id} className="border-b border-gray-100">
                   <td className="py-2 font-mono text-xs">#{r.id}</td>
                   <td className="py-2 font-mono text-xs">
-                    {r.repository.owner}/{r.repository.name}
+                    {r.owner}/{r.name}
                   </td>
                   <td className="py-2 text-right">{r.priority}</td>
                   <td className="py-2 text-right font-mono text-xs">

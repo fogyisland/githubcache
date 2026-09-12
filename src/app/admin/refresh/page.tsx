@@ -57,11 +57,15 @@ export default async function AdminRefreshPage(): Promise<ReactElement> {
         repos={repos.map((r) => ({ ...r, id: r.id.toString() }))}
       />
       <PendingJobsTable
+        // M31 — owner/name live on the RefreshJob row directly.
         jobs={pendingJobs.map((j) => ({
-          ...j,
           id: j.id.toString(),
-          repositoryId: j.repositoryId.toString(),
-          repository: { owner: j.repository.owner, name: j.repository.name },
+          repositoryId: j.repositoryId?.toString() ?? null,
+          priority: j.priority,
+          scheduledFor: j.scheduledFor,
+          attempts: j.attempts,
+          owner: j.owner,
+          name: j.name,
         }))}
       />
     </div>

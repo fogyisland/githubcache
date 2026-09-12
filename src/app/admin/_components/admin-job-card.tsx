@@ -6,12 +6,18 @@ import type { TimezoneId } from '@/lib/timezone/registry';
 
 interface JobRow {
   id: bigint;
-  repositoryId: bigint;
+  // M31 — repositoryId may be null (queue-on-miss, no repositories row).
+  // Carried in the type for downstream consumers; the card render doesn't
+  // touch it directly.
+  repositoryId: bigint | null;
   status: string;
   attempts: number;
   createdAt: Date;
   lastError: string | null;
-  repository: { owner: string; name: string };
+  // M31 — owner/name live directly on the RefreshJob row (the relation
+  // to `repositories` was dropped in Task 1).
+  owner: string;
+  name: string;
 }
 
 interface Props {
@@ -38,7 +44,7 @@ export async function AdminJobCard({ job, userTz }: Props): Promise<ReactElement
   const t = await getTranslations('admin.queue.card');
   const ageMs = Date.now() - job.createdAt.getTime();
   const ageMin = Math.round(ageMs / 60000);
-  const repoFullName = `${job.repository.owner}/${job.repository.name}`;
+  const repoFullName = `${job.owner}/${job.name}`;
   const jobIdStr = job.id.toString();
 
   return (

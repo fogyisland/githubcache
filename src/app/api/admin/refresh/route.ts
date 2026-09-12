@@ -94,16 +94,22 @@ export async function POST(req: Request): Promise<Response> {
     return apiError('bad_request', 'invalid repoId', {}, req);
   }
 
-  // Verify repo exists — minimal projection (id only) to keep cost down.
+  // Verify repo exists — minimal projection (id, owner, name) to keep cost down.
+  // M31 — enqueueManualRefresh now takes owner/name in addition to repositoryId
+  // (the scheduler claims jobs by owner/name without joining repositories).
   const repo = await prisma.repository.findUnique({
     where: { id: repoId },
-    select: { id: true },
+    select: { id: true, owner: true, name: true },
   });
   if (!repo) {
     return apiError('not_found', 'repository not found', {}, req);
   }
 
-  const job = await enqueueManualRefresh(repoId);
+  const job = await enqueueManualRefresh({
+    owner: repo.owner,
+    name: repo.name,
+    repositoryId: repoId,
+  });
   void writeAudit({
     action: 'manual_refresh_trigger',
     targetType: 'repository',

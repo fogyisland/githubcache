@@ -139,7 +139,9 @@ export async function runTick(): Promise<TickResult> {
         // Unexpected error (DB failure, programmer error). Log and mark as failed.
         const message = e instanceof Error ? e.message : String(e);
         logger.error(
-          { err: e, jobId: job.id.toString(), repoId: job.repositoryId.toString() },
+          // M31 — repositoryId may be null (queue-on-miss); log owner/name
+          // which are guaranteed present on the job row.
+          { err: e, jobId: job.id.toString(), owner: job.owner, name: job.name },
           'refreshOne threw unexpectedly',
         );
         await prisma.refreshJob.update({

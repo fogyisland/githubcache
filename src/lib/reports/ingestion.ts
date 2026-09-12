@@ -90,7 +90,8 @@ export async function repositoryFetchBreakdown(): Promise<FetchStatusBreakdown> 
 
 export interface RecentRefreshJobRow {
   id: bigint;
-  repositoryId: bigint;
+  // M31 — repositoryId may be null on a queued job (queue-on-miss).
+  repositoryId: bigint | null;
   repositoryOwner: string;
   repositoryName: string;
   status: 'pending' | 'in_progress' | 'done' | 'failed';
@@ -105,9 +106,11 @@ export interface RecentRefreshJobRow {
  * Recent refresh jobs joined with their parent repository. Used by the
  * /admin/ingestion "recent jobs" table.
  *
- * Pagination is applied at the Prisma layer (the join already includes the
- * repository in a single SQL roundtrip via `include`). Optional `from`/`to`
+ * Pagination is applied at the Prisma layer. Optional `from`/`to`
  * filter on `updatedAt` — the window the page currently shows in its KPIs.
+ *
+ * M31 — owner/name live directly on the `refresh_jobs` row (the relation
+ * to `repositories` was dropped). No `include` needed.
  */
 export async function recentRefreshJobs(
   args: { skip: number; take: number },
@@ -125,17 +128,14 @@ export async function recentRefreshJobs(
       orderBy: { updatedAt: 'desc' },
       skip: args.skip,
       take: args.take,
-      include: {
-        repository: { select: { owner: true, name: true } },
-      },
     }),
     prisma.refreshJob.count({ where }),
   ]);
   return rows.map((r) => ({
     id: r.id,
     repositoryId: r.repositoryId,
-    repositoryOwner: r.repository.owner,
-    repositoryName: r.repository.name,
+    repositoryOwner: r.owner,
+    repositoryName: r.name,
     status: r.status,
     priority: r.priority,
     attempts: r.attempts,

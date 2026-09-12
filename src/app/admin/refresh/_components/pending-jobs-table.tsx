@@ -3,11 +3,14 @@ import { getTranslations } from 'next-intl/server';
 
 interface Job {
   id: string;
-  repositoryId: string;
+  // M31 — repositoryId may be null (queue-on-miss, no repositories row).
+  repositoryId: string | null;
   priority: number;
   scheduledFor: Date;
   attempts: number;
-  repository: { owner: string; name: string };
+  // M31 — owner/name live directly on the RefreshJob row.
+  owner: string;
+  name: string;
 }
 
 /**
@@ -39,7 +42,7 @@ export async function PendingJobsTable({ jobs }: { jobs: Job[] }): Promise<React
               <tr key={j.id} className="border-b border-gray-100">
                 <td className="py-2 font-mono text-xs">#{j.id}</td>
                 <td className="py-2 font-mono text-xs">
-                  {j.repository.owner}/{j.repository.name}
+                  {j.owner}/{j.name}
                 </td>
                 <td className="py-2 text-right">{j.priority}</td>
                 <td className="py-2 text-right font-mono text-xs">

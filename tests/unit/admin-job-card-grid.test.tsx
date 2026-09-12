@@ -46,7 +46,9 @@ const sampleJob = {
   attempts: 0,
   createdAt: new Date('2026-09-11T11:55:00Z'),
   lastError: null,
-  repository: { owner: 'vercel', name: 'next.js' },
+  // M31 — owner/name live directly on the RefreshJob row.
+  owner: 'vercel',
+  name: 'next.js',
 };
 
 const failedJob = {
@@ -56,7 +58,8 @@ const failedJob = {
   attempts: 3,
   createdAt: new Date('2026-09-11T10:00:00Z'),
   lastError: 'rate limited',
-  repository: { owner: 'facebook', name: 'react' },
+  owner: 'facebook',
+  name: 'react',
 };
 
 describe('AdminJobCard', () => {
