@@ -184,7 +184,7 @@ import AdminApiKeyDetailPage from '@/app/admin/api-keys/[id]/page';
 
 describe('AdminApiKeysPage i18n', () => {
   it('renders translated filter labels and empty state (no rows mock)', async () => {
-    const html = renderToStaticMarkup(await AdminApiKeysPage({ searchParams: {} }));
+    const html = renderToStaticMarkup(await AdminApiKeysPage({ searchParams: Promise.resolve({}) }));
     // Page header title
     expect(html).toContain('API Keys');
     expect(html).toContain('Issue, approve, and revoke API keys.');
@@ -202,7 +202,7 @@ describe('AdminApiKeysPage i18n', () => {
 
 describe('AdminApiKeyDetailPage i18n', () => {
   it('renders translated dl labels, section headings, and description', async () => {
-    const html = renderToStaticMarkup(await AdminApiKeyDetailPage({ params: { id: '1' } }));
+    const html = renderToStaticMarkup(await AdminApiKeyDetailPage({ params: Promise.resolve({ id: '1' }) }));
     // Page header title (key name) and description (with interpolated role)
     expect(html).toContain('Test Key');
     expect(html).toContain('Owned by op@test.com (operator)');

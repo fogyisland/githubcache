@@ -59,7 +59,7 @@ beforeAll(async () => {
 afterAll(async () => {
   server.close();
   for (const owner of TEST_OWNERS) {
-    await prisma.refreshJob.deleteMany({ where: { repository: { owner } } });
+    await prisma.refreshJob.deleteMany({ where: { owner } });
     await prisma.repository.deleteMany({ where: { owner } });
   }
   await prisma.refreshJob.deleteMany({});
@@ -86,7 +86,7 @@ beforeEach(async () => {
   server.resetHandlers();
   for (const owner of TEST_OWNERS) {
     // Delete refreshJobs first (FK on repositoryId) then repositories.
-    await prisma.refreshJob.deleteMany({ where: { repository: { owner } } });
+    await prisma.refreshJob.deleteMany({ where: { owner } });
     await prisma.repository.deleteMany({ where: { owner } });
   }
 });

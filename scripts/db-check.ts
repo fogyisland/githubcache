@@ -39,7 +39,7 @@ async function main(): Promise<void> {
     where: { status: 'done' },
     orderBy: { updatedAt: 'desc' },
     take: 3,
-    include: { repository: { select: { owner: true, name: true } } },
+    select: { id: true, owner: true, name: true, updatedAt: true, status: true },
   });
   console.log('\n--- recent done jobs ---');
   console.log(JSON.stringify(recentDone, replacer, 2));

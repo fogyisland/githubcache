@@ -204,7 +204,7 @@ import AdminIngestionPage from '@/app/admin/ingestion/page';
 
 describe('AdminIngestionPage i18n', () => {
   it('renders translated title and description on the page header', async () => {
-    const html = renderToStaticMarkup(await AdminIngestionPage({ searchParams: {} }));
+    const html = renderToStaticMarkup(await AdminIngestionPage({ searchParams: Promise.resolve({}) }));
     expect(html).toContain('Ingestion');
     expect(html).toContain(
       'GitHub→DB pipeline health: queue depth, throughput, cached-repo fetch status, and recent refresh jobs.',
@@ -212,7 +212,7 @@ describe('AdminIngestionPage i18n', () => {
   });
 
   it('passes real aggregation values to KPI + breakdown stubs', async () => {
-    const html = renderToStaticMarkup(await AdminIngestionPage({ searchParams: {} }));
+    const html = renderToStaticMarkup(await AdminIngestionPage({ searchParams: Promise.resolve({}) }));
     expect(html).toContain('data-field="pending"');
     expect(html).toContain('data-field="done"');
     expect(html).toContain('>4<');
@@ -222,7 +222,7 @@ describe('AdminIngestionPage i18n', () => {
   });
 
   it('shows the scheduler card and the recent-jobs table together', async () => {
-    const html = renderToStaticMarkup(await AdminIngestionPage({ searchParams: {} }));
+    const html = renderToStaticMarkup(await AdminIngestionPage({ searchParams: Promise.resolve({}) }));
     expect(html).toContain('data-testid="scheduler-card-stub"');
     expect(html).toContain('data-testid="recent-jobs-stub"');
     expect(html).toContain('vercel/next.js');

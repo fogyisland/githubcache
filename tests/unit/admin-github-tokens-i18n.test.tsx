@@ -222,7 +222,7 @@ import AdminGithubTokenDetailPage from '@/app/admin/github-tokens/[id]/page';
 
 describe('AdminGithubTokensPage i18n', () => {
   it('renders translated title, description, and section headings', async () => {
-    const html = renderToStaticMarkup(await AdminGithubTokensPage({ searchParams: {} }));
+    const html = renderToStaticMarkup(await AdminGithubTokensPage({ searchParams: Promise.resolve({}) }));
     // Page header title
     expect(html).toContain('GitHub Tokens');
     expect(html).toContain('Manage the GitHub token pool used by the refresh scheduler.');
@@ -239,7 +239,7 @@ describe('AdminGithubTokensPage i18n', () => {
   });
 
   it('renders translated status and pool chips', async () => {
-    const html = renderToStaticMarkup(await AdminGithubTokensPage({ searchParams: {} }));
+    const html = renderToStaticMarkup(await AdminGithubTokensPage({ searchParams: Promise.resolve({}) }));
     // Status chip text (from status.active)
     expect(html).toContain('>active<');
     // Pool chip text (from pool.inPool)
@@ -249,7 +249,7 @@ describe('AdminGithubTokensPage i18n', () => {
 
 describe('AdminGithubTokenDetailPage i18n', () => {
   it('renders translated dl labels, section headings, and audit empty state', async () => {
-    const html = renderToStaticMarkup(await AdminGithubTokenDetailPage({ params: { id: '1' } }));
+    const html = renderToStaticMarkup(await AdminGithubTokenDetailPage({ params: Promise.resolve({ id: '1' }) }));
     // Page header description (interpolated first4/last4)
     expect(html).toContain('Token ghp1…wxyz');
     // dl labels

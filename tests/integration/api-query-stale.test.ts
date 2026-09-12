@@ -48,7 +48,7 @@ afterAll(async () => {
   server.close();
   // Cleanup test rows.
   await prisma.refreshJob.deleteMany({
-    where: { repository: { owner: { startsWith: TEST_REPO_OWNER_PREFIX } } },
+    where: { owner: { startsWith: TEST_REPO_OWNER_PREFIX } },
   });
   await prisma.repository.deleteMany({
     where: { owner: { startsWith: TEST_REPO_OWNER_PREFIX } },
@@ -73,7 +73,7 @@ beforeEach(async () => {
   server.resetHandlers();
   // Delete refreshJobs first (FK on repositoryId) then repositories.
   await prisma.refreshJob.deleteMany({
-    where: { repository: { owner: { startsWith: TEST_REPO_OWNER_PREFIX } } },
+    where: { owner: { startsWith: TEST_REPO_OWNER_PREFIX } },
   });
   await prisma.repository.deleteMany({
     where: { owner: { startsWith: TEST_REPO_OWNER_PREFIX } },
@@ -156,6 +156,10 @@ describe('POST /api/query — stale path', () => {
     // log an unhandled-request error (server.listen uses onUnhandledRequest:
     // 'error'), so the absence of a handler below is itself part of the
     // assertion.
+    //
+    // M31: enqueueRefresh no longer creates a stub repository row — the
+    // refresh_job is enqueued with repositoryId=null. The scheduler tick
+    // creates the repository row when it processes the job.
     const res = await postQuery([`${TEST_REPO_OWNER_PREFIX}nomiss/r`]);
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
@@ -170,13 +174,13 @@ describe('POST /api/query — stale path', () => {
     expect(body.results[0]!.queuedAt).toBeTruthy();
     expect(body.results[0]!.scheduledFor).toBeTruthy();
     expect(body.summary.pending).toBe(1);
-    // Stub repository + pending refreshJob should have been written.
-    const repo = await prisma.repository.findUnique({
-      where: { owner_name: { owner: `${TEST_REPO_OWNER_PREFIX}nomiss`, name: 'r' } },
-    });
-    expect(repo).not.toBeNull();
+    // Pending refreshJob enqueued by owner/name (no repository row yet).
     const jobs = await prisma.refreshJob.findMany({
-      where: { repositoryId: repo!.id, status: 'pending' },
+      where: {
+        owner: `${TEST_REPO_OWNER_PREFIX}nomiss`,
+        name: 'r',
+        status: 'pending',
+      },
     });
     expect(jobs).toHaveLength(1);
     expect(jobs[0]!.priority).toBe(70);
@@ -209,7 +213,7 @@ describe('POST /api/query — stale path', () => {
     // it up on its next aging sweep if lastFetchedAt crosses the TTL.
     expect(
       await prisma.refreshJob.findFirst({
-        where: { repository: { owner: `${TEST_REPO_OWNER_PREFIX}staleup` } },
+        where: { owner: `${TEST_REPO_OWNER_PREFIX}staleup` },
       }),
     ).toBeNull();
   });
@@ -231,7 +235,7 @@ describe('POST /api/query — stale path', () => {
     // No new refreshJob for terminal not_found rows.
     expect(
       await prisma.refreshJob.findFirst({
-        where: { repository: { owner: `${TEST_REPO_OWNER_PREFIX}nf` } },
+        where: { owner: `${TEST_REPO_OWNER_PREFIX}nf` },
       }),
     ).toBeNull();
   });

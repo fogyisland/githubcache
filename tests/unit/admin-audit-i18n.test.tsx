@@ -218,7 +218,7 @@ import AdminAuditPage from '@/app/admin/audit/page';
 
 describe('AdminAuditPage i18n', () => {
   it('renders translated title and description on the page header', async () => {
-    const html = renderToStaticMarkup(await AdminAuditPage({ searchParams: {} }));
+    const html = renderToStaticMarkup(await AdminAuditPage({ searchParams: Promise.resolve({}) }));
     expect(html).toContain('Audit log');
     expect(html).toContain(
       'Search across every admin action. Filters update the URL — bookmark or share a view.'
@@ -226,7 +226,7 @@ describe('AdminAuditPage i18n', () => {
   });
 
   it('renders translated filter labels, placeholders and buttons via the real AuditFilters', async () => {
-    const html = renderToStaticMarkup(await AdminAuditPage({ searchParams: {} }));
+    const html = renderToStaticMarkup(await AdminAuditPage({ searchParams: Promise.resolve({}) }));
     // Filter labels
     expect(html).toContain('Action</span>');
     expect(html).toContain('Actor user ID</span>');
@@ -241,7 +241,7 @@ describe('AdminAuditPage i18n', () => {
   });
 
   it('renders translated table headers, pagination, system tag, and dash fallback', async () => {
-    const html = renderToStaticMarkup(await AdminAuditPage({ searchParams: {} }));
+    const html = renderToStaticMarkup(await AdminAuditPage({ searchParams: Promise.resolve({}) }));
     // Headers
     expect(html).toContain('>When<');
     expect(html).toContain('>Action<');

@@ -96,7 +96,7 @@ describe('runTick', () => {
     pickQueue.reset();
     poolStatusOverride.status = { active: 1, exhausted: 0, earliestReset: null };
     server.resetHandlers();
-    await prisma.refreshJob.deleteMany({ where: { repository: { owner: TEST_OWNER } } });
+    await prisma.refreshJob.deleteMany({ where: { owner: TEST_OWNER } });
     await prisma.repository.deleteMany({ where: { owner: TEST_OWNER } });
 
     repo = await prisma.repository.create({
@@ -110,7 +110,7 @@ describe('runTick', () => {
   });
 
   afterEach(async () => {
-    await prisma.refreshJob.deleteMany({ where: { repository: { owner: TEST_OWNER } } });
+    await prisma.refreshJob.deleteMany({ where: { owner: TEST_OWNER } });
     await prisma.repository.deleteMany({ where: { owner: TEST_OWNER } });
   });
 
@@ -122,6 +122,8 @@ describe('runTick', () => {
   async function makePending(overrides: Partial<RefreshJob> = {}): Promise<RefreshJob> {
     return prisma.refreshJob.create({
       data: {
+        owner: repo.owner,
+        name: repo.name,
         repositoryId: repo.id,
         priority: 50,
         scheduledFor: new Date(Date.now() - 1000), // overdue
@@ -141,7 +143,7 @@ describe('runTick', () => {
     await runTick();
     // Our test jobs should still be untouched (no jobs in pending state for us)
     const ours = await prisma.refreshJob.findMany({
-      where: { repository: { owner: TEST_OWNER }, status: 'pending' },
+      where: { owner: TEST_OWNER, status: 'pending' },
     });
     expect(ours).toHaveLength(0);
   });
@@ -178,6 +180,8 @@ describe('runTick', () => {
     const j1 = await makePending({ priority: 1 });
     const j2 = await prisma.refreshJob.create({
       data: {
+        owner: r2.owner,
+        name: r2.name,
         repositoryId: r2.id,
         priority: 1,
         scheduledFor: new Date(Date.now() - 1000),
@@ -187,6 +191,8 @@ describe('runTick', () => {
     });
     const j3 = await prisma.refreshJob.create({
       data: {
+        owner: r3.owner,
+        name: r3.name,
         repositoryId: r3.id,
         priority: 1,
         scheduledFor: new Date(Date.now() - 1000),

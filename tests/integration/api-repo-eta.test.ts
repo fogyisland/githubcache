@@ -11,7 +11,7 @@ let activeKeyPlain: string;
 
 async function cleanup(): Promise<void> {
   // refresh_jobs has FK to repositories — delete them first.
-  await prisma.refreshJob.deleteMany({ where: { repository: { owner: OWNER } } });
+  await prisma.refreshJob.deleteMany({ where: { owner: OWNER } });
   await prisma.repository.deleteMany({ where: { owner: OWNER } });
   // Scope cleanup by the test key prefix (apiKeys + their FK owners).
   await prisma.rateLimitBucket.deleteMany({

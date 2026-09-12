@@ -209,7 +209,7 @@ import AdminQueriesPage from '@/app/admin/queries/page';
 
 describe('AdminQueriesPage i18n', () => {
   it('renders translated title and description on the page header', async () => {
-    const html = renderToStaticMarkup(await AdminQueriesPage({ searchParams: {} }));
+    const html = renderToStaticMarkup(await AdminQueriesPage({ searchParams: Promise.resolve({}) }));
     expect(html).toContain('Queries');
     expect(html).toContain(
       'Drill-down on consumer API traffic: time window, top repos, top keys, and a paginated list of recent requests (including anonymous v1 calls).',
@@ -217,7 +217,7 @@ describe('AdminQueriesPage i18n', () => {
   });
 
   it('passes real aggregation values to the KPIs stub', async () => {
-    const html = renderToStaticMarkup(await AdminQueriesPage({ searchParams: {} }));
+    const html = renderToStaticMarkup(await AdminQueriesPage({ searchParams: Promise.resolve({}) }));
     expect(html).toContain('data-field="totalRequests"');
     expect(html).toContain('data-field="cacheHitRate"');
     expect(html).toContain('>4321<');
@@ -225,7 +225,7 @@ describe('AdminQueriesPage i18n', () => {
   });
 
   it('renders anonymous v1 rows with the anonymous key label', async () => {
-    const html = renderToStaticMarkup(await AdminQueriesPage({ searchParams: {} }));
+    const html = renderToStaticMarkup(await AdminQueriesPage({ searchParams: Promise.resolve({}) }));
     expect(html).toContain('/api/v1/repos/[owner]/[name]');
     expect(html).toContain('anonymous');
   });

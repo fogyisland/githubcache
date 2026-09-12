@@ -80,7 +80,7 @@ beforeEach(async () => {
   server.resetHandlers();
   // Delete refreshJobs first (FK on repositoryId) then repositories.
   await prisma.refreshJob.deleteMany({
-    where: { repository: { owner: { startsWith: TEST_OWNER_PREFIX } } },
+    where: { owner: { startsWith: TEST_OWNER_PREFIX } },
   });
   await prisma.repository.deleteMany({ where: { owner: { startsWith: TEST_OWNER_PREFIX } } });
 });

@@ -108,7 +108,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await prisma.refreshJob.deleteMany({
-    where: { repository: { owner: { startsWith: REPO_OWNER_PREFIX } } },
+    where: { owner: { startsWith: REPO_OWNER_PREFIX } },
   });
   await prisma.repository.deleteMany({
     where: { owner: { startsWith: REPO_OWNER_PREFIX } },
@@ -136,7 +136,7 @@ beforeEach(async () => {
   resume();
   // Recreate test repo (trigger tests will create jobs against it)
   await prisma.refreshJob.deleteMany({
-    where: { repository: { owner: { startsWith: REPO_OWNER_PREFIX } } },
+    where: { owner: { startsWith: REPO_OWNER_PREFIX } },
   });
   await prisma.repository.deleteMany({
     where: { owner: { startsWith: REPO_OWNER_PREFIX } },
@@ -162,6 +162,9 @@ vi.mock('@/lib/github/pool', () => ({
   getBackoff: vi.fn(() => 10),
   shutdownPool: vi.fn(() => Promise.resolve()),
   poolSize: vi.fn(() => 0),
+  // M22 — poolStatus() reports active tokens to runTick. Default to "1 active,
+  // 0 exhausted" so the auto-pause branch never triggers.
+  poolStatus: vi.fn(() => ({ active: 1, exhausted: 0, earliestReset: null })),
 }));
 
 vi.mock('@/lib/logger', () => ({
@@ -399,6 +402,8 @@ describe('scheduler tick skip-when-paused', () => {
     // Seed a pending job that would normally be claimed
     const job = await prisma.refreshJob.create({
       data: {
+        owner: testRepo.owner,
+        name: testRepo.name,
         repositoryId: testRepo.id,
         priority: 1, // highest priority — would definitely be claimed if not paused
         scheduledFor: new Date(Date.now() - 1000),

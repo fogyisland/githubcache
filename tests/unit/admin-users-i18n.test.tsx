@@ -192,7 +192,7 @@ import AdminUsersPage from '@/app/admin/users/page';
 
 describe('AdminUsersPage i18n', () => {
   it('renders translated section headings, filter labels, and empty states', async () => {
-    const html = renderToStaticMarkup(await AdminUsersPage({ searchParams: {} }));
+    const html = renderToStaticMarkup(await AdminUsersPage({ searchParams: Promise.resolve({}) }));
     // Page header title
     expect(html).toContain('Users');
     // Section headings

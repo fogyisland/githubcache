@@ -9,25 +9,28 @@ describe('nightlySweep', () => {
   let ok1: Repository, ok2: Repository, notFound: Repository, forbidden: Repository;
 
   beforeEach(async () => {
-    await prisma.refreshJob.deleteMany({ where: { repository: { owner: TEST_OWNER } } });
+    await prisma.refreshJob.deleteMany({ where: { owner: TEST_OWNER } });
     await prisma.repository.deleteMany({ where: { owner: TEST_OWNER } });
 
+    // Stale lastFetchedAt (10 days ago) so the sweep facet filter
+    // `lastFetchedAt < cutoff` matches these repos.
+    const stale = new Date(Date.now() - 10 * 24 * 60 * 60_000);
     ok1 = await prisma.repository.create({
-      data: { owner: TEST_OWNER, name: 'ok-1', node: {}, fetchStatus: 'ok' },
+      data: { owner: TEST_OWNER, name: 'ok-1', node: {}, fetchStatus: 'ok', lastFetchedAt: stale },
     });
     ok2 = await prisma.repository.create({
-      data: { owner: TEST_OWNER, name: 'ok-2', node: {}, fetchStatus: 'ok' },
+      data: { owner: TEST_OWNER, name: 'ok-2', node: {}, fetchStatus: 'ok', lastFetchedAt: stale },
     });
     notFound = await prisma.repository.create({
-      data: { owner: TEST_OWNER, name: 'nf-1', node: {}, fetchStatus: 'not_found' },
+      data: { owner: TEST_OWNER, name: 'nf-1', node: {}, fetchStatus: 'not_found', lastFetchedAt: stale },
     });
     forbidden = await prisma.repository.create({
-      data: { owner: TEST_OWNER, name: 'fb-1', node: {}, fetchStatus: 'forbidden' },
+      data: { owner: TEST_OWNER, name: 'fb-1', node: {}, fetchStatus: 'forbidden', lastFetchedAt: stale },
     });
   });
 
   afterEach(async () => {
-    await prisma.refreshJob.deleteMany({ where: { repository: { owner: TEST_OWNER } } });
+    await prisma.refreshJob.deleteMany({ where: { owner: TEST_OWNER } });
     await prisma.repository.deleteMany({ where: { owner: TEST_OWNER } });
   });
 
@@ -77,7 +80,7 @@ describe('nightlySweep', () => {
     await nightlySweep();
     const after = Date.now();
     const jobs = await prisma.refreshJob.findMany({
-      where: { repository: { owner: TEST_OWNER } },
+      where: { owner: TEST_OWNER },
     });
     expect(jobs.length).toBeGreaterThan(0);
     for (const j of jobs) {

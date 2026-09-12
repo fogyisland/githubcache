@@ -31,7 +31,7 @@ describe('page-level admin role check', () => {
   it('redirects to /login when no session is present (AdminUsersPage)', async () => {
     mockValidateSession.mockResolvedValueOnce(null);
     const AdminUsersPage = (await import('@/app/admin/users/page')).default;
-    await expect(AdminUsersPage({ searchParams: {} })).rejects.toThrow(
+    await expect(AdminUsersPage({ searchParams: Promise.resolve({}) })).rejects.toThrow(
       '__redirect_to__/login',
     );
     expect(mockRedirect).toHaveBeenCalledWith('/login');
@@ -52,7 +52,7 @@ describe('page-level admin role check', () => {
     // with a DB error — but we expect the redirect throw to win because
     // it's synchronous after the await on validateSession.
     const AdminUsersPage = (await import('@/app/admin/users/page')).default;
-    await expect(AdminUsersPage({ searchParams: {} })).rejects.toThrow(
+    await expect(AdminUsersPage({ searchParams: Promise.resolve({}) })).rejects.toThrow(
       '__redirect_to__/admin',
     );
     expect(mockRedirect).toHaveBeenCalledWith('/admin');
@@ -66,7 +66,7 @@ describe('page-level admin role check', () => {
       status: 'active',
     } as never);
     const AdminUserDetailPage = (await import('@/app/admin/users/[id]/page')).default;
-    await expect(AdminUserDetailPage({ params: { id: '1' } })).rejects.toThrow(
+    await expect(AdminUserDetailPage({ params: Promise.resolve({ id: '1' }) })).rejects.toThrow(
       '__redirect_to__/admin',
     );
     expect(mockRedirect).toHaveBeenCalledWith('/admin');
@@ -80,7 +80,7 @@ describe('page-level admin role check', () => {
       status: 'active',
     } as never);
     const AdminGithubTokensPage = (await import('@/app/admin/github-tokens/page')).default;
-    await expect(AdminGithubTokensPage({ searchParams: {} })).rejects.toThrow(
+    await expect(AdminGithubTokensPage({ searchParams: Promise.resolve({}) })).rejects.toThrow(
       '__redirect_to__/admin',
     );
     expect(mockRedirect).toHaveBeenCalledWith('/admin');

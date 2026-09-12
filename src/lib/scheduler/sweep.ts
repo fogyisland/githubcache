@@ -56,7 +56,7 @@ async function sweepFacet(facet: Facet, cadenceHours: number): Promise<SweepResu
   if (facet === 'releases') where.releasesFetchedAt = { lt: cutoff };
   if (facet === 'branches') where.branchesFetchedAt = { lt: cutoff };
 
-  const repos = await prisma.repository.findMany({ where, select: { id: true } });
+  const repos = await prisma.repository.findMany({ where, select: { id: true, owner: true, name: true } });
 
   if (repos.length === 0) {
     logger.info(
@@ -68,6 +68,8 @@ async function sweepFacet(facet: Facet, cadenceHours: number): Promise<SweepResu
 
   const data = repos.map((r) => ({
     repositoryId: r.id,
+    owner: r.owner,
+    name: r.name,
     kind: facet,
     priority: 99,
     scheduledFor: new Date(),

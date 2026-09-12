@@ -197,7 +197,7 @@ import AdminEmailLogPage from '@/app/admin/email/log/page';
 describe('AdminEmailLogPage', () => {
   it('renders title, breadcrumb chain, filters, table with rows + pagination', async () => {
     const html = renderToStaticMarkup(
-      await AdminEmailLogPage({ searchParams: {} }),
+      await AdminEmailLogPage({ searchParams: Promise.resolve({}) }),
     );
 
     // Title
@@ -224,7 +224,7 @@ describe('AdminEmailLogPage', () => {
 
   it('passes filter values through to AdminFilterBar', async () => {
     const html = renderToStaticMarkup(
-      await AdminEmailLogPage({ searchParams: { status: 'failed', templateKey: 'invite' } }),
+      await AdminEmailLogPage({ searchParams: Promise.resolve({ status: 'failed', templateKey: 'invite' }) }),
     );
     // The mocked AdminFilterBar renders a select with defaultValue
     expect(html).toContain('name="status"');

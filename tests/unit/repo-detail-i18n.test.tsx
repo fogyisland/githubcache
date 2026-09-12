@@ -244,7 +244,7 @@ import RepoNotFound from '@/app/repo/[owner]/[name]/not-found';
 describe('generateMetadata i18n', () => {
   it('returns interpolated title and description for owner/name', async () => {
     const meta = await generateMetadata({
-      params: { owner: 'facebook', name: 'react' },
+      params: Promise.resolve({ owner: 'facebook', name: 'react' }),
     });
     expect(meta.title).toBe('facebook/react · GitHub Metadata Cache');
     expect(meta.description).toBe(
@@ -256,7 +256,7 @@ describe('generateMetadata i18n', () => {
 describe('RepoDetailPage (ok branch) i18n', () => {
   it('renders translated hero, stats, cards, footer for a successful lookup', async () => {
     mockLookupResult = mockOkResult;
-    const el = await RepoDetailPage({ params: { owner: 'facebook', name: 'react' } });
+    const el = await RepoDetailPage({ params: Promise.resolve({ owner: 'facebook', name: 'react' }) });
     const html = renderToStaticMarkup(el);
     // hero
     expect(html).toContain('repository · cached metadata');
@@ -288,7 +288,7 @@ describe('RepoDetailPage (ok branch) i18n', () => {
 describe('RepoDetailPage (error branch) i18n', () => {
   it('renders translated back-link for error result (data is untranslated)', async () => {
     mockLookupResult = mockErrorResult;
-    const el = await RepoDetailPage({ params: { owner: 'facebook', name: 'react' } });
+    const el = await RepoDetailPage({ params: Promise.resolve({ owner: 'facebook', name: 'react' }) });
     const html = renderToStaticMarkup(el);
     expect(html).toContain('← All repositories');
     // raw error from lookupRepo — must NOT be translated

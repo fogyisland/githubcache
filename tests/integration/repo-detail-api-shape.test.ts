@@ -95,7 +95,7 @@ import RepoDetailPage from '@/app/repo/[owner]/[name]/page';
 describe('repo detail page — API shape section', () => {
   it('renders a collapsible <details> with the JSON metadata shape', async () => {
     const el = await RepoDetailPage({
-      params: { owner: 'torvalds', name: 'linux' },
+      params: Promise.resolve({ owner: 'torvalds', name: 'linux' }),
     });
     const html = renderToStaticMarkup(el as never);
     expect(html).toContain('ghc-api-shape');
@@ -106,7 +106,7 @@ describe('repo detail page — API shape section', () => {
 
   it('includes a /api/v1/repos/... link to fetch the same data via the public API', async () => {
     const el = await RepoDetailPage({
-      params: { owner: 'torvalds', name: 'linux' },
+      params: Promise.resolve({ owner: 'torvalds', name: 'linux' }),
     });
     const html = renderToStaticMarkup(el as never);
     expect(html).toContain('/api/v1/repos/torvalds/linux');

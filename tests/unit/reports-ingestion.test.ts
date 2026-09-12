@@ -128,6 +128,8 @@ describe('ingestionSummary', () => {
     // Seed one done job in window
     await prisma.refreshJob.create({
       data: {
+        owner: `${TEST_REPO_PREFIX}sum`,
+        name: 'sum',
         repositoryId: repoId,
         priority: 50,
         scheduledFor: new Date(),
@@ -139,6 +141,8 @@ describe('ingestionSummary', () => {
     // Seed one failed job in window
     await prisma.refreshJob.create({
       data: {
+        owner: `${TEST_REPO_PREFIX}sum`,
+        name: 'sum',
         repositoryId: repoId,
         priority: 50,
         scheduledFor: new Date(),
@@ -166,6 +170,8 @@ describe('recentRefreshJobs', () => {
     const repoId2 = await seedRepo(`${TEST_REPO_PREFIX}recent-b`, 'recent-b', 'ok');
     await prisma.refreshJob.create({
       data: {
+        owner: `${TEST_REPO_PREFIX}recent-a`,
+        name: 'recent-a',
         repositoryId: repoId,
         priority: 50,
         scheduledFor: new Date(),
@@ -175,6 +181,8 @@ describe('recentRefreshJobs', () => {
     });
     await prisma.refreshJob.create({
       data: {
+        owner: `${TEST_REPO_PREFIX}recent-b`,
+        name: 'recent-b',
         repositoryId: repoId2,
         priority: 50,
         scheduledFor: new Date(),

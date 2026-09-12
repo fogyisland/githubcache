@@ -11,7 +11,7 @@ vi.mock('@/lib/github/pool', () => ({
 
 async function cleanup(): Promise<void> {
   await prisma.refreshJob.deleteMany({
-    where: { repository: { owner: { startsWith: TEST_REPO_OWNER_PREFIX } } },
+    where: { owner: { startsWith: TEST_REPO_OWNER_PREFIX } },
   });
   await prisma.repository.deleteMany({
     where: { owner: { startsWith: TEST_REPO_OWNER_PREFIX } },
@@ -267,6 +267,8 @@ describe('GET /api/v1/status — full endpoint', () => {
     // Seed: 2 pending, 1 in_progress, 1 done (fresh), 1 failed.
     await prisma.refreshJob.create({
       data: {
+        owner: repo.owner,
+        name: repo.name,
         repositoryId: repo.id,
         priority: 50,
         scheduledFor: new Date(),
@@ -275,6 +277,8 @@ describe('GET /api/v1/status — full endpoint', () => {
     });
     await prisma.refreshJob.create({
       data: {
+        owner: repo.owner,
+        name: repo.name,
         repositoryId: repo.id,
         priority: 50,
         scheduledFor: new Date(),
@@ -283,6 +287,8 @@ describe('GET /api/v1/status — full endpoint', () => {
     });
     await prisma.refreshJob.create({
       data: {
+        owner: repo.owner,
+        name: repo.name,
         repositoryId: repo.id,
         priority: 50,
         scheduledFor: new Date(),
@@ -291,6 +297,8 @@ describe('GET /api/v1/status — full endpoint', () => {
     });
     await prisma.refreshJob.create({
       data: {
+        owner: repo.owner,
+        name: repo.name,
         repositoryId: repo.id,
         priority: 50,
         scheduledFor: new Date(),
@@ -299,6 +307,8 @@ describe('GET /api/v1/status — full endpoint', () => {
     });
     await prisma.refreshJob.create({
       data: {
+        owner: repo.owner,
+        name: repo.name,
         repositoryId: repo.id,
         priority: 50,
         scheduledFor: new Date(),
@@ -349,11 +359,19 @@ describe('GET /api/v1/status — full endpoint', () => {
   });
 
   it('8) db down: returns 503 with ok:false and zero counts', async () => {
-    // Spy on prisma.$queryRaw and make it throw.
-    const spy = vi
-      .spyOn(prisma, '$queryRaw')
-      .mockRejectedValueOnce(new Error('connection refused') as never);
-
+    // PRE-EXISTING (M30.7c): the route's degraded 503 payload omits
+    // `tick_ms` + `batch_size` which the schema requires, so safeParse
+    // fails and the route falls through to 500 internal_error. This is
+    // outside the M31 scope. The prototype patch below was the
+    // minimal change to get `vi.spyOn` to work against the Proxy
+    // export — but it surfaces as 500 because of (b). Tracked as a
+    // TODO for a separate follow-up.
+    const PrismaClientMod = await import('@prisma/client') as unknown as {
+      PrismaClient: { prototype: Record<string, unknown> };
+    };
+    const proto = PrismaClientMod.PrismaClient.prototype;
+    const origQueryRaw = proto.$queryRaw;
+    proto.$queryRaw = () => Promise.reject(new Error('connection refused'));
     try {
       const res = await GET();
       expect(res.status).toBe(503);
@@ -380,7 +398,7 @@ describe('GET /api/v1/status — full endpoint', () => {
       expect(body.version.nodeVersion).toBe(process.version);
       expect(body.timestamp).toBeDefined();
     } finally {
-      spy.mockRestore();
+      proto.$queryRaw = origQueryRaw;
     }
   });
 
