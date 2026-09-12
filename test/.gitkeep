@@ -1,0 +1,3 @@
+// test/ — ad-hoc load + smoke scripts that exercise the live API end-to-end.
+// NOT picked up by vitest (which uses tests/). Used by humans to verify
+// behavior changes against a running dev:server. See load-50.mjs.
