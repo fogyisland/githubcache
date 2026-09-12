@@ -1,23 +1,14 @@
 import type { ReactElement } from 'react';
-import type { FetchStatus } from '@prisma/client';
 import { getTranslations } from 'next-intl/server';
 import { listRepositories } from '@/lib/db/repositories';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
-import { AdminFilterBar } from '@/app/admin/_components/admin-filter-bar';
 import { AdminPagination } from '@/app/admin/_components/admin-pagination';
 import { AdminTable, type AdminColumn } from '@/app/admin/_components/admin-table';
-import { AdminStatusChip, type AdminChipVariant } from '@/app/admin/_components/admin-status-chip';
+import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
 import { formatDate } from '@/lib/format/datetime';
 import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 
 type RepoRow = Awaited<ReturnType<typeof listRepositories>>['rows'][number];
-
-const FETCH_STATUS_VARIANT: Record<FetchStatus, AdminChipVariant> = {
-  ok: 'ok',
-  not_found: 'warn',
-  forbidden: 'warn',
-  error: 'danger',
-};
 
 const PAGE_SIZE_DEFAULT = 25;
 const PAGE_SIZE_MAX = 200;
@@ -27,9 +18,13 @@ const PAGE_SIZE_MAX = 200;
  * `repositories` so operators can audit which GitHub repos have been
  * pulled into the cache, in what state, and when last refreshed.
  *
- * Mirrors /admin/api-keys: AdminPageHeader + AdminFilterBar (fetch status)
- * + AdminTable + AdminPagination. Status filter is URL-synced so deep
- * links preserve selection (and pagination carries it forward).
+ * Mirrors /admin/api-keys: AdminPageHeader + AdminTable + AdminPagination.
+ *
+ * Post-M31 the `repositories` table only holds rows with a successful
+ * GitHub fetch (200/304). Cache misses no longer create stub rows, and
+ * 404/410/403 failures write to `refresh_jobs` + the audit log — not to
+ * `repositories`. The fetch-status filter chip is therefore gone;
+ * `fetchStatus` should always be 'ok' on rows rendered here.
  *
  * Each row's owner/name is a link to the admin-side detail page at
  * `/admin/repositories/[owner]/[name]` — that page renders the cached
@@ -39,7 +34,8 @@ const PAGE_SIZE_MAX = 200;
 export default async function AdminRepositoriesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; limit?: string; offset?: string }> }): Promise<ReactElement> {
+  searchParams: Promise<{ limit?: string; offset?: string }>;
+}): Promise<ReactElement> {
   const sp = await searchParams;
   const t = await getTranslations('admin.repositories');
   const tPag = await getTranslations('admin.common.pagination');
@@ -49,14 +45,6 @@ export default async function AdminRepositoriesPage({
   // user-facing dates — that pattern is reserved for machine APIs).
   const userTz = await resolveRequestTimezone({});
 
-  const filterStatus: FetchStatus | undefined =
-    sp.status === 'ok' ||
-    sp.status === 'not_found' ||
-    sp.status === 'forbidden' ||
-    sp.status === 'error'
-      ? sp.status
-      : undefined;
-
   const rawLimit = Number(sp.limit ?? PAGE_SIZE_DEFAULT);
   const rawOffset = Number(sp.offset ?? 0);
   const limit = Number.isFinite(rawLimit)
@@ -64,8 +52,10 @@ export default async function AdminRepositoriesPage({
     : PAGE_SIZE_DEFAULT;
   const offset = Number.isFinite(rawOffset) ? Math.max(0, rawOffset) : 0;
 
+  // No `fetchStatus` filter — post-M31 every row in `repositories` has
+  // fetchStatus='ok' (failures are recorded in refresh_jobs + audit).
+  // `?status=...` in the URL is silently ignored for backward compatibility.
   const { rows: repos, total } = await listRepositories({
-    ...(filterStatus ? { fetchStatus: filterStatus } : {}),
     skip: offset,
     take: limit,
   });
@@ -85,7 +75,7 @@ export default async function AdminRepositoriesPage({
       key: 'status',
       header: t('list.column.status'),
       render: (r) => (
-        <AdminStatusChip variant={FETCH_STATUS_VARIANT[r.fetchStatus]}>
+        <AdminStatusChip variant={r.fetchStatus === 'ok' ? 'ok' : 'warn'}>
           {t(`status.${r.fetchStatus}` as 'status.ok')}
         </AdminStatusChip>
       ),
@@ -120,22 +110,7 @@ export default async function AdminRepositoriesPage({
         description={t('description')}
       />
 
-      <AdminFilterBar
-        filters={[
-          {
-            name: 'status',
-            label: t('list.filter.status'),
-            options: [
-              { value: 'ok', label: t('status.ok') },
-              { value: 'not_found', label: t('status.not_found') },
-              { value: 'forbidden', label: t('status.forbidden') },
-              { value: 'error', label: t('status.error') },
-            ],
-          },
-        ]}
-        basePath="/admin/repositories"
-        {...(filterStatus ? { values: { status: filterStatus } } : {})}
-      />
+      <p className="ghc-admin-audit-note">{t('auditNote')}</p>
 
       <AdminTable<RepoRow>
         columns={columns}
@@ -156,9 +131,6 @@ export default async function AdminRepositoriesPage({
           end: offset + repos.length,
           total,
         })}
-        extraSearch={{
-          ...(filterStatus ? { status: filterStatus } : {}),
-        }}
       />
     </div>
   );

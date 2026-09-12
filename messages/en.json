@@ -430,7 +430,8 @@
     },
     "repositories": {
       "title": "Imported nodes",
-      "description": "Repositories pulled into the cache from ingestion providers or direct lookups. Filter by fetch status to find failures fast.",
+      "description": "Repositories pulled into the cache from ingestion providers or direct lookups.",
+      "auditNote": "Rows here represent repositories with successful GitHub fetches. Failed lookups are recorded in the audit log under `repo_forbidden` or `refresh.failed_review`.",
       "breadcrumbAdmin": "Admin",
       "breadcrumbRepositories": "Imported nodes",
       "status": {
@@ -443,9 +444,6 @@
         "ariaLabel": "Imported repositories",
         "never": "never",
         "dash": "—",
-        "filter": {
-          "status": "Fetch status"
-        },
         "column": {
           "owner": "Owner",
           "name": "Name",
@@ -454,8 +452,8 @@
           "error": "Error"
         },
         "empty": {
-          "title": "No repositories match this filter",
-          "description": "Try clearing the filter or run an ingestion provider to bring new repos in."
+          "title": "No repositories cached yet",
+          "description": "Run an ingestion provider or perform a successful lookup to bring new repos in."
         }
       },
       "detail": {

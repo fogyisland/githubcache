@@ -430,7 +430,8 @@
     },
     "repositories": {
       "title": "已入库节点",
-      "description": "通过入库数据源或直接查询拉入缓存的仓库。按获取状态筛选可快速定位失败项。",
+      "description": "通过入库数据源或直接查询拉入缓存的仓库。",
+      "auditNote": "此处列出的均为 GitHub 拉取成功的仓库。失败的查询会写入审计日志，搜索 `repo_forbidden` 或 `refresh.failed_review` 即可定位。",
       "breadcrumbAdmin": "管理",
       "breadcrumbRepositories": "已入库节点",
       "status": {
@@ -443,9 +444,6 @@
         "ariaLabel": "已入库仓库",
         "never": "从未",
         "dash": "—",
-        "filter": {
-          "status": "获取状态"
-        },
         "column": {
           "owner": "所有者",
           "name": "名称",
@@ -454,8 +452,8 @@
           "error": "错误"
         },
         "empty": {
-          "title": "没有匹配的仓库",
-          "description": "尝试清除筛选条件或运行一个入库数据源。"
+          "title": "暂无入库仓库",
+          "description": "运行入库数据源或完成一次成功查询即可拉入新仓库。"
         }
       },
       "detail": {
