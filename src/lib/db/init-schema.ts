@@ -75,13 +75,13 @@ const CREATE_TABLE_STATEMENTS: ReadonlyArray<string> = [
     PRIMARY KEY (\`id\`)
   ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 
-  // users — M3 + M10 + M11 + M13 + M23 + M26 + M27
+  // users — M3 + M10 + M11 + M13 + M23 + M26 + M27 + M31.x
   `CREATE TABLE IF NOT EXISTS \`users\` (
     \`id\` BIGINT NOT NULL AUTO_INCREMENT,
     \`email\` VARCHAR(255) NOT NULL,
     \`password_hash\` VARCHAR(255) NULL,
     \`role\` ENUM('admin','operator') NOT NULL DEFAULT 'operator',
-    \`user_status\` ENUM('active','disabled') NOT NULL DEFAULT 'active',
+    \`user_status\` INT NOT NULL DEFAULT 0,
     \`created_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     \`last_login_at\` DATETIME(3) NULL,
     \`theme\` ENUM('terminal','editorial','brutalist') NOT NULL DEFAULT 'terminal',
