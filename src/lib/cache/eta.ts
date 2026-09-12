@@ -56,11 +56,11 @@ export async function getQueueDepth(): Promise<number> {
  */
 export async function getMedianFetchMs(): Promise<number> {
   const rows = await prisma.$queryRawUnsafe<Array<{ median_ms: number | null }>>(
-    `SELECT TIMESTAMPDIFF(MICROSECOND, MIN(createdAt), MAX(updatedAt)) /
+    `SELECT TIMESTAMPDIFF(MICROSECOND, MIN(created_at), MAX(updated_at)) /
             NULLIF(COUNT(*), 0) / 1000 AS median_ms
        FROM refresh_jobs
       WHERE status = 'done'
-        AND updatedAt >= (NOW() - INTERVAL 24 HOUR)`,
+        AND updated_at >= (NOW() - INTERVAL 24 HOUR)`,
   );
   const v = rows[0]?.median_ms;
   return typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0;
