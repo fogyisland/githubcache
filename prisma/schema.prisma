@@ -8,70 +8,69 @@ datasource db {
 }
 
 model Repository {
-  id                    BigInt      @id @default(autoincrement())
-  owner                 String      @db.VarChar(100)
-  name                  String      @db.VarChar(200)
+  id                BigInt      @id @default(autoincrement())
+  owner             String      @db.VarChar(100)
+  name              String      @db.VarChar(200)
   // Core fields — was metadata.{description,private,defaultBranch,...}.
   // M27 — these were added without @map annotations, which made Prisma
   // emit camelCase column names that don't exist in the DB (the
   // migration created them as snake_case). @map fixes the mismatch.
-  description           String?     @map("description") @db.Text
-  private               Boolean     @default(false) @map("private")
+  description       String?     @map("description") @db.Text
+  private           Boolean     @default(false) @map("private")
   // Nullable at the Prisma layer so existing call sites that don't pass
   // it (test fixtures, stub upserts in queue-on-miss) keep working.
   // The DB column has NOT NULL DEFAULT 'main' so reads always get a
   // value; the backfill in M27.2 will populate it from `metadata` for
   // existing rows.
-  defaultBranch         String?     @map("default_branch") @db.VarChar(100)
-  stars                 Int         @default(0) @map("stars")
-  forks                 Int         @default(0) @map("forks")
-  watchers              Int         @default(0) @map("watchers")
-  repoCreatedAt         DateTime?   @map("repo_created_at")
-  repoUpdatedAt         DateTime?   @map("repo_updated_at")
-  repoPushedAt          DateTime?   @map("repo_pushed_at")
-  language              String?     @map("language") @db.VarChar(50)
-  license               String?     @map("license") @db.VarChar(100)
-  topics                Json        @default("[]") @map("topics")
-  homepage              String?     @map("homepage") @db.Text
-  archived              Boolean     @default(false) @map("archived")
-  disabled              Boolean     @default(false) @map("disabled")
+  defaultBranch     String?     @map("default_branch") @db.VarChar(100)
+  stars             Int         @default(0) @map("stars")
+  forks             Int         @default(0) @map("forks")
+  watchers          Int         @default(0) @map("watchers")
+  repoCreatedAt     DateTime?   @map("repo_created_at")
+  repoUpdatedAt     DateTime?   @map("repo_updated_at")
+  repoPushedAt      DateTime?   @map("repo_pushed_at")
+  language          String?     @map("language") @db.VarChar(50)
+  license           String?     @map("license") @db.VarChar(100)
+  topics            Json        @default("[]") @map("topics")
+  homepage          String?     @map("homepage") @db.Text
+  archived          Boolean     @default(false) @map("archived")
+  disabled          Boolean     @default(false) @map("disabled")
   // Legacy JSON columns — dropped in M27.6. Read path in M27.3 falls
   // back to `metadata` when the new columns are NULL (pre-backfill).
-  node                  Json
-  metadata              Json?
-  etag                  String?     @db.VarChar(128)
+  node              Json
+  metadata          Json?
+  etag              String?     @db.VarChar(128)
   // M27.4 — per-facet ETags. Each list endpoint (releases, branches)
   // returns its own ETag; storing them separately lets a 304 on one
   // not poison the other.
-  releasesEtag          String?     @map("releases_etag") @db.VarChar(128)
-  branchesEtag          String?     @map("branches_etag") @db.VarChar(128)
-  lastFetchedAt         DateTime?   @map("last_fetched_at")
+  releasesEtag      String?     @map("releases_etag") @db.VarChar(128)
+  branchesEtag      String?     @map("branches_etag") @db.VarChar(128)
+  lastFetchedAt     DateTime?   @map("last_fetched_at")
   // Per-facet freshness — supersedes lastFetchedAt once backfill runs.
-  coreFetchedAt         DateTime?   @map("core_fetched_at")
-  releasesFetchedAt     DateTime?   @map("releases_fetched_at")
-  branchesFetchedAt    DateTime?   @map("branches_fetched_at")
-  fetchStatus           FetchStatus @default(ok) @map("fetch_status")
-  fetchError            String?     @map("fetch_error") @db.Text
-  createdAt             DateTime    @default(now()) @map("created_at")
+  coreFetchedAt     DateTime?   @map("core_fetched_at")
+  releasesFetchedAt DateTime?   @map("releases_fetched_at")
+  branchesFetchedAt DateTime?   @map("branches_fetched_at")
+  fetchStatus       FetchStatus @default(ok) @map("fetch_status")
+  fetchError        String?     @map("fetch_error") @db.Text
+  createdAt         DateTime    @default(now()) @map("created_at")
 
-  releases              RepoRelease[]
-  branches              RepoBranch[]
-  refreshJobs           RefreshJob[]
+  releases RepoRelease[]
+  branches RepoBranch[]
 
   @@unique([owner, name])
   @@map("repositories")
 }
 
 model RepoRelease {
-  id           BigInt   @id @default(autoincrement())
-  repositoryId BigInt   @map("repository_id")
+  id           BigInt     @id @default(autoincrement())
+  repositoryId BigInt     @map("repository_id")
   repository   Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
-  tag          String   @db.VarChar(100)
-  name         String?  @db.VarChar(255)
-  publishedAt  DateTime @map("published_at")
-  prerelease   Boolean  @default(false)
-  draft        Boolean  @default(false)
-  fetchedAt    DateTime @default(now()) @map("fetched_at")
+  tag          String     @db.VarChar(100)
+  name         String?    @db.VarChar(255)
+  publishedAt  DateTime   @map("published_at")
+  prerelease   Boolean    @default(false)
+  draft        Boolean    @default(false)
+  fetchedAt    DateTime   @default(now()) @map("fetched_at")
 
   @@unique([repositoryId, tag])
   @@index([repositoryId, publishedAt])
@@ -79,13 +78,13 @@ model RepoRelease {
 }
 
 model RepoBranch {
-  id            BigInt   @id @default(autoincrement())
-  repositoryId  BigInt   @map("repository_id")
+  id            BigInt     @id @default(autoincrement())
+  repositoryId  BigInt     @map("repository_id")
   repository    Repository @relation(fields: [repositoryId], references: [id], onDelete: Cascade)
-  name          String   @db.VarChar(100)
-  protected     Boolean  @default(false)
-  lastCommitSha String?  @db.VarChar(64) @map("last_commit_sha")
-  fetchedAt     DateTime @default(now()) @map("fetched_at")
+  name          String     @db.VarChar(100)
+  protected     Boolean    @default(false)
+  lastCommitSha String?    @map("last_commit_sha") @db.VarChar(64)
+  fetchedAt     DateTime   @default(now()) @map("fetched_at")
 
   @@unique([repositoryId, name])
   @@map("repo_branches")
@@ -114,13 +113,13 @@ model User {
   // value needed at user creation). Existing rows are backfilled via the
   // migration's DEFAULT clause to 'Asia/Shanghai' — matches the original
   // operator locale and means no operator sees a TZ jump after deploy.
-  timezone       String?        @db.VarChar(64) @map("timezone")
+  timezone     String?      @map("timezone") @db.VarChar(64)
   // M26 — how the account was created. `self` = public /signup flow;
   // `invited` = came in through /admin/users/invite and consumed the
   // invite token. Defaults to `self` so the schema-level default matches
   // the new public path; the invite-accept path writes `invited`
   // explicitly. Used by the admin users page to surface the source.
-  signupSource   SignupSource   @default(self) @map("signup_source")
+  signupSource SignupSource @default(self) @map("signup_source")
 
   apiKeys      ApiKey[]     @relation("owner")
   approvedKeys ApiKey[]     @relation("approver")
@@ -263,7 +262,14 @@ enum GithubTokenStatus {
 
 model RefreshJob {
   id           BigInt           @id @default(autoincrement())
-  repositoryId BigInt           @map("repository_id")
+  // M31 — refresh_jobs may exist without a repositories row (queue-on-miss
+  // no longer pre-creates a stub). repositoryId becomes nullable; lookup
+  // is done by owner/name against repositories.owner_name unique index.
+  repositoryId BigInt?          @map("repository_id")
+  // M31 — owner/name mirror the target so the scheduler can claim a batch
+  // without joining repositories. Backfilled from the FK on migration.
+  owner        String           @db.VarChar(100)
+  name         String           @db.VarChar(200)
   // M27 — what facet this job refreshes. Existing rows default to
   // 'core' (full re-fetch). M27.5 starts enqueuing 'releases' / 'branches'
   // per facet cadence.
@@ -276,8 +282,8 @@ model RefreshJob {
   lockedUntil  DateTime?        @map("locked_until")
   createdAt    DateTime         @default(now()) @map("created_at")
   updatedAt    DateTime         @updatedAt @map("updated_at")
-  repository   Repository       @relation(fields: [repositoryId], references: [id])
 
+  @@index([owner, name])
   @@index([status, scheduledFor])
   @@index([status, priority])
   @@map("refresh_jobs")
@@ -399,22 +405,22 @@ model WebhookSubscription {
 // delivery worker picks up `pending` rows where `nextRetryAt <= now()`
 // and processes them FIFO (oldest first).
 model WebhookDelivery {
-  id              String    @id @default(cuid()) @db.VarChar(191)
-  subscriptionId  String    @map("subscription_id") @db.VarChar(191)
-  subscription    WebhookSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  eventId         String    @map("event_id") @db.VarChar(191)
-  eventAction     String    @map("event_action") @db.VarChar(100)
-  eventTargetType String    @map("event_target_type") @db.VarChar(50)
-  eventTargetId   String    @map("event_target_id") @db.VarChar(100)
-  eventCreatedAt  DateTime  @map("event_created_at")
+  id              String                @id @default(cuid()) @db.VarChar(191)
+  subscriptionId  String                @map("subscription_id") @db.VarChar(191)
+  subscription    WebhookSubscription   @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  eventId         String                @map("event_id") @db.VarChar(191)
+  eventAction     String                @map("event_action") @db.VarChar(100)
+  eventTargetType String                @map("event_target_type") @db.VarChar(50)
+  eventTargetId   String                @map("event_target_id") @db.VarChar(100)
+  eventCreatedAt  DateTime              @map("event_created_at")
   payload         Json
-  attemptCount    Int       @default(0) @map("attempt_count")
+  attemptCount    Int                   @default(0) @map("attempt_count")
   status          WebhookDeliveryStatus @default(pending)
-  lastAttemptAt   DateTime? @map("last_attempt_at")
-  lastError       String?   @map("last_error") @db.Text
-  nextRetryAt     DateTime? @map("next_retry_at")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  lastAttemptAt   DateTime?             @map("last_attempt_at")
+  lastError       String?               @map("last_error") @db.Text
+  nextRetryAt     DateTime?             @map("next_retry_at")
+  createdAt       DateTime              @default(now()) @map("created_at")
+  updatedAt       DateTime              @updatedAt @map("updated_at")
 
   @@index([status, nextRetryAt])
   @@index([subscriptionId, createdAt])
