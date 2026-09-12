@@ -120,7 +120,7 @@ vi.mock('@/lib/auth/session', () => ({
     id: 1n,
     email: 'admin@test.com',
     role: 'admin',
-    status: 'active',
+    status: 0,
     adminVariant: 'mission_control',
     theme: 'terminal',
     createdAt: new Date('2026-01-01'),

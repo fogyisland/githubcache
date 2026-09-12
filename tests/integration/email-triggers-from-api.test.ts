@@ -31,7 +31,7 @@ beforeAll(async () => {
     data: {
       email: ADMIN_EMAIL,
       role: 'admin',
-      status: 'active',
+      status: 0,
       passwordHash: await hashPassword(ADMIN_PASSWORD),
     },
   });
@@ -41,7 +41,7 @@ beforeAll(async () => {
     data: {
       email: OPERATOR_EMAIL,
       role: 'operator',
-      status: 'active',
+      status: 0,
       passwordHash: await hashPassword(OPERATOR_PASSWORD),
     },
   });

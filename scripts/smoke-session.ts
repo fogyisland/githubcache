@@ -3,11 +3,12 @@
 //
 //   npm run smoke:session
 import { prisma } from '@/lib/db/client';
+import { UserStatus } from '@/lib/db/users';
 import { createSession } from '@/lib/db/sessions';
 
 async function main(): Promise<void> {
   const user = await prisma.user.findFirst({
-    where: { role: 'admin', status: 'active' },
+    where: { role: 'admin', status: UserStatus.Active },
     orderBy: { id: 'asc' },
   });
   if (!user) {

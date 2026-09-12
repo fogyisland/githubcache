@@ -33,7 +33,7 @@ beforeAll(async () => {
     data: {
       email: TEST_EMAIL,
       role: 'admin',
-      status: 'active',
+      status: 0,
       passwordHash: await hashPassword(TEST_PASSWORD),
     },
   });

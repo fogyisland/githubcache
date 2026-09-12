@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import { listUsers, getUserById, updateUserStatus } from '@/lib/db/users';
+import { listUsers, getUserById, updateUserStatus, UserStatus } from '@/lib/db/users';
 import { prisma } from '@/lib/db/client';
 
 const TEST_EMAIL_PREFIX = 'db-users-test-';
@@ -41,7 +41,7 @@ afterAll(async () => {
 beforeEach(async () => {
   // Reset all test users to active before each test
   for (const id of testUserIds) {
-    await prisma.user.update({ where: { id }, data: { status: 'active' } }).catch(() => {
+    await prisma.user.update({ where: { id }, data: { status: UserStatus.Active } }).catch(() => {
       /* ignore */
     });
   }
@@ -76,23 +76,23 @@ describe('getUserById', () => {
 describe('updateUserStatus', () => {
   it('updates status to disabled', async () => {
     const id = testUserIds[0]!;
-    await updateUserStatus(id, 'disabled', actorId);
+    await updateUserStatus(id, UserStatus.Disabled, actorId);
     const user = await getUserById(id);
-    expect(user!.status).toBe('disabled');
+    expect(user!.status).toBe(UserStatus.Disabled);
   });
 
   it('updates status back to active', async () => {
     const id = testUserIds[1]!;
-    await updateUserStatus(id, 'disabled', actorId);
-    await updateUserStatus(id, 'active', actorId);
+    await updateUserStatus(id, UserStatus.Disabled, actorId);
+    await updateUserStatus(id, UserStatus.Active, actorId);
     const user = await getUserById(id);
-    expect(user!.status).toBe('active');
+    expect(user!.status).toBe(UserStatus.Active);
   });
 
   // M28.bug4a — updateUserStatus refuses to write without an actor.
   it('throws when actorUserId is missing or non-positive', async () => {
     const id = testUserIds[2]!;
-    await expect(updateUserStatus(id, 'disabled', 0n)).rejects.toThrow(
+    await expect(updateUserStatus(id, UserStatus.Disabled, 0n)).rejects.toThrow(
       /positive actorUserId/,
     );
   });
@@ -104,13 +104,13 @@ describe('updateUserStatus', () => {
   it('writes an audit_log row with source=application', async () => {
     const id = testUserIds[2]!;
     // Reset first (beforeEach already did active, but be explicit)
-    await updateUserStatus(id, 'active', actorId);
+    await updateUserStatus(id, UserStatus.Active, actorId);
 
     const before = await prisma.auditLog.count({
       where: { targetType: 'user', targetId: id.toString() },
     });
 
-    await updateUserStatus(id, 'disabled', actorId);
+    await updateUserStatus(id, UserStatus.Disabled, actorId);
 
     const rows = await prisma.auditLog.findMany({
       where: { targetType: 'user', targetId: id.toString() },
@@ -126,8 +126,9 @@ describe('updateUserStatus', () => {
     // so this test doesn't depend on the runtime shape of the parsed object.
     const meta = JSON.stringify(row.metadata);
     expect(meta).toContain('"source":"application"');
-    expect(meta).toContain('"from":"active"');
-    expect(meta).toContain('"to":"disabled"');
+    // M31.x: status is now numeric (0=active, 2=disabled)
+    expect(meta).toContain('"from":0');
+    expect(meta).toContain('"to":2');
     expect(meta).toContain('"trigger":"users_status_audit"');
     expect(rows.length + before).toBeGreaterThan(0);
   });

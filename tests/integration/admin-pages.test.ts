@@ -42,7 +42,7 @@ describe('page-level admin role check', () => {
       id: 1n,
       email: 'op@example.test',
       role: 'operator',
-      status: 'active',
+      status: 0,
     } as never);
     // listUsers() and listInvitations() are imported eagerly by the page
     // module — we just need to ensure the redirect fires BEFORE they're
@@ -63,7 +63,7 @@ describe('page-level admin role check', () => {
       id: 1n,
       email: 'op@example.test',
       role: 'operator',
-      status: 'active',
+      status: 0,
     } as never);
     const AdminUserDetailPage = (await import('@/app/admin/users/[id]/page')).default;
     await expect(AdminUserDetailPage({ params: Promise.resolve({ id: '1' }) })).rejects.toThrow(
@@ -77,7 +77,7 @@ describe('page-level admin role check', () => {
       id: 1n,
       email: 'op@example.test',
       role: 'operator',
-      status: 'active',
+      status: 0,
     } as never);
     const AdminGithubTokensPage = (await import('@/app/admin/github-tokens/page')).default;
     await expect(AdminGithubTokensPage({ searchParams: Promise.resolve({}) })).rejects.toThrow(
@@ -98,7 +98,7 @@ describe('page-level admin role check', () => {
       id: 1n,
       email: 'op@example.test',
       role: 'operator',
-      status: 'active',
+      status: 0,
     } as never);
     const AdminQueuePage = (await import('@/app/admin/queue/page')).default;
     await expect(AdminQueuePage({})).rejects.toThrow('__redirect_to__/admin');

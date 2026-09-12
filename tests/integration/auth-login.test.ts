@@ -3,6 +3,7 @@ import { GET as getCsrf } from '@/app/api/admin/auth/csrf/route';
 import { POST as postLogin } from '@/app/api/admin/auth/login/route';
 import { hashPassword } from '@/lib/auth/password';
 import { prisma } from '@/lib/db/client';
+import { UserStatus } from '@/lib/db/users';
 import { __resetAllLoginThrottlesForTests } from '@/lib/rate-limit/login-throttle';
 
 const TEST_EMAIL_PREFIX = 'login-test-';
@@ -20,7 +21,7 @@ beforeAll(async () => {
     data: {
       email: `${TEST_EMAIL_PREFIX}active-${Date.now()}@example.test`,
       role: 'admin',
-      status: 'active',
+      status: UserStatus.Active,
       passwordHash: await hashPassword(activeUserPlainPassword),
     },
   });
@@ -32,7 +33,7 @@ beforeAll(async () => {
     data: {
       email: `${TEST_EMAIL_PREFIX}disabled-${Date.now()}@example.test`,
       role: 'admin',
-      status: 'disabled',
+      status: UserStatus.Disabled,
       passwordHash: await hashPassword(activeUserPlainPassword),
     },
   });

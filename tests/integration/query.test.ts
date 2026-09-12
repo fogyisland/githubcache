@@ -40,7 +40,7 @@ beforeAll(async () => {
   server.listen({ onUnhandledRequest: 'error' });
   // Create a user and approved API key for tests
   const user = await prisma.user.create({
-    data: { email: `${AUTH_EMAIL_PREFIX}${Date.now()}@test`, role: 'admin', status: 'active' },
+    data: { email: `${AUTH_EMAIL_PREFIX}${Date.now()}@test`, role: 'admin', status: 0 },
   });
   const generated = generateApiKey();
   authPlainKey = generated.plain;

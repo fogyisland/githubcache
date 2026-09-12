@@ -79,7 +79,7 @@ beforeAll(async () => {
     data: {
       email: ADMIN_EMAIL,
       role: 'admin',
-      status: 'active',
+      status: 0,
       passwordHash: await hashPassword(ADMIN_PASSWORD),
     },
   });
@@ -89,7 +89,7 @@ beforeAll(async () => {
     data: {
       email: OPERATOR_EMAIL,
       role: 'operator',
-      status: 'active',
+      status: 0,
       passwordHash: await hashPassword(OPERATOR_PASSWORD),
     },
   });
@@ -130,7 +130,7 @@ beforeEach(async () => {
   // Ensure operator is active
   await prisma.user.update({
     where: { id: operatorUserId },
-    data: { status: 'active' },
+    data: { status: 0 },
   });
   await prisma.session.deleteMany({ where: { userId: operatorUserId } });
 });
@@ -366,7 +366,7 @@ describe('PATCH /api/admin/github-tokens/[id]', () => {
       new Request(`http://x/api/admin/github-tokens/${id}`, {
         method: 'PATCH',
         headers: authHeaders({ 'content-type': 'application/json' }),
-        body: JSON.stringify({ status: 'disabled', csrf: csrfToken }),
+        body: JSON.stringify({ status: 2, csrf: csrfToken }),
       }),
       { params: { id: String(id) } },
     );
@@ -405,7 +405,7 @@ describe('PATCH /api/admin/github-tokens/[id]', () => {
           cookie: `${opCsrfCookie}; ${opLogin.sid}`,
           'x-csrf-token': opCsrfToken,
         },
-        body: JSON.stringify({ status: 'disabled', csrf: opCsrfToken }),
+        body: JSON.stringify({ status: 2, csrf: opCsrfToken }),
       }),
       { params: { id: String(id) } },
     );
@@ -541,7 +541,7 @@ describe('M21 — DB-direct token activation', () => {
       new Request(`http://x/api/admin/github-tokens/${id}`, {
         method: 'PATCH',
         headers: authHeaders({ 'content-type': 'application/json' }),
-        body: JSON.stringify({ status: 'disabled', csrf: csrfToken }),
+        body: JSON.stringify({ status: 2, csrf: csrfToken }),
       }),
       { params: { id: String(id) } },
     );
@@ -553,7 +553,7 @@ describe('M21 — DB-direct token activation', () => {
       new Request(`http://x/api/admin/github-tokens/${id}`, {
         method: 'PATCH',
         headers: authHeaders({ 'content-type': 'application/json' }),
-        body: JSON.stringify({ status: 'active', csrf: csrfToken }),
+        body: JSON.stringify({ status: 0, csrf: csrfToken }),
       }),
       { params: { id: String(id) } },
     );

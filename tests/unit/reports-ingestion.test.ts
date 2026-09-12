@@ -43,7 +43,7 @@ beforeAll(async () => {
     create: {
       email: TEST_USER_EMAIL,
       role: 'operator',
-      status: 'active',
+      status: 0,
     },
   });
 });

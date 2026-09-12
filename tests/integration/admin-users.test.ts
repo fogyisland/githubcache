@@ -6,6 +6,7 @@ import { PATCH as patchUser, DELETE as deleteUser } from '@/app/api/admin/users/
 import { POST as postResetPassword } from '@/app/api/admin/users/[id]/reset-password/route';
 import { hashPassword } from '@/lib/auth/password';
 import { prisma } from '@/lib/db/client';
+import { UserStatus } from '@/lib/db/users';
 
 const TEST_EMAIL_PREFIX = 'admin-users-int-';
 const ADMIN_EMAIL = `${TEST_EMAIL_PREFIX}admin-${Date.now()}@example.test`;
@@ -85,7 +86,7 @@ beforeAll(async () => {
     data: {
       email: ADMIN_EMAIL,
       role: 'admin',
-      status: 'active',
+      status: UserStatus.Active,
       passwordHash: await hashPassword(ADMIN_PASSWORD),
     },
   });
@@ -96,7 +97,7 @@ beforeAll(async () => {
     data: {
       email: OPERATOR_EMAIL,
       role: 'operator',
-      status: 'active',
+      status: UserStatus.Active,
       passwordHash: await hashPassword(OPERATOR_PASSWORD),
     },
   });
@@ -132,7 +133,7 @@ beforeEach(async () => {
   // Reset operator status / sessions between tests
   await prisma.user.update({
     where: { id: operatorUserId },
-    data: { status: 'active' },
+    data: { status: UserStatus.Active },
   });
   await prisma.session.deleteMany({ where: { userId: operatorUserId } });
   await prisma.invitation.deleteMany({
@@ -241,14 +242,14 @@ describe('PATCH /api/admin/users/[id]', () => {
       new Request(`http://x/api/admin/users/${operatorUserId}`, {
         method: 'PATCH',
         headers: authHeaders({ 'content-type': 'application/json' }),
-        body: JSON.stringify({ status: 'disabled', csrf: csrfToken }),
+        body: JSON.stringify({ status: UserStatus.Disabled, csrf: csrfToken }),
       }),
       { params: { id: String(operatorUserId) } },
     );
     expect(res.status).toBe(200);
 
     const after = await prisma.user.findUnique({ where: { id: operatorUserId } });
-    expect(after!.status).toBe('disabled');
+    expect(after!.status).toBe(UserStatus.Disabled);
 
     await new Promise((r) => setTimeout(r, 100));
     const audits = await prisma.auditLog.findMany({
@@ -261,21 +262,21 @@ describe('PATCH /api/admin/users/[id]', () => {
   it('re-enables a disabled user and writes audit enable_user', async () => {
     await prisma.user.update({
       where: { id: operatorUserId },
-      data: { status: 'disabled' },
+      data: { status: UserStatus.Disabled },
     });
 
     const res = await patchUser(
       new Request(`http://x/api/admin/users/${operatorUserId}`, {
         method: 'PATCH',
         headers: authHeaders({ 'content-type': 'application/json' }),
-        body: JSON.stringify({ status: 'active', csrf: csrfToken }),
+        body: JSON.stringify({ status: UserStatus.Active, csrf: csrfToken }),
       }),
       { params: { id: String(operatorUserId) } },
     );
     expect(res.status).toBe(200);
 
     const after = await prisma.user.findUnique({ where: { id: operatorUserId } });
-    expect(after!.status).toBe('active');
+    expect(after!.status).toBe(UserStatus.Active);
 
     await new Promise((r) => setTimeout(r, 100));
     const audits = await prisma.auditLog.findMany({
@@ -289,7 +290,7 @@ describe('PATCH /api/admin/users/[id]', () => {
       new Request('http://x/api/admin/users/999999999999', {
         method: 'PATCH',
         headers: authHeaders({ 'content-type': 'application/json' }),
-        body: JSON.stringify({ status: 'disabled', csrf: csrfToken }),
+        body: JSON.stringify({ status: UserStatus.Disabled, csrf: csrfToken }),
       }),
       { params: { id: '999999999999' } },
     );
@@ -303,7 +304,7 @@ describe('PATCH /api/admin/users/[id]', () => {
       new Request(`http://x/api/admin/users/${adminUserId}`, {
         method: 'PATCH',
         headers: authHeaders({ 'content-type': 'application/json' }),
-        body: JSON.stringify({ status: 'disabled', csrf: csrfToken }),
+        body: JSON.stringify({ status: UserStatus.Disabled, csrf: csrfToken }),
       }),
       { params: { id: String(adminUserId) } },
     );
@@ -311,7 +312,7 @@ describe('PATCH /api/admin/users/[id]', () => {
 
     // Status must NOT have changed — the admin stays active.
     const after = await prisma.user.findUnique({ where: { id: adminUserId } });
-    expect(after!.status).toBe('active');
+    expect(after!.status).toBe(UserStatus.Active);
   });
 });
 

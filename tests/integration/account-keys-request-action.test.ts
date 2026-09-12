@@ -51,7 +51,7 @@ vi.mock('@/lib/auth/session', () => ({
     id: operator?.id ?? 1n,
     email: TEST_EMAIL,
     role: 'operator',
-    status: 'active',
+    status: 0,
     passwordHash: '',
     theme: 'terminal',
     adminVariant: 'mission_control',
@@ -71,7 +71,7 @@ beforeAll(async () => {
     data: {
       email: TEST_EMAIL,
       role: 'operator',
-      status: 'active',
+      status: 0,
       passwordHash: await hashPassword('pw'),
       signupSource: 'self',
     },

@@ -11,7 +11,7 @@ export async function ensureTestAdmin(): Promise<{ email: string; password: stri
       email,
       passwordHash: await hashPassword(password),
       role: 'admin',
-      status: 'active',
+      status: 0,
     },
   });
   return { email, password };

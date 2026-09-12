@@ -62,7 +62,7 @@ beforeEach(async () => {
     data: {
       email: `${TEST_KEY_PREFIX}-op-${Date.now()}@example.test`,
       role: 'operator',
-      status: 'active',
+      status: 0,
       passwordHash: 'placeholder',
       signupSource: 'self',
     },

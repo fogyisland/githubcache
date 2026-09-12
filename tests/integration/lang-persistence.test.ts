@@ -18,7 +18,7 @@ beforeAll(async () => {
     data: {
       email: `${TEST_EMAIL_PREFIX}active-${Date.now()}@example.test`,
       role: 'admin',
-      status: 'active',
+      status: 0,
       passwordHash: await hashPassword(activeUserPlainPassword),
     },
   });

@@ -18,7 +18,7 @@ const MOCKED_SESSION_USER: User = {
   email: TEST_EMAIL,
   passwordHash: 'x',
   role: 'operator',
-  status: 'active',
+  status: 0,
   createdAt: new Date('2026-01-01'),
   lastLoginAt: null,
   theme: 'terminal',
@@ -98,7 +98,7 @@ beforeAll(async () => {
     data: {
       email: TEST_EMAIL,
       role: 'operator',
-      status: 'active',
+      status: 0,
       passwordHash: await hashPassword(TEST_PASSWORD),
       signupSource: 'self',
     },

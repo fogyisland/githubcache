@@ -13,6 +13,7 @@ import {
   getSessionIdFromCookie,
 } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/client';
+import { UserStatus } from '@/lib/db/users';
 import { env } from '@/lib/config/env';
 
 const TEST_EMAIL_PREFIX = 'session-test-';
@@ -24,14 +25,14 @@ beforeAll(async () => {
     data: {
       email: `${TEST_EMAIL_PREFIX}u1-${Date.now()}@test`,
       role: 'admin',
-      status: 'active',
+      status: UserStatus.Active,
     },
   });
   const u2 = await prisma.user.create({
     data: {
       email: `${TEST_EMAIL_PREFIX}u2-${Date.now()}@test`,
       role: 'admin',
-      status: 'active',
+      status: UserStatus.Active,
     },
   });
   testUserId = u1.id;
@@ -106,13 +107,13 @@ describe('findSessionById', () => {
 
   it('returns null and deletes session for disabled user', async () => {
     const { id } = await dbCreateSession(testUserId);
-    await prisma.user.update({ where: { id: testUserId }, data: { status: 'disabled' } });
+    await prisma.user.update({ where: { id: testUserId }, data: { status: UserStatus.Disabled } });
     const result = await findSessionById(id);
     expect(result).toBeNull();
     const row = await prisma.session.findUnique({ where: { id } });
     expect(row).toBeNull();
     // Restore for cleanup
-    await prisma.user.update({ where: { id: testUserId }, data: { status: 'active' } });
+    await prisma.user.update({ where: { id: testUserId }, data: { status: UserStatus.Active } });
   });
 
   it('renews expiresAt if <4h remaining (sliding renewal)', async () => {

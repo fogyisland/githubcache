@@ -11,7 +11,7 @@ const SAMPLE_USER = {
   email: 'alice@example.com',
   passwordHash: 'x',
   role: 'admin',
-  status: 'active',
+  status: 0,
   createdAt: new Date('2026-01-01'),
   lastLoginAt: new Date('2026-09-01'),
   theme: 'terminal',

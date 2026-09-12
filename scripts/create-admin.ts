@@ -37,13 +37,13 @@ async function main(): Promise<void> {
     update: {
       passwordHash,
       role: 'admin',
-      status: 'active',
+      status: 0,
     },
     create: {
       email,
       passwordHash,
       role: 'admin',
-      status: 'active',
+      status: 0,
     },
     select: { id: true, email: true, role: true, status: true, createdAt: true },
   });

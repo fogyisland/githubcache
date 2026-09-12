@@ -11,7 +11,7 @@ beforeAll(async () => {
     data: {
       email: `${TEST_EMAIL_PREFIX}op-${Date.now()}@example.test`,
       role: 'operator',
-      status: 'active',
+      status: 0,
       passwordHash: await hashPassword('pw'),
       signupSource: 'self',
     },

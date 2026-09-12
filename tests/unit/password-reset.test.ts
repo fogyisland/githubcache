@@ -12,7 +12,7 @@ beforeAll(async () => {
     data: {
       email: `${TEST_EMAIL_PREFIX}u-${Date.now()}@example.test`,
       role: 'admin',
-      status: 'active',
+      status: 0,
       passwordHash: await hashPassword('original-password'),
     },
   });
@@ -104,7 +104,7 @@ describe('changePassword', () => {
       data: {
         email: `${TEST_EMAIL_PREFIX}other-${Date.now()}@example.test`,
         role: 'operator',
-        status: 'active',
+        status: 0,
         passwordHash: await hashPassword('other-password'),
       },
     });

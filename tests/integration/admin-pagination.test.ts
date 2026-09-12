@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { hashPassword } from '@/lib/auth/password';
 import { prisma } from '@/lib/db/client';
-import { listUsers } from '@/lib/db/users';
+import { listUsers, UserStatus } from '@/lib/db/users';
 import { listApiKeys } from '@/lib/db/api-keys';
 import { listAllTokens } from '@/lib/db/github-tokens';
 
@@ -20,7 +20,7 @@ async function seedUsers(n: number): Promise<bigint[]> {
       data: {
         email: `${TEST_EMAIL_PREFIX}user-${i}-${Date.now()}@example.test`,
         role: i % 2 === 0 ? 'admin' : 'operator',
-        status: i % 3 === 0 ? 'disabled' : 'active',
+        status: i % 3 === 0 ? UserStatus.Disabled : UserStatus.Active,
         passwordHash: await hashPassword('seed-password'),
         createdAt: new Date(Date.now() - (n - i) * 1000),
       },
@@ -37,7 +37,7 @@ async function seedApiKeys(n: number): Promise<bigint[]> {
       data: {
         email: `${TEST_EMAIL_PREFIX}owner-${Date.now()}@example.test`,
         role: 'operator',
-        status: 'active',
+        status: 0,
         passwordHash: await hashPassword('seed-password'),
       },
     })
@@ -144,7 +144,7 @@ describe('listUsers pagination', () => {
 
   it('returns no rows for an impossible role filter combination', async () => {
     // admin + status=disabled with skip beyond seeded disabled admins
-    const page = await listUsers({ role: 'admin', status: 'disabled', skip: 100, take: 10 });
+    const page = await listUsers({ role: 'admin', status: UserStatus.Disabled, skip: 100, take: 10 });
     expect(page.rows.length).toBe(0);
   });
 });

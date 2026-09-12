@@ -94,7 +94,7 @@ vi.mock('@/lib/auth/session', () => ({
     id: 1n,
     email: 'admin@test.com',
     role: 'admin',
-    status: 'active',
+    status: 0,
     adminVariant: 'mission_control',
     theme: 'terminal',
     createdAt: new Date('2026-01-01'),
@@ -121,7 +121,7 @@ vi.mock('@/lib/reports/queries', () => ({
     {
       id: 1n,
       label: 'ci-token-1',
-      status: 'active',
+      status: 0,
       requestsUsed: 100,
       requestsLimit: 5000,
       resetAt: null,

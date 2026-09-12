@@ -47,18 +47,21 @@ import { stdin as input, stdout as output } from 'node:process';
 // can use them without changing every call site.
 let prisma!: import('@prisma/client').PrismaClient;
 let hashPassword!: (pw: string) => Promise<string>;
+let UserStatus!: typeof import('@/lib/db/users').UserStatus;
 let logger!: { error: (...args: unknown[]) => void };
 
 async function loadAppModules(): Promise<void> {
   if (prisma) return;
-  const [db, auth, log] = await Promise.all([
+  const [db, auth, log, users] = await Promise.all([
     import('@/lib/db/client'),
     import('@/lib/auth/password'),
     import('@/lib/logger'),
+    import('@/lib/db/users'),
   ]);
   prisma = db.prisma;
   hashPassword = auth.hashPassword;
   logger = log.logger;
+  UserStatus = users.UserStatus;
 }
 
 // -----------------------------------------------------------------------------
@@ -306,14 +309,14 @@ async function bootstrapAdmin(cfg: Config): Promise<void> {
   const passwordHash = await hashPassword(cfg.adminPassword);
 
   if (existing && !RESET_ADMIN) {
-    if (existing.role === 'admin' && existing.status === 'active') {
+    if (existing.role === 'admin' && existing.status === UserStatus.Active) {
       console.log(`✓ already exists: ${cfg.adminEmail} (admin/active) — login with your existing password`);
       return;
     }
     // Promote to admin/active if it was a downgraded user.
     await prisma.user.update({
       where: { id: existing.id },
-      data: { passwordHash, role: 'admin', status: 'active' },
+      data: { passwordHash, role: 'admin', status: 0 },
     });
     console.log(`✓ promoted to admin/active: ${cfg.adminEmail}`);
     return;
@@ -321,12 +324,12 @@ async function bootstrapAdmin(cfg: Config): Promise<void> {
 
   const user = await prisma.user.upsert({
     where: { email: cfg.adminEmail },
-    update: { passwordHash, role: 'admin', status: 'active' },
+    update: { passwordHash, role: 'admin', status: 0 },
     create: {
       email: cfg.adminEmail,
       passwordHash,
       role: 'admin',
-      status: 'active',
+      status: 0,
       theme: 'terminal',
       adminVariant: 'mission_control',
       lang: 'zh',

@@ -16,7 +16,7 @@ beforeAll(async () => {
     data: {
       email: `${TEST_EMAIL_PREFIX}owner-${Date.now()}@example.test`,
       role: 'operator',
-      status: 'active',
+      status: 0,
     },
   });
   ownerUserId = owner.id;
@@ -26,7 +26,7 @@ beforeAll(async () => {
     data: {
       email: `${TEST_EMAIL_PREFIX}admin-${Date.now()}@example.test`,
       role: 'admin',
-      status: 'active',
+      status: 0,
     },
   });
   adminUserId = admin.id;

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import { prisma } from '@/lib/db/client';
 import { hashPassword } from '@/lib/auth/password';
+import { UserStatus } from '@/lib/db/users';
 
 const TEST_EMAIL_PREFIX = 'key-requested-email-int-';
 
@@ -11,13 +12,13 @@ beforeAll(async () => {
   // them for the duration of these tests — otherwise stray admins
   // from other tests would receive emails and skew the assertions.
   const pre = await prisma.user.findMany({
-    where: { role: 'admin', status: 'active' },
+    where: { role: 'admin', status: UserStatus.Active },
     select: { id: true },
   });
   adminIds = pre.map((u) => u.id);
   await prisma.user.updateMany({
     where: { id: { in: adminIds } },
-    data: { status: 'disabled' },
+    data: { status: UserStatus.Disabled },
   });
 
   // Seed a single admin user to receive the email.
@@ -25,7 +26,7 @@ beforeAll(async () => {
     data: {
       email: `${TEST_EMAIL_PREFIX}admin-${Date.now()}@example.test`,
       role: 'admin',
-      status: 'active',
+      status: UserStatus.Active,
       passwordHash: await hashPassword('pw'),
     },
   });
@@ -36,7 +37,7 @@ afterAll(async () => {
   // Restore pre-existing admins to active.
   await prisma.user.updateMany({
     where: { id: { in: adminIds.filter((id) => id !== adminIds[adminIds.length - 1]) } },
-    data: { status: 'active' },
+    data: { status: UserStatus.Active },
   });
   await prisma.emailLog.deleteMany({
     where: { recipient: { startsWith: TEST_EMAIL_PREFIX } },
@@ -115,7 +116,7 @@ describe('key-requested email', () => {
         data: {
           email: `${TEST_EMAIL_PREFIX}req-${Date.now()}@example.test`,
           role: 'operator',
-          status: 'active',
+          status: UserStatus.Active,
           passwordHash: await hashPassword('pw'),
           signupSource: 'self',
         },
@@ -176,14 +177,14 @@ describe('key-requested email', () => {
       // Disable the admin we created in beforeAll.
       await prisma.user.update({
         where: { id: adminIds[adminIds.length - 1]! },
-        data: { status: 'disabled' },
+        data: { status: UserStatus.Disabled },
       });
 
       const requester = await prisma.user.create({
         data: {
           email: `${TEST_EMAIL_PREFIX}req2-${Date.now()}@example.test`,
           role: 'operator',
-          status: 'active',
+          status: UserStatus.Active,
           passwordHash: await hashPassword('pw'),
         },
       });
@@ -209,7 +210,7 @@ describe('key-requested email', () => {
       // Cleanup
       await prisma.user.update({
         where: { id: adminIds[adminIds.length - 1]! },
-        data: { status: 'active' },
+        data: { status: UserStatus.Active },
       });
       await prisma.apiKey.deleteMany({ where: { id: apiKey.id } });
       await prisma.user.deleteMany({ where: { id: requester.id } });
