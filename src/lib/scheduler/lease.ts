@@ -39,8 +39,17 @@ const LOCK_DURATION_MS = 5 * 60_000; // 5 minutes — matches M5.4's expected re
  */
 export async function claimBatch(batchSize: number): Promise<RefreshJob[]> {
   return prisma.$transaction(async (tx) => {
-    const rows = await tx.$queryRaw<Array<{ id: bigint; repository_id: bigint }>>`
-      SELECT id, repository_id FROM refresh_jobs
+    // M31.1 — drop `repository_id` from the SELECT list. M31 made
+    // repository_id nullable (and dropped the FK to repositories), so
+    // the value is no longer authoritative for scheduler dispatch —
+    // refresh-one.ts looks the row up by owner/name instead. The
+    // column itself is kept on the table for legacy compatibility
+    // (audit / back-office consumers may still reference it), but
+    // the claim path doesn't need it. Trimming the projection saves
+    // a small amount of wire traffic and makes the SELECT's intent
+    // explicit: "give me the ids I'm about to lock".
+    const rows = await tx.$queryRaw<Array<{ id: bigint }>>`
+      SELECT id FROM refresh_jobs
       WHERE status = 'pending'
         AND scheduled_for <= UTC_TIMESTAMP(6)
         AND (locked_until IS NULL OR locked_until < UTC_TIMESTAMP(6))
