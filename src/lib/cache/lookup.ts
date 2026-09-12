@@ -51,12 +51,13 @@ export type QueryResult = ResultOk | ResultNotFound | ResultPending | ResultErro
 export const STALE_WARNING = 'data may be delayed';
 
 /**
- * M20: enqueue a refresh job for an owner/name that is missing or stale
- * in the cache. Upserts a stub repositories row (so refreshJob has a
- * repositoryId foreign key) and creates a refresh_job at priority 70.
+ * M31: enqueue a refresh job for an owner/name that is missing or stale
+ * in the cache. No stub repositories row is created — refresh_jobs
+ * reference owner/name directly and the scheduler worker writes a
+ * repositories row only after GitHub returns data.
  *
- * Idempotent: if a pending job already exists for the same repo, we
- * don't create a duplicate — claim will pick it up on the next tick.
+ * Idempotent: if a pending job already exists for the same owner/name,
+ * we don't create a duplicate — claim will pick it up on the next tick.
  */
 async function enqueueRefresh(owner: string, name: string): Promise<{
   queuedAt: Date;
@@ -65,26 +66,9 @@ async function enqueueRefresh(owner: string, name: string): Promise<{
   medianFetchMs: number;
 }> {
   const queuedAt = new Date();
-  // repositoryId is a FK on refresh_jobs, so we need a repositories row
-  // even before the first fetch. Upsert keeps any existing metadata
-  // (e.g. a stale 'ok' row) untouched on update.
-  const repo = await prisma.repository.upsert({
-    where: { owner_name: { owner, name } },
-    create: {
-      owner,
-      name,
-      node: { stub: true } as never,
-      // M27 — stub rows are placeholder before the first fetch. Real
-      // defaultBranch arrives when the worker populates this row.
-      defaultBranch: 'main',
-      fetchStatus: 'ok',
-    },
-    update: {},
-    select: { id: true },
-  });
-  // Skip duplicate pending job for the same repo (queue depth 1).
+  // Skip duplicate pending job for the same owner/name (queue depth 1).
   const existing = await prisma.refreshJob.findFirst({
-    where: { repositoryId: repo.id, status: 'pending' },
+    where: { owner, name, status: 'pending' },
     select: { scheduledFor: true, createdAt: true },
   });
   if (existing) {
@@ -99,7 +83,9 @@ async function enqueueRefresh(owner: string, name: string): Promise<{
   const scheduledFor = queuedAt;
   await prisma.refreshJob.create({
     data: {
-      repositoryId: repo.id,
+      owner,
+      name,
+      repositoryId: null,
       priority: 70,
       scheduledFor,
     },
