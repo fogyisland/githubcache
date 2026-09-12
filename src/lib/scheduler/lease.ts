@@ -1,4 +1,4 @@
-import type { RefreshJob, Repository } from '@prisma/client';
+import type { RefreshJob } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
 
 const LOCK_DURATION_MS = 5 * 60_000; // 5 minutes — matches M5.4's expected refresh duration
@@ -34,11 +34,10 @@ const LOCK_DURATION_MS = 5 * 60_000; // 5 minutes — matches M5.4's expected re
  * - lockedUntil: now + LOCK_DURATION_MS
  * - attempts: incremented
  *
- * Returns the claimed jobs with their parent Repository included.
+ * Returns the claimed jobs (without joining Repository — callers look up the
+ * Repository by owner/name via findRepoByCanonical).
  */
-export async function claimBatch(
-  batchSize: number,
-): Promise<Array<RefreshJob & { repository: Repository }>> {
+export async function claimBatch(batchSize: number): Promise<RefreshJob[]> {
   return prisma.$transaction(async (tx) => {
     const rows = await tx.$queryRaw<Array<{ id: bigint; repository_id: bigint }>>`
       SELECT id, repository_id FROM refresh_jobs
@@ -64,8 +63,7 @@ export async function claimBatch(
 
     return tx.refreshJob.findMany({
       where: { id: { in: ids } },
-      include: { repository: true },
       orderBy: [{ priority: 'asc' }, { scheduledFor: 'asc' }],
-    }) as Promise<Array<RefreshJob & { repository: Repository }>>;
+    });
   });
 }

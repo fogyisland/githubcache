@@ -10,7 +10,7 @@ describe('claimBatch', () => {
 
   beforeEach(async () => {
     // Clean any leftover data from previous runs
-    await prisma.refreshJob.deleteMany({ where: { repository: { owner: TEST_OWNER } } });
+    await prisma.refreshJob.deleteMany({ where: { owner: TEST_OWNER } });
     await prisma.repository.deleteMany({ where: { owner: TEST_OWNER } });
 
     // Create a parent Repository (required by the FK from RefreshJob)
@@ -25,7 +25,7 @@ describe('claimBatch', () => {
   });
 
   afterEach(async () => {
-    await prisma.refreshJob.deleteMany({ where: { repository: { owner: TEST_OWNER } } });
+    await prisma.refreshJob.deleteMany({ where: { owner: TEST_OWNER } });
     await prisma.repository.deleteMany({ where: { owner: TEST_OWNER } });
   });
 
@@ -43,6 +43,8 @@ describe('claimBatch', () => {
     return prisma.refreshJob.create({
       data: {
         repositoryId: repo.id,
+        owner: TEST_OWNER,
+        name: 'lease-test',
         priority: 50,
         scheduledFor: new Date(),
         status: 'pending',
@@ -62,7 +64,7 @@ describe('claimBatch', () => {
     const claimed = (await claimBatch(10)).filter((c) => c.repositoryId === repo.id);
     expect(claimed).toHaveLength(1);
     expect(claimed[0]!.id).toBe(j.id);
-    expect(claimed[0]!.repository.id).toBe(repo.id);
+    expect(claimed[0]!.repositoryId).toBe(repo.id);
   });
 
   it('marks claimed job with status=in_progress, lockedUntil, attempts++', async () => {
@@ -156,10 +158,10 @@ describe('claimBatch', () => {
     expect(ids.size).toBe(4); // all 4 distinct
   });
 
-  it('returns repository via include', async () => {
+  it('returns job with owner/name fields populated', async () => {
     await makeJob();
     const claimed = (await claimBatch(1)).filter((c) => c.repositoryId === repo.id);
-    expect(claimed[0]!.repository.owner).toBe(TEST_OWNER);
-    expect(claimed[0]!.repository.name).toBe('lease-test');
+    expect(claimed[0]!.owner).toBe(TEST_OWNER);
+    expect(claimed[0]!.name).toBe('lease-test');
   });
 });
