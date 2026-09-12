@@ -114,4 +114,14 @@ describe('AdminSidebar — groups (M30.8)', () => {
     expect(webhooksIdx).toBeGreaterThan(queueIdx);
     expect(auditIdx).toBeGreaterThan(webhooksIdx);
   });
+
+  it('group header is a button with aria-expanded + aria-controls', () => {
+    const html = renderToStaticMarkup(<AdminSidebar userRole="admin" />);
+    // The overview group's header is a <button> with aria-expanded
+    // pointing at a controlled list. Overview is force-expanded because
+    // the active section (`dashboard`) lives there.
+    expect(html).toMatch(
+      /<button[^>]*aria-expanded="true"[^>]*aria-controls="ghc-admin-sidebar-group-overview"/,
+    );
+  });
 });
