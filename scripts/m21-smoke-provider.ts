@@ -1,14 +1,18 @@
 /**
- * M20.5 smoke-test — preview + run a provider end-to-end.
+ * M31 smoke-test — preview a provider end-to-end.
  *
  * Usage:
- *   node --import tsx/esm --env-file=.env scripts/m21-smoke-provider.ts <slug> [--limit N] [--dryRun]
+ *   node --import tsx/esm --env-file=.env scripts/m21-smoke-provider.ts <slug> [--limit N]
  *
- * Defaults: slug=comfyui-manager, no limit, real run.
+ * Defaults: slug=comfyui-manager, no limit.
+ *
+ * M31: bulk insertion via runProvider() was removed per the user directive
+ * ("不支持批量提交"). This script now exercises preview-only — to enqueue
+ * a repo, query its owner/name individually via the public lookup API.
  */
 
 import { prisma } from '@/lib/db/client';
-import { previewProvider, runProvider } from '@/lib/ingestion/providers/run';
+import { previewProvider } from '@/lib/ingestion/providers/run';
 import { poolSize } from '@/lib/github/pool';
 
 function getArg(name: string): string | undefined {
@@ -16,14 +20,10 @@ function getArg(name: string): string | undefined {
   if (idx === -1) return undefined;
   return process.argv[idx + 1];
 }
-function hasFlag(name: string): boolean {
-  return process.argv.includes(`--${name}`);
-}
 
 async function main(): Promise<void> {
   const slug = process.argv[2] ?? 'comfyui-manager';
   const limit = getArg('limit') ? Number(getArg('limit')) : undefined;
-  const dryRun = hasFlag('dryRun');
 
   const provider = await prisma.ingestionProvider.findUnique({
     where: { slug },
@@ -36,22 +36,11 @@ async function main(): Promise<void> {
   console.log(`config: ${JSON.stringify(provider.configJson)}`);
 
   const activeTokens = poolSize();
-  console.log(`poolSize: ${activeTokens} (${activeTokens > 0 ? 'tokens available — scheduler can drain' : 'NO TOKENS — jobs will queue but not drain'})`);
+  console.log(`poolSize: ${activeTokens} (${activeTokens > 0 ? 'tokens available — scheduler can drain' : 'NO TOKENS — refresh_jobs will queue but not drain'})`);
 
   console.log('\n--- preview ---');
   const preview = await previewProvider(slug, { ...(limit !== undefined ? { limit } : {}) });
   console.log(JSON.stringify(preview, (_k, v) => (typeof v === 'bigint' ? v.toString() : v), 2));
-
-  if (dryRun) {
-    console.log('\n--dryRun set — skipping runProvider');
-    return;
-  }
-
-  console.log('\n--- run ---');
-  const runResult = await runProvider(slug, {
-    ...(limit !== undefined ? { limit } : {}),
-  });
-  console.log(JSON.stringify(runResult, (_k, v) => (typeof v === 'bigint' ? v.toString() : v), 2));
 
   await prisma.$disconnect();
 }

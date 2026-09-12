@@ -1060,18 +1060,15 @@
         "enable": "启用",
         "disable": "停用",
         "preview": "预览",
-        "run": "执行",
         "confirmDelete": "确认删除数据源 {slug}？此操作不可撤销。"
       },
       "runCard": {
-        "heading": "通过数据源入库",
-        "description": "选择已配置的数据源，把返回的所有陈旧或新增 owner/name 加入刷新任务队列。",
+        "heading": "通过数据源预览",
+        "description": "选择已配置的数据源，查看它能解析出的所有不重复的 owner/name。系统不支持批量入库——请通过公共查询接口逐个查询 owner/name。",
         "chooseProvider": "数据源",
         "noProviders": "尚未配置任何数据源，请先新建。",
-        "dryRun": "仅试运行（不入库）",
-        "limitLabel": "最大入库条数",
+        "limitLabel": "最大预览条数",
         "submitPreview": "预览",
-        "submitRun": "立即执行",
         "previewResult": {
           "items": "条目",
           "urls": "URL",
@@ -1081,11 +1078,7 @@
           "new": "新增",
           "invalid": "无效"
         },
-        "poolEmptyWarning": "尚未配置 GitHub token，任务在抓取时会失败。请先到 /admin/github-tokens 添加 token 再执行。",
-        "runOk": "已入队 {jobCount} 个刷新任务。",
-        "previewOk": "预览结果：{totals}。",
         "previewFailed": "预览失败（HTTP {status}）",
-        "runFailed": "执行失败（HTTP {status}）",
         "createFailed": "加载数据源失败（HTTP {status}）"
       }
     },

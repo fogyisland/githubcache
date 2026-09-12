@@ -1060,18 +1060,15 @@
         "enable": "Enable",
         "disable": "Disable",
         "preview": "Preview",
-        "run": "Run",
         "confirmDelete": "Delete provider {slug}? This cannot be undone."
       },
       "runCard": {
-        "heading": "Run via provider",
-        "description": "Pick a configured provider and enqueue refresh jobs for every stale or new owner/name pair it returns.",
+        "heading": "Preview via provider",
+        "description": "Pick a configured provider and inspect the unique owner/name pairs it would return. Bulk insertion is not supported — query each owner/name individually via the public lookup API.",
         "chooseProvider": "Provider",
         "noProviders": "No providers configured yet — create one first.",
-        "dryRun": "Dry run (no jobs enqueued)",
-        "limitLabel": "Max pairs to enqueue",
+        "limitLabel": "Max pairs to preview",
         "submitPreview": "Preview",
-        "submitRun": "Run now",
         "previewResult": {
           "items": "items",
           "urls": "urls",
@@ -1081,11 +1078,7 @@
           "new": "new",
           "invalid": "invalid"
         },
-        "poolEmptyWarning": "No GitHub tokens configured — jobs will fail at fetch. Add tokens at /admin/github-tokens before running for real.",
-        "runOk": "Enqueued {jobCount} refresh jobs.",
-        "previewOk": "Preview: {totals}.",
         "previewFailed": "Preview failed (HTTP {status})",
-        "runFailed": "Run failed (HTTP {status})",
         "createFailed": "Failed to load providers (HTTP {status})"
       }
     },

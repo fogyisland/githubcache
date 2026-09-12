@@ -5,9 +5,11 @@ import { parseProviderConfig, type ProviderConfig } from './schema';
 import { parseGitHubUrl } from './extract';
 
 /**
- * previewProvider / runProvider — the orchestration layer that turns a
- * provider's items into either a counts report (preview) or enqueued
- * refresh_jobs (run).
+ * previewProvider — the orchestration layer that turns a provider's
+ * items into a counts report (preview). Bulk insertion is intentionally
+ * NOT supported: per the user directive ("不支持批量提交"), each
+ * owner/name pair must be queued individually via the public lookup
+ * API.
  *
  * Pipeline:
  *   1. Load provider by slug (404 if missing, 409 if disabled).
@@ -21,12 +23,6 @@ import { parseGitHubUrl } from './extract';
  *      existing_ok | stale | new.
  *
  * Preview returns counts + a sample (first 20 non-OK).
- * Run additionally creates refresh_jobs for every stale + new pair
- * (idempotent on repositories via upsert).
- *
- * Without a GitHub token pool, the enqueued jobs will fail at fetch
- * time with no_token_available — that's expected for the M19 testing
- * path (user has no tokens configured).
  */
 
 export interface PreviewTotals {
@@ -42,12 +38,6 @@ export interface PreviewTotals {
 export interface PreviewResult {
   totals: PreviewTotals;
   sample: { owner: string; name: string }[];
-}
-
-export interface RunResult {
-  totals: PreviewTotals;
-  jobCount: number;
-  dryRun: boolean;
 }
 
 export class ProviderNotFoundError extends Error {
@@ -146,19 +136,16 @@ async function classifyAgainstDb(
 ): Promise<{
   counts: Pick<PreviewTotals, 'existing' | 'stale' | 'new'>;
   status: Map<string, 'existing' | 'stale' | 'new'>;
-  staleIds: Map<string, bigint>;
 }> {
   if (pairs.length === 0) {
     return {
       counts: { existing: 0, stale: 0, new: 0 },
       status: new Map(),
-      staleIds: new Map(),
     };
   }
   const rows = await prisma.repository.findMany({
     where: { OR: pairs.map((p) => ({ owner: p.owner, name: p.name })) },
     select: {
-      id: true,
       owner: true,
       name: true,
       fetchStatus: true,
@@ -170,7 +157,6 @@ async function classifyAgainstDb(
   let stale = 0;
   let fresh = 0;
   const status = new Map<string, 'existing' | 'stale' | 'new'>();
-  const staleIds = new Map<string, bigint>();
   for (const p of pairs) {
     const key = `${p.owner}/${p.name}`;
     const row = rowMap.get(key);
@@ -180,7 +166,6 @@ async function classifyAgainstDb(
     } else if (row.fetchStatus !== 'ok' || row.lastFetchedAt === null) {
       stale++;
       status.set(key, 'stale');
-      staleIds.set(key, row.id);
     } else {
       existing++;
       status.set(key, 'existing');
@@ -189,7 +174,6 @@ async function classifyAgainstDb(
   return {
     counts: { existing, stale, new: fresh },
     status,
-    staleIds,
   };
 }
 
@@ -217,99 +201,5 @@ export async function previewProvider(
       ...counts,
     },
     sample,
-  };
-}
-
-export async function runProvider(
-  slug: string,
-  opts: { limit?: number; dryRun?: boolean } = {},
-): Promise<RunResult> {
-  // Compute preview first so the totals match what the operator saw.
-  const { pairs, itemCount, urlCount } = await extractUniquePairs(slug, opts.limit);
-  const { counts, status, staleIds } = await classifyAgainstDb(pairs);
-  if (opts.dryRun) {
-    return {
-      totals: {
-        items: itemCount,
-        urls: urlCount,
-        unique: pairs.length,
-        invalid: urlCount - pairs.length,
-        ...counts,
-      },
-      jobCount: 0,
-      dryRun: true,
-    };
-  }
-
-  let jobCount = 0;
-  // Enqueue for new pairs: bulk-insert stub repository rows + bulk-insert
-  // refresh_jobs. Using `createMany` + `skipDuplicates` avoids the per-row
-  // `$transaction` that explodes past Prisma's 5s interactive-transaction
-  // timeout at ~5k rows (M20.4 hit this with the 5852-row ComfyUI batch —
-  // original upsert loop took ~35s and exceeded the 5s tx limit).
-  //
-  // Two-step:
-  //   1. Insert all stub repository rows in one createMany (skipDuplicates
-  //      handles the race where another run already created them).
-  //   2. Look up the new IDs by (owner, name) — only the rows we JUST
-  //      inserted (skipDuplicates kept) need refresh_jobs.
-  //   3. Bulk-insert the refresh_jobs in one createMany.
-  const newPairs = pairs.filter(
-    (p) => status.get(`${p.owner}/${p.name}`) === 'new',
-  );
-  if (newPairs.length > 0) {
-    await prisma.repository.createMany({
-      data: newPairs.map((p) => ({
-        owner: p.owner,
-        name: p.name,
-        node: { stub: true } as never,
-        // M27 — stub rows. Real defaultBranch arrives when the worker
-        // populates these rows.
-        defaultBranch: 'main',
-        fetchStatus: 'ok' as const,
-      })),
-      skipDuplicates: true,
-    });
-    const repos = await prisma.repository.findMany({
-      where: { OR: newPairs.map((p) => ({ owner: p.owner, name: p.name })) },
-      select: { id: true, owner: true, name: true },
-    });
-    const idMap = new Map(repos.map((r) => [`${r.owner}/${r.name}`, r.id]));
-    const jobRows = newPairs
-      .map((p) => {
-        const id = idMap.get(`${p.owner}/${p.name}`);
-        return id !== undefined
-          ? { repositoryId: id, priority: 70, scheduledFor: new Date() }
-          : null;
-      })
-      .filter((row): row is { repositoryId: bigint; priority: number; scheduledFor: Date } => row !== null);
-    if (jobRows.length > 0) {
-      await prisma.refreshJob.createMany({ data: jobRows });
-      jobCount = jobRows.length;
-    }
-  }
-  // Enqueue for stale pairs (re-fetch existing rows). Same createMany
-  // pattern — these rows already exist so we can map directly from the
-  // staleIds map without a re-query.
-  if (staleIds.size > 0) {
-    const jobRows = Array.from(staleIds.values()).map((id) => ({
-      repositoryId: id,
-      priority: 70,
-      scheduledFor: new Date(),
-    }));
-    await prisma.refreshJob.createMany({ data: jobRows });
-    jobCount += jobRows.length;
-  }
-
-  return {
-    totals: {
-      items: itemCount,
-      urls: urlCount,
-      unique: pairs.length,
-      invalid: urlCount - pairs.length,
-      ...counts,
-    },
-    jobCount,
-    dryRun: false,
   };
 }

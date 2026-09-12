@@ -1,6 +1,5 @@
 'use client';
 import { useEffect, useState, type ReactElement } from 'react';
-import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { adminFetch } from '@/lib/api/admin-fetch';
 import { fetchCsrfToken } from '@/lib/csrf/client';
@@ -28,43 +27,32 @@ interface PreviewResponse {
   poolEmpty?: boolean;
 }
 
-interface RunResponse {
-  totals: PreviewTotals;
-  jobCount: number;
-  poolEmpty?: boolean;
-}
-
 /**
- * M19.10 — Run via provider (client island).
+ * M31 — Preview via provider (client island).
+ *
+ * Per the user directive ("不支持批量提交，批量提交也就是一个一个的提交"),
+ * providers may preview their unique owner/name pairs (read-only) but
+ * CANNOT execute batch insertion. Each owner/name must be queued
+ * individually via the public lookup API.
  *
  * Loads the configured provider list, lets the operator pick one, and
- * exposes Preview (parse + dedupe + classify) and Run (enqueue refresh
- * jobs) buttons. After Run, refreshes the page so the RecentJobsTable
- * picks up the newly-enqueued jobs.
- *
- * Pool-empty state is read from the run/preview response; we show a
- * warning banner whenever poolEmpty comes back true so operators know
- * jobs will fail at fetch time.
+ * exposes a Preview button (parse + dedupe + classify against the DB).
+ * The preview response surfaces an inline sample so operators can see
+ * which owner/name pairs are stale or new.
  */
 export function RunViaProvider(): ReactElement {
   const t = useTranslations('admin.providers.runCard');
   const tPreview = useTranslations('admin.providers.previewResult');
-  const router = useRouter();
 
   const [providers, setProviders] = useState<ProviderRow[] | null>(null);
   const [loadError, setLoadError] = useState<{ status: number } | null>(null);
   const [csrfReady, setCsrfReady] = useState(false);
   const [selectedId, setSelectedId] = useState('');
   const [limit, setLimit] = useState('');
-  const [dryRun, setDryRun] = useState(true);
 
   const [preview, setPreview] = useState<PreviewResponse | null>(null);
   const [previewBusy, setPreviewBusy] = useState(false);
   const [previewError, setPreviewError] = useState<{ status: number } | null>(null);
-
-  const [runResult, setRunResult] = useState<RunResponse | null>(null);
-  const [runBusy, setRunBusy] = useState(false);
-  const [runError, setRunError] = useState<{ status: number } | null>(null);
 
   useEffect(() => {
     void Promise.all([
@@ -106,37 +94,6 @@ export function RunViaProvider(): ReactElement {
     }
   }
 
-  async function onRun(): Promise<void> {
-    if (!csrfReady || !selectedId) return;
-    setRunBusy(true);
-    setRunError(null);
-    setRunResult(null);
-    try {
-      const csrf = await fetchCsrfToken();
-      const body: Record<string, unknown> = { dryRun, csrf };
-      if (limit.trim() !== '') body.limit = Number(limit);
-      const data = await adminFetch<RunResponse>(
-        `/api/admin/providers/${selectedId}/run`,
-        {
-          method: 'POST',
-          body,
-        },
-      );
-      setRunResult(data);
-      if (!dryRun && data.jobCount > 0) {
-        router.refresh();
-      }
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : String(e);
-      const status = message.startsWith('adminFetch ')
-        ? Number(message.split(' ')[1]?.split(':')[0] ?? 0)
-        : 0;
-      setRunError({ status });
-    } finally {
-      setRunBusy(false);
-    }
-  }
-
   if (loadError) {
     return (
       <section className="ghc-admin-card" aria-label="Run via provider">
@@ -162,8 +119,6 @@ export function RunViaProvider(): ReactElement {
       </section>
     );
   }
-
-  const showPoolEmpty = (preview?.poolEmpty ?? runResult?.poolEmpty ?? false) && !dryRun;
 
   return (
     <section className="ghc-admin-card" aria-label="Run via provider">
@@ -198,15 +153,6 @@ export function RunViaProvider(): ReactElement {
             className="ghc-api-settings-input"
           />
         </label>
-
-        <label className="ghc-admin-checkbox">
-          <input
-            type="checkbox"
-            checked={dryRun}
-            onChange={(e) => setDryRun(e.target.checked)}
-          />
-          {t('dryRun')}
-        </label>
       </div>
 
       <div className="ghc-admin-form-actions">
@@ -218,25 +164,10 @@ export function RunViaProvider(): ReactElement {
         >
           {t('submitPreview')}
         </button>
-        <button
-          type="button"
-          onClick={() => void onRun()}
-          disabled={runBusy || !csrfReady || !selectedId}
-          className="ghc-btn-primary"
-        >
-          {t('submitRun')}
-        </button>
       </div>
-
-      {showPoolEmpty ? (
-        <p className="ghc-admin-warning">{t('poolEmptyWarning')}</p>
-      ) : null}
 
       {previewError ? (
         <p className="ghc-admin-error">{t('previewFailed', { status: previewError.status })}</p>
-      ) : null}
-      {runError ? (
-        <p className="ghc-admin-error">{t('runFailed', { status: runError.status })}</p>
       ) : null}
 
       {preview ? (
@@ -284,12 +215,6 @@ export function RunViaProvider(): ReactElement {
             </ul>
           ) : null}
         </section>
-      ) : null}
-
-      {runResult ? (
-        <p className="ghc-admin-success">
-          {t('runOk', { jobCount: runResult.jobCount })}
-        </p>
       ) : null}
     </section>
   );

@@ -4,7 +4,6 @@ import { fileURLToPath } from 'node:url';
 import { prisma } from '@/lib/db/client';
 import {
   previewProvider,
-  runProvider,
   ProviderNotFoundError,
   ProviderDisabledError,
 } from '@/lib/ingestion/providers/run';
@@ -131,103 +130,6 @@ describe('previewProvider', () => {
     });
     await expect(previewProvider(TEST_SLUG)).rejects.toBeInstanceOf(
       ProviderDisabledError,
-    );
-  });
-});
-
-describe('runProvider', () => {
-  it('dryRun=true does not create any refresh_jobs', async () => {
-    const a = await prisma.repository.create({
-      data: {
-        owner: TEST_OWNER_PREFIX,
-        name: 'Fixture-A',
-        node: { stub: true } as never,
-        fetchStatus: 'ok',
-        lastFetchedAt: new Date(),
-      },
-    });
-    testRepoIds.push(a.id);
-
-    const result = await runProvider(TEST_SLUG, { dryRun: true });
-
-    expect(result.dryRun).toBe(true);
-    expect(result.jobCount).toBe(0);
-    expect(result.totals.unique).toBe(4);
-    expect(result.totals.existing).toBe(1);
-    expect(result.totals.stale).toBe(0);
-    expect(result.totals.new).toBe(3);
-
-    const jobs = await prisma.refreshJob.findMany({
-      where: { repositoryId: { in: testRepoIds } },
-    });
-    expect(jobs.length).toBe(0);
-  });
-
-  it('creates refresh_jobs for new and stale pairs, leaves existing untouched', async () => {
-    // existing: ok + fetched
-    const a = await prisma.repository.create({
-      data: {
-        owner: TEST_OWNER_PREFIX,
-        name: 'Fixture-A',
-        node: { stub: true } as never,
-        fetchStatus: 'ok',
-        lastFetchedAt: new Date(),
-      },
-    });
-    testRepoIds.push(a.id);
-    // stale: error
-    const b = await prisma.repository.create({
-      data: {
-        owner: TEST_OWNER_PREFIX,
-        name: 'Fixture-B',
-        node: { stub: true } as never,
-        fetchStatus: 'error',
-        lastFetchedAt: null,
-      },
-    });
-    testRepoIds.push(b.id);
-
-    const result = await runProvider(TEST_SLUG);
-
-    expect(result.dryRun).toBe(false);
-    // stale=1 + new=2 (C, D) = 3 jobs.
-    expect(result.jobCount).toBe(3);
-    expect(result.totals.existing).toBe(1);
-
-    // Verify all 3 jobs were created (existing A was NOT re-enqueued).
-    const jobs = await prisma.refreshJob.findMany({
-      where: { repository: { owner: TEST_OWNER_PREFIX } },
-    });
-    testJobIds.push(...jobs.map((j) => j.id));
-    expect(jobs.length).toBe(3);
-
-    // Verify no job points at A (existing_ok).
-    const aJobs = jobs.filter((j) => j.repositoryId === a.id);
-    expect(aJobs.length).toBe(0);
-
-    // Verify one job points at B (stale).
-    const bJobs = jobs.filter((j) => j.repositoryId === b.id);
-    expect(bJobs.length).toBe(1);
-
-    // Verify C and D rows were upserted with fetchStatus='ok' (the
-    // stub default) and got a job each.
-    const cOrD = await prisma.repository.findMany({
-      where: {
-        owner: TEST_OWNER_PREFIX,
-        name: { in: ['Fixture-C', 'Fixture-D'] },
-      },
-    });
-    expect(cOrD.length).toBe(2);
-    for (const r of cOrD) {
-      testRepoIds.push(r.id);
-      const rJobs = jobs.filter((j) => j.repositoryId === r.id);
-      expect(rJobs.length).toBe(1);
-    }
-  });
-
-  it('throws ProviderNotFoundError for unknown slug', async () => {
-    await expect(runProvider('does-not-exist')).rejects.toBeInstanceOf(
-      ProviderNotFoundError,
     );
   });
 });
