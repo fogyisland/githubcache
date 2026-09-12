@@ -23,6 +23,13 @@ vi.mock('next-intl/server', () => ({
         'sections.reports': 'Reports',
         'sections.audit': 'Audit',
         'sections.refresh': 'Refresh',
+        'groups.overview.label': 'Overview',
+        'groups.access.label': 'Access',
+        'groups.data.label': 'Data',
+        'groups.operations.label': 'Operations',
+        'groups.system.label': 'System',
+        'groupToggle.collapse': 'Collapse {group}',
+        'groupToggle.expand': 'Expand {group}',
       },
     };
     return (key: string) => labels[ns]?.[key] ?? key;
@@ -51,6 +58,13 @@ vi.mock('next-intl', () => ({
         'sections.insights': 'Insights',
         'sections.email': 'Email',
         'sections.email-log': 'Email log',
+        'groups.overview.label': 'Overview',
+        'groups.access.label': 'Access',
+        'groups.data.label': 'Data',
+        'groups.operations.label': 'Operations',
+        'groups.system.label': 'System',
+        'groupToggle.collapse': 'Collapse {group}',
+        'groupToggle.expand': 'Expand {group}',
       },
       'admin.shell.statusbar': { db: 'DB', ms: 'ms', queue: 'Queue', scheduler: 'Scheduler', audit24h: 'Audit 24h', operator: 'Operator' },
       'admin.shell.palette': { placeholder: 'Search admin — sections, recent actions…', noMatches: 'No matches for "{query}"', sections: 'Sections', recentAudit: 'Recent audit', hintNav: 'navigate', hintOpen: 'open', hintClose: 'close' },
@@ -143,8 +157,12 @@ describe('AdminShell', () => {
     expect(html).not.toContain('href="/admin/audit"');
     expect(html).not.toContain('href="/admin/refresh"');
     // operator-visible:
+    // M30.8 — `reports` moved into the admin-only `system` group, so
+    // operators no longer see it via the sidebar even though the
+    // section's own role list includes them. `repositories` is the
+    // operator-visible surrogate used here.
     expect(html).toContain('href="/admin/api-keys"');
-    expect(html).toContain('href="/admin/reports"');
+    expect(html).toContain('href="/admin/repositories"');
   });
 
   it('renders status bar only for mission_control variant', async () => {

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 vi.mock('next-intl/server', () => ({
@@ -15,6 +16,13 @@ vi.mock('next-intl/server', () => ({
         'sections.audit': 'Audit',
         'sections.refresh': 'Refresh',
         'sections.queue': 'Queue',
+        'groups.overview.label': 'Overview',
+        'groups.access.label': 'Access',
+        'groups.data.label': 'Data',
+        'groups.operations.label': 'Operations',
+        'groups.system.label': 'System',
+        'groupToggle.collapse': 'Collapse {group}',
+        'groupToggle.expand': 'Expand {group}',
       },
       'admin.shell.dashboard': {
         title: 'Dashboard',
@@ -62,6 +70,13 @@ vi.mock('next-intl', () => ({
         'sections.insights': 'Insights',
         'sections.email': 'Email',
         'sections.email-log': 'Email log',
+        'groups.overview.label': 'Overview',
+        'groups.access.label': 'Access',
+        'groups.data.label': 'Data',
+        'groups.operations.label': 'Operations',
+        'groups.system.label': 'System',
+        'groupToggle.collapse': 'Collapse {group}',
+        'groupToggle.expand': 'Expand {group}',
       },
       'admin.shell.statusbar': { db: 'DB', ms: 'ms', queue: 'Queue', scheduler: 'Scheduler', audit24h: 'Audit 24h', operator: 'Operator' },
       'admin.shell.palette': { placeholder: 'Search admin — sections, recent actions…', noMatches: 'No matches for "{query}"', sections: 'Sections', recentAudit: 'Recent audit', hintNav: 'navigate', hintOpen: 'open', hintClose: 'close' },
@@ -79,7 +94,7 @@ import { AdminSidebar } from '@/app/admin/_components/admin-sidebar';
 describe('AdminSidebar i18n', () => {
   it('renders translated section titles from messages', () => {
     const html = renderToStaticMarkup(
-      AdminSidebar({ userRole: 'admin' }),
+      createElement(AdminSidebar, { userRole: 'admin' }),
     );
     expect(html).toContain('Dashboard');
     expect(html).toContain('Users');
@@ -93,7 +108,7 @@ describe('AdminSidebar i18n', () => {
 
   it('hides admin-only sections for operator role', () => {
     const html = renderToStaticMarkup(
-      AdminSidebar({ userRole: 'operator' }),
+      createElement(AdminSidebar, { userRole: 'operator' }),
     );
     expect(html).toContain('Dashboard');
     expect(html).not.toContain('Users');  // admin-only
