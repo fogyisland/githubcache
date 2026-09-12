@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import type { FetchStatus } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
 import { getRepoMetadata } from '@/lib/cache/read';
@@ -66,33 +67,94 @@ async function enqueueRefresh(owner: string, name: string): Promise<{
   medianFetchMs: number;
 }> {
   const queuedAt = new Date();
-  // Skip duplicate pending job for the same owner/name (queue depth 1).
-  const existing = await prisma.refreshJob.findFirst({
-    where: { owner, name, status: 'pending' },
-    select: { scheduledFor: true, createdAt: true },
-  });
-  if (existing) {
-    const [depth, median] = await Promise.all([getQueueDepth(), getMedianFetchMs()]);
-    return {
-      queuedAt: existing.createdAt,
-      scheduledFor: existing.scheduledFor,
-      queueDepth: depth,
-      medianFetchMs: median,
-    };
+  // M31.1 — wrap the findFirst + create in a single transaction with
+  // SERIALIZABLE isolation so concurrent identical requests can't both
+  // observe "no existing pending job" and then both INSERT. Without
+  // this, two simultaneous lookupRepo('foo', 'bar') calls (e.g. from
+  // a public-form submit + a /api/query POST landing in the same
+  // scheduler tick) produce two pending jobs for the same target —
+  // the scheduler will fetch GitHub twice and double-bill the rate-
+  // limit pool. MySQL SERIALIZABLE maps to "SELECT ... FOR UPDATE"
+  // everywhere in the transaction, so the second concurrent caller
+  // blocks until the first commits and then sees the row.
+  //
+  // Edge case: when two callers both reach the INSERT path under
+  // SERIALIZABLE, InnoDB may pick one as the deadlock victim and
+  // raise 1213 / Prisma P2034 ("Transaction failed due to a write
+  // conflict or a deadlock. Please retry your transaction."). The
+  // losing transaction must retry; on the second attempt the winner's
+  // row is visible, so we hit the existing-pending branch and return
+  // the deduped shape without inserting a duplicate. One retry is
+  // enough — InnoDB's deadlock detector doesn't loop a single pair
+  // of transactions back into the same conflict.
+  const MAX_ATTEMPTS = 3;
+  let attempt = 0;
+  let enqueueResult: {
+    kind: 'existing' | 'created';
+    queuedAt: Date;
+    scheduledFor: Date;
+  };
+  while (true) {
+    attempt += 1;
+    try {
+      enqueueResult = await prisma.$transaction(
+        async (tx) => {
+          const existing = await tx.refreshJob.findFirst({
+            where: { owner, name, status: 'pending' },
+            select: { scheduledFor: true, createdAt: true },
+          });
+          if (existing) {
+            return {
+              kind: 'existing' as const,
+              queuedAt: existing.createdAt,
+              scheduledFor: existing.scheduledFor,
+            };
+          }
+          const scheduledFor = queuedAt;
+          await tx.refreshJob.create({
+            data: {
+              owner,
+              name,
+              repositoryId: null,
+              priority: 70,
+              scheduledFor,
+            },
+          });
+          return {
+            kind: 'created' as const,
+            queuedAt,
+            scheduledFor,
+          };
+        },
+        { isolationLevel: 'Serializable' },
+      );
+      break;
+    } catch (e: unknown) {
+      // Prisma surfaces MySQL's 1213 (deadlock) as a generic
+      // PrismaClientKnownRequestError with code 'P2034'. Retry until
+      // we win or hit MAX_ATTEMPTS — but don't loop forever, a real
+      // bug shouldn't be masked.
+      const code =
+        e instanceof Prisma.PrismaClientKnownRequestError ? e.code : undefined;
+      if (code !== 'P2034' || attempt >= MAX_ATTEMPTS) {
+        throw e;
+      }
+      // brief jitter so the losing caller doesn't immediately re-try
+      // into the same gap-lock conflict. 5-15ms is enough.
+      await new Promise((r) => setTimeout(r, 5 + Math.floor(Math.random() * 10)));
+    }
   }
-  const scheduledFor = queuedAt;
-  await prisma.refreshJob.create({
-    data: {
-      owner,
-      name,
-      repositoryId: null,
-      priority: 70,
-      scheduledFor,
-    },
-  });
-  // After create, include THIS job in depth (it just got enqueued).
+
+  // After commit, fetch the depth / median with the post-create row
+  // visible. Same shape as before — existing callers don't care whether
+  // the row came from an existing match or a fresh insert.
   const [depth, median] = await Promise.all([getQueueDepth(), getMedianFetchMs()]);
-  return { queuedAt, scheduledFor, queueDepth: depth, medianFetchMs: median };
+  return {
+    queuedAt: enqueueResult.queuedAt,
+    scheduledFor: enqueueResult.scheduledFor,
+    queueDepth: depth,
+    medianFetchMs: median,
+  };
 }
 
 /**

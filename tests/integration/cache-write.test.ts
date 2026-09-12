@@ -162,4 +162,52 @@ describe('create-then-update (M31 split)', () => {
     expect(all).toHaveLength(1);
     expect(all[0]?.fetchStatus).toBe('not_found');
   });
+
+  it('concurrent calls on a cold cache yield exactly ONE row (M31.1 P2002 guard)', async () => {
+    // M31.1 — the findRepoByCanonical + createRepo path in
+    // storeRepoMetadata is racy: two workers calling
+    // storeRepoMetadata(owner, name) concurrently each observe
+    // "no existing row" and both attempt createRepo. The second
+    // INSERT hits the @@unique([owner, name]) constraint and throws
+    // P2002. Without the catch in storeRepoMetadata, P2002 escalates
+    // all the way to refresh-one.handleError and marks the
+    // refresh_job failed — but the first worker's row is correct.
+    //
+    // After the fix: the second caller catches P2002, re-reads the
+    // row the first worker wrote, and falls through to updateRepo.
+    // Both calls resolve successfully and the row count stays at 1.
+    const results = await Promise.allSettled([
+      storeRepoMetadata({
+        owner: 'test-owner',
+        name: 'race-test',
+        node: { id: 999 },
+        metadata: { stars: 1 },
+        fetchStatus: 'ok',
+      }),
+      storeRepoMetadata({
+        owner: 'test-owner',
+        name: 'race-test',
+        node: { id: 999 },
+        metadata: { stars: 2 },
+        fetchStatus: 'ok',
+      }),
+    ]);
+
+    // Neither call should reject — P2002 must not bubble out.
+    for (const r of results) {
+      expect(r.status).toBe('fulfilled');
+    }
+
+    // Exactly one row, regardless of who won the race.
+    const all = await prisma.repository.findMany({
+      where: { owner: 'test-owner', name: 'race-test' },
+    });
+    expect(all).toHaveLength(1);
+
+    // One of the two metadata blobs wins; the row is internally
+    // consistent (stars is 1 or 2, both valid). We assert it's
+    // one of them rather than a default because both writers
+    // spread their own baseData into the row.
+    expect([1, 2]).toContain(all[0]?.stars);
+  });
 });

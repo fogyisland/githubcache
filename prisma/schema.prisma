@@ -203,7 +203,7 @@ model AuditLog {
   actorUserId BigInt   @map("actor_user_id")
   action      String   @db.VarChar(100)
   targetType  String   @map("target_type") @db.VarChar(50)
-  targetId    String   @map("target_id") @db.VarChar(100)
+  targetId    String   @map("target_id") @db.VarChar(400)
   metadata    Json?
   ip          String?  @db.VarChar(45)
   createdAt   DateTime @default(now()) @map("created_at")

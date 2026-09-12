@@ -10,6 +10,17 @@ vi.mock('@/lib/db/client', () => {
   const upsert = vi.fn().mockResolvedValue({ id: 999n });
   const findFirst = vi.fn().mockResolvedValue(null); // no existing pending
   const create = vi.fn().mockResolvedValue({ id: 1n });
+  // M31.1 — enqueueRefresh now calls prisma.$transaction (Serializable
+  // isolation) instead of two top-level calls. The mock passes the
+  // transaction body a tx object whose findFirst/create resolve the
+  // same as the top-level mocks, so the test exercises the new path
+  // without touching a real DB.
+  const $transaction = vi.fn().mockImplementation(async (fn) => {
+    const tx = {
+      refreshJob: { findFirst, create },
+    };
+    return fn(tx);
+  });
   return {
     prisma: {
       repository: { upsert },
@@ -19,6 +30,7 @@ vi.mock('@/lib/db/client', () => {
         create,
       },
       $queryRawUnsafe: vi.fn().mockResolvedValue([{ median_ms: 7000 }]),
+      $transaction,
     },
   };
 });

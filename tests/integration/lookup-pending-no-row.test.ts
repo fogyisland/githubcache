@@ -109,4 +109,40 @@ describe('lookupRepo (M31 — no stub row)', () => {
     const names = jobs.map((j) => j.name).sort();
     expect(names).toEqual(['lookup-test-a', 'lookup-test-b']);
   });
+
+  it('concurrent identical calls dedup to a single refresh_job (M31.1 Serializable guard)', async () => {
+    // M31.1 — before the Serializable-transaction fix in enqueueRefresh,
+    // three concurrent Promise.all callers could all observe "no
+    // existing pending job" (each findFirst saw an empty result set)
+    // and then each INSERT — producing three duplicate refresh_jobs
+    // for the same target. The scheduler tick would claim all three,
+    // hit GitHub three times, and triple-bill the rate-limit pool.
+    //
+    // After the fix: the Serializable transaction in enqueueRefresh
+    // serializes the findFirst + create, so only one INSERT wins and
+    // the other two see the row on their re-read inside the
+    // transaction. Assert exactly ONE row regardless of caller count.
+    const results = await Promise.all([
+      lookupRepo(TEST_OWNER, 'concurrent-1'),
+      lookupRepo(TEST_OWNER, 'concurrent-1'),
+      lookupRepo(TEST_OWNER, 'concurrent-1'),
+    ]);
+
+    // All three callers must see a pending result — none of them
+    // should have surfaced an error.
+    for (const r of results) {
+      expect(r.fetch_status).toBe('pending');
+    }
+
+    // Exactly one refresh_job — the Serializable guard prevents
+    // duplicates. No repositories row, same as the single-call path.
+    const jobs = await prisma.refreshJob.findMany({
+      where: { owner: TEST_OWNER, name: 'concurrent-1' },
+    });
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0]?.status).toBe('pending');
+
+    const repoCount = await prisma.repository.count({ where: { owner: TEST_OWNER } });
+    expect(repoCount).toBe(0);
+  });
 });

@@ -1,4 +1,5 @@
-import type { Prisma, Repository } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import type { Repository } from '@prisma/client';
 import type { FetchStatus } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
 import { findRepoByCanonical, createRepo, updateRepo } from '@/lib/db/repositories';
@@ -81,7 +82,34 @@ export async function storeRepoMetadata(args: {
         // — Prisma's UncheckedUpdateInput type accepts the same shape.
         data: baseData,
       })
-    : await createRepo(baseData);
+    : await (async () => {
+        // M31.1 — the findRepoByCanonical above and the createRepo here
+        // are not atomic. If another worker (scheduler tick racing the
+        // public-form path, or two scheduler workers after the M31
+        // multi-worker upgrade) writes the same (owner, name) between
+        // the SELECT and the INSERT, createRepo throws P2002 (unique
+        // constraint @@unique([owner, name]) violation). Without this
+        // catch the P2002 bubbles up to refresh-one.handleError and
+        // escalates the refresh_job to terminal failure — but the row
+        // the other worker wrote is already correct. Fall through to
+        // updateRepo: re-read the canonical row and apply baseData on
+        // top of it. Idempotent merge — both workers end up with the
+        // same fields, only the slightly-later timestamp wins.
+        try {
+          return await createRepo(baseData);
+        } catch (e: unknown) {
+          if (
+            e instanceof Prisma.PrismaClientKnownRequestError &&
+            e.code === 'P2002'
+          ) {
+            const raced = await findRepoByCanonical(args.owner, args.name);
+            if (raced) {
+              return await updateRepo({ id: raced.id, data: baseData });
+            }
+          }
+          throw e;
+        }
+      })();
   logger.info(
     { owner: args.owner, name: args.name, fetchStatus: args.fetchStatus },
     'repo stored',
