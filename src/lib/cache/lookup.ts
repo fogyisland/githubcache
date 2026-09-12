@@ -2,6 +2,8 @@ import type { FetchStatus } from '@prisma/client';
 import { prisma } from '@/lib/db/client';
 import { getRepoMetadata } from '@/lib/cache/read';
 import { nextDueForStatus } from '@/lib/scheduler/aging';
+import { env } from '@/lib/config/env';
+import { estimateExpectedAt, getQueueDepth, getMedianFetchMs } from '@/lib/cache/eta';
 
 export interface ResultOk {
   canonical: string;
@@ -33,6 +35,9 @@ export interface ResultPending {
   fetch_status: 'pending';
   queuedAt: string; // ISO timestamp when the job was enqueued
   scheduledFor: string; // ISO timestamp when scheduler is expected to run
+  expectedAt: string; // M30.7c — ISO ETA when caller can expect the fetch to complete
+  schedulerTickMs: number; // M30.7c — ms between scheduler ticks
+  schedulerBatchSize: number; // M30.7c — jobs per batch
 }
 export interface ResultError {
   canonical: string;
@@ -56,6 +61,8 @@ export const STALE_WARNING = 'data may be delayed';
 async function enqueueRefresh(owner: string, name: string): Promise<{
   queuedAt: Date;
   scheduledFor: Date;
+  queueDepth: number;
+  medianFetchMs: number;
 }> {
   const queuedAt = new Date();
   // repositoryId is a FK on refresh_jobs, so we need a repositories row
@@ -81,7 +88,13 @@ async function enqueueRefresh(owner: string, name: string): Promise<{
     select: { scheduledFor: true, createdAt: true },
   });
   if (existing) {
-    return { queuedAt: existing.createdAt, scheduledFor: existing.scheduledFor };
+    const [depth, median] = await Promise.all([getQueueDepth(), getMedianFetchMs()]);
+    return {
+      queuedAt: existing.createdAt,
+      scheduledFor: existing.scheduledFor,
+      queueDepth: depth,
+      medianFetchMs: median,
+    };
   }
   const scheduledFor = queuedAt;
   await prisma.refreshJob.create({
@@ -91,7 +104,9 @@ async function enqueueRefresh(owner: string, name: string): Promise<{
       scheduledFor,
     },
   });
-  return { queuedAt, scheduledFor };
+  // After create, include THIS job in depth (it just got enqueued).
+  const [depth, median] = await Promise.all([getQueueDepth(), getMedianFetchMs()]);
+  return { queuedAt, scheduledFor, queueDepth: depth, medianFetchMs: median };
 }
 
 /**
@@ -137,6 +152,7 @@ function buildPendingResult(
   original: string,
   queuedAt: Date,
   scheduledFor: Date,
+  expectedAt: Date,
 ): ResultPending {
   return {
     canonical: `${owner}/${name}`,
@@ -145,6 +161,9 @@ function buildPendingResult(
     fetch_status: 'pending',
     queuedAt: queuedAt.toISOString(),
     scheduledFor: scheduledFor.toISOString(),
+    expectedAt: expectedAt.toISOString(),
+    schedulerTickMs: env.SCHEDULER_TICK_MS,
+    schedulerBatchSize: env.SCHEDULER_BATCH_SIZE,
   };
 }
 
@@ -181,8 +200,14 @@ export async function lookupRepo(owner: string, name: string): Promise<QueryResu
     // forbidden/error: re-enqueue so scheduler can retry.
   }
   try {
-    const { queuedAt, scheduledFor } = await enqueueRefresh(owner, name);
-    return buildPendingResult(owner, name, original, queuedAt, scheduledFor);
+    const { queuedAt, scheduledFor, queueDepth, medianFetchMs } = await enqueueRefresh(owner, name);
+    const expectedAt = estimateExpectedAt({
+      queueDepth,
+      tickMs: env.SCHEDULER_TICK_MS,
+      batchSize: env.SCHEDULER_BATCH_SIZE,
+      medianFetchMs,
+    });
+    return buildPendingResult(owner, name, original, queuedAt, scheduledFor, expectedAt);
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'unknown';
     return {

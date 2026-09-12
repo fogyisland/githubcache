@@ -1,5 +1,35 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { estimateExpectedAt } from '@/lib/cache/eta';
+import { lookupRepo } from '@/lib/cache/lookup';
+
+// Mock @/lib/db/client so lookupRepo's plumbing test doesn't touch a real DB.
+// Task 1's pure tests don't import @/lib/cache/lookup, so they're unaffected
+// by this mock — vi.mock is hoisted per file and only fires when @/lib/db/client
+// is actually resolved by lookupRepo's import graph.
+vi.mock('@/lib/db/client', () => {
+  const upsert = vi.fn().mockResolvedValue({ id: 999n });
+  const findFirst = vi.fn().mockResolvedValue(null); // no existing pending
+  const create = vi.fn().mockResolvedValue({ id: 1n });
+  return {
+    prisma: {
+      repository: { upsert },
+      refreshJob: {
+        count: vi.fn().mockResolvedValue(2),
+        findFirst,
+        create,
+      },
+      $queryRawUnsafe: vi.fn().mockResolvedValue([{ median_ms: 7000 }]),
+    },
+  };
+});
+
+// Stub @/lib/cache/read so lookupRepo takes the enqueue path (cache miss).
+vi.mock('@/lib/cache/read', () => ({
+  getRepoMetadata: vi.fn().mockResolvedValue({ found: false }),
+}));
+
+// @/lib/db/repositories is transitively imported by lookup — stub it.
+vi.mock('@/lib/db/repositories', () => ({}));
 
 describe('estimateExpectedAt', () => {
   const NOW = new Date('2026-09-12T12:00:00.000Z');
@@ -46,5 +76,19 @@ describe('estimateExpectedAt', () => {
       queueDepth: 1, tickMs: 60_000, batchSize: 10, medianFetchMs: 0, now: NOW,
     });
     expect(r).toBeInstanceOf(Date);
+  });
+});
+
+describe('lookupRepo plumbing', () => {
+  it('7) pending result has expectedAt > queuedAt and the two new fields', async () => {
+    const r = await lookupRepo('owner', 'name');
+    if (r.fetch_status !== 'pending') throw new Error('expected pending');
+    const queuedAt = new Date(r.queuedAt);
+    const expectedAt = new Date(r.expectedAt);
+    expect(expectedAt.getTime()).toBeGreaterThan(queuedAt.getTime());
+    expect(typeof r.schedulerTickMs).toBe('number');
+    expect(r.schedulerTickMs).toBeGreaterThan(0);
+    expect(typeof r.schedulerBatchSize).toBe('number');
+    expect(r.schedulerBatchSize).toBeGreaterThan(0);
   });
 });
