@@ -65,6 +65,34 @@ export const ADMIN_SECTIONS: Record<AdminSectionSlug, AdminSection> = {
   'email-log':    { slug: 'email-log',      icon: 'email-log',      href: '/admin/email/log',    roles: ['admin'] },
 };
 
+export type AdminGroupSlug = 'overview' | 'access' | 'data' | 'operations' | 'system';
+
+export interface AdminGroup {
+  slug: AdminGroupSlug;
+  /** Render order inside the group. */
+  slugs: AdminSectionSlug[];
+  /** Group-level role filter. A group the user can't see is rendered with `hidden`. */
+  roles: Array<'admin' | 'operator'>;
+}
+
+/**
+ * Sidebar groups. M30.8 — admin sidebar previously rendered 18 flat
+ * `<li>` items, which made it hard to scan. We group them into 5
+ * functional buckets. `palette-loader.ts` flattens this back to a flat
+ * list (groups are sidebar-only).
+ *
+ * Group `roles` is a coarse gate; per-section `roles` is still consulted
+ * before rendering each link, so admin-only sections like `users` are
+ * hidden from operators even when the group is visible.
+ */
+export const ADMIN_GROUPS: AdminGroup[] = [
+  { slug: 'overview',   slugs: ['dashboard'],                                          roles: ['admin', 'operator'] },
+  { slug: 'access',     slugs: ['users', 'api-keys', 'github-tokens'],               roles: ['admin', 'operator'] },
+  { slug: 'data',       slugs: ['repositories', 'ingestion', 'providers'],           roles: ['admin', 'operator'] },
+  { slug: 'operations', slugs: ['refresh', 'queue', 'webhooks', 'audit'],             roles: ['admin'] },
+  { slug: 'system',     slugs: ['database', 'api-settings', 'insights', 'email', 'email-log', 'reports', 'queries'], roles: ['admin'] },
+];
+
 /**
  * Pick the active sidebar slug from the current pathname. Returns
  * 'dashboard' as the fallback for any unrecognised admin path.
