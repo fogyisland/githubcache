@@ -134,6 +134,17 @@
         "email": "Email",
         "email-log": "Email log"
       },
+      "groups": {
+        "overview":   { "label": "Overview" },
+        "access":     { "label": "Access" },
+        "data":       { "label": "Data" },
+        "operations": { "label": "Operations" },
+        "system":     { "label": "System" }
+      },
+      "groupToggle": {
+        "collapse": "Collapse {group}",
+        "expand":   "Expand {group}"
+      },
       "statusbar": {
         "db": "DB",
         "ms": "ms",

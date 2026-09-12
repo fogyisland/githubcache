@@ -134,6 +134,17 @@
         "email": "邮件",
         "email-log": "邮件日志"
       },
+      "groups": {
+        "overview":   { "label": "概览" },
+        "access":     { "label": "访问" },
+        "data":       { "label": "数据" },
+        "operations": { "label": "运维" },
+        "system":     { "label": "系统" }
+      },
+      "groupToggle": {
+        "collapse": "折叠 {group}",
+        "expand":   "展开 {group}"
+      },
       "statusbar": {
         "db": "数据库",
         "ms": "毫秒",
