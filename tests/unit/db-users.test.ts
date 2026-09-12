@@ -97,39 +97,13 @@ describe('updateUserStatus', () => {
     );
   });
 
-  // M27.7 — application writes must be auditable via the AFTER UPDATE
-  // trigger on `users`. We verify both the row gets written AND that
-  // the source is tagged 'application' (distinguishes from manual SQL
-  // which the trigger tags 'sql').
-  it('writes an audit_log row with source=application', async () => {
-    const id = testUserIds[2]!;
-    // Reset first (beforeEach already did active, but be explicit)
-    await updateUserStatus(id, UserStatus.Active, actorId);
-
-    const before = await prisma.auditLog.count({
-      where: { targetType: 'user', targetId: id.toString() },
-    });
-
-    await updateUserStatus(id, UserStatus.Disabled, actorId);
-
-    const rows = await prisma.auditLog.findMany({
-      where: { targetType: 'user', targetId: id.toString() },
-      orderBy: { id: 'desc' },
-      take: 1,
-    });
-    expect(rows.length).toBe(1);
-    const row = rows[0]!;
-    expect(row.action).toBe('disable_user');
-    // M28.bug4a — trigger now stamps actor_user_id from @app_actor.
-    expect(row.actorUserId).toBe(actorId);
-    // MySQL JSON column round-trip -> JsonValue; assert via JSON.stringify
-    // so this test doesn't depend on the runtime shape of the parsed object.
-    const meta = JSON.stringify(row.metadata);
-    expect(meta).toContain('"source":"application"');
-    // M31.x: status is now numeric (0=active, 2=disabled)
-    expect(meta).toContain('"from":0');
-    expect(meta).toContain('"to":2');
-    expect(meta).toContain('"trigger":"users_status_audit"');
-    expect(rows.length + before).toBeGreaterThan(0);
-  });
+  // M31.x — removed the audit_log shadow-write test. The M27.7
+  // users_status_audit trigger was dropped (migration
+  // 20260913000004_drop_users_status_audit_trigger) because its
+  // string-compare against the new INT user_status column broke.
+  // Coverage of the in-app audit write now lives in
+  // tests/integration/admin-users.test.ts:240 ('disables an active
+  // user and writes audit disable_user') and :262 ('re-enables a
+  // disabled user and writes audit enable_user'), which exercise
+  // the full PATCH /api/admin/users/[id] route.
 });

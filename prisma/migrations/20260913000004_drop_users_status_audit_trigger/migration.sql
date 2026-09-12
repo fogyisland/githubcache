@@ -1,0 +1,27 @@
+-- M31.x: drop users_status_audit trigger (M27.7 + M28.bug4a).
+--
+-- The trigger was created in M27.7 as a defensive shadow-audit: any
+-- UPDATE that changes user_status (whether via the in-app path or a
+-- manual SQL fix) writes a row to audit_log. M28.bug4a taught it to
+-- stamp actor_user_id via @app_actor.
+--
+-- After M31.x converted user_status from ENUM('active','disabled') to
+-- INT (0=active, 2=disabled), the trigger's string compare broke:
+--
+--   IF(NEW.user_status = 'disabled', ...)
+--
+-- MySQL strict mode rejects the string against the new INT column with
+-- ER_TRUNCATED_WRONG_VALUE (1292), aborting the UPDATE for ALL callers
+-- — including the in-app PATCH /api/admin/users/[id] route.
+--
+-- The in-app route at src/app/api/admin/users/[id]/route.ts already
+-- writes its own audit_log row (with metadata: { previousStatus,
+-- newStatus, ... }), so the trigger's shadow write was redundant and
+-- inconsistent (the trigger used 'from'/'to' field names; the in-app
+-- path used 'previousStatus'/'newStatus'). Dropping is the cleanest
+-- resolution; if a future need for "SQL writes should also be audited"
+-- emerges, write a new trigger that matches the in-app schema
+-- (numeric, with previousStatus/newStatus) and have the in-app path
+-- SET @app_source = 'skip' to avoid double-write.
+
+DROP TRIGGER IF EXISTS users_status_audit;
