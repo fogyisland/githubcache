@@ -1,5 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+// @vitest-environment happy-dom
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { createRoot, type Root } from 'react-dom/client';
+import { act } from 'react';
+import { usePathname } from 'next/navigation';
 import { AdminSidebar } from '@/app/admin/_components/admin-sidebar';
 
 vi.mock('next/navigation', () => ({
@@ -123,5 +127,172 @@ describe('AdminSidebar — groups (M30.8)', () => {
     expect(html).toMatch(
       /<button[^>]*aria-expanded="true"[^>]*aria-controls="ghc-admin-sidebar-group-overview"/,
     );
+  });
+});
+
+/**
+ * M30.8 — collapse/expand + active-group force-expand interaction tests.
+ *
+ * DOM library chosen: `react-dom/client` (`createRoot(...).render(...)`)
+ * + raw `button.dispatchEvent(new MouseEvent('click', { bubbles: true }))`.
+ *
+ * `@testing-library/react` is NOT a direct or transitive dependency in
+ * this repo (verified in Task 6 report), so we use the only DOM-binding
+ * option that does not require adding a new package. happy-dom provides
+ * `window` and `document` under `// @vitest-environment` above.
+ *
+ * NOTE: vitest's `happy-dom` environment ships `window.localStorage` as
+ * a plain object stub (no `getItem`/`setItem`/`clear` methods — see the
+ * `--localstorage-file was provided without a valid path` warning).
+ * `installInMemoryLocalStorage()` below swaps it for a Map-backed
+ * implementation that matches the Storage interface our component
+ * reads/writes. The component itself wraps these calls in `try/catch`
+ * so a missing Storage would not crash, but tests 2 & 3 explicitly
+ * verify the persisted JSON, so the stub is required.
+ *
+ * Each test renders into its own fresh `<div>` and unmounts via
+ * `root.unmount()` so the next test sees a clean DOM (in particular,
+ * `localStorage` is cleared in `beforeEach` for state isolation).
+ */
+
+/** Map-backed Storage stub. Mirrors the parts of Storage we exercise. */
+function installInMemoryLocalStorage(): void {
+  const store = new Map<string, string>();
+  const stub = {
+    get length(): number {
+      return store.size;
+    },
+    clear(): void {
+      store.clear();
+    },
+    getItem(key: string): string | null {
+      return store.has(key) ? store.get(key)! : null;
+    },
+    key(index: number): string | null {
+      return Array.from(store.keys())[index] ?? null;
+    },
+    removeItem(key: string): void {
+      store.delete(key);
+    },
+    setItem(key: string, value: string): void {
+      store.set(key, String(value));
+    },
+  };
+  Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    writable: true,
+    value: stub,
+  });
+}
+
+describe('AdminSidebar — collapse / expand interaction', () => {
+  let container: HTMLDivElement;
+  let root: Root;
+
+  beforeEach(() => {
+    installInMemoryLocalStorage();
+    window.localStorage.clear();
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+  });
+
+  afterEach(() => {
+    if (root) {
+      act(() => {
+        root.unmount();
+      });
+    }
+    if (container && container.parentNode) {
+      container.remove();
+    }
+  });
+
+  it('clicking a non-active group header collapses its items', () => {
+    // The brief's draft used `[data-group="overview"]`, but `overview`
+    // is force-expanded when the active pathname is `/admin` (the
+    // dashboard section lives there) — see `isCurrentGroupActive()` in
+    // admin-sidebar.tsx. So clicking its header toggles `collapsed` but
+    // `isExpanded()` still returns true. Use the `access` group instead,
+    // which has no active section under `/admin`.
+    act(() => {
+      root.render(<AdminSidebar userRole="admin" />);
+    });
+    const accessList = container.querySelector('#ghc-admin-sidebar-group-access');
+    expect(accessList).not.toBeNull();
+    expect(accessList!.hasAttribute('hidden')).toBe(false);
+    const accessHeader = container.querySelector(
+      '[data-group="access"] button',
+    ) as HTMLButtonElement | null;
+    expect(accessHeader).not.toBeNull();
+    act(() => {
+      accessHeader!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    const accessListAfter = container.querySelector(
+      '#ghc-admin-sidebar-group-access',
+    );
+    expect(accessListAfter!.hasAttribute('hidden')).toBe(true);
+  });
+
+  it('persists collapsed state in localStorage', () => {
+    act(() => {
+      root.render(<AdminSidebar userRole="admin" />);
+    });
+    const accessHeader = container.querySelector(
+      '[data-group="access"] button',
+    ) as HTMLButtonElement | null;
+    expect(accessHeader).not.toBeNull();
+    act(() => {
+      accessHeader!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    const stored = JSON.parse(
+      window.localStorage.getItem('ghc.admin.sidebar.collapsed') ?? '{}',
+    );
+    expect(stored.access).toBe(true);
+  });
+
+  it('re-expanding a group clears its entry from localStorage (or sets false)', () => {
+    act(() => {
+      root.render(<AdminSidebar userRole="admin" />);
+    });
+    const accessHeader = container.querySelector(
+      '[data-group="access"] button',
+    ) as HTMLButtonElement | null;
+    expect(accessHeader).not.toBeNull();
+    act(() => {
+      accessHeader!.dispatchEvent(new MouseEvent('click', { bubbles: true })); // collapse
+    });
+    act(() => {
+      accessHeader!.dispatchEvent(new MouseEvent('click', { bubbles: true })); // re-expand
+    });
+    const stored = JSON.parse(
+      window.localStorage.getItem('ghc.admin.sidebar.collapsed') ?? '{}',
+    );
+    expect(stored.access).not.toBe(true);
+  });
+
+  it('force-expands the group containing the active section', () => {
+    // Pathname is /admin/email/log — the active section is `email-log` which
+    // lives in the `system` group. Even after attempting to collapse
+    // `system`, the items must remain visible because the active
+    // section lives there.
+    //
+    // Per the brief's "Replace the `vi.doMock` block..." note, we use the
+    // established `vi.mocked(usePathname).mockReturnValue(...)` pattern
+    // instead of `vi.doMock` (which is brittle across tests).
+    vi.mocked(usePathname).mockReturnValue('/admin/email/log');
+    act(() => {
+      root.render(<AdminSidebar userRole="admin" />);
+    });
+    const systemHeader = container.querySelector(
+      '[data-group="system"] button',
+    ) as HTMLButtonElement | null;
+    expect(systemHeader).not.toBeNull();
+    act(() => {
+      systemHeader!.dispatchEvent(new MouseEvent('click', { bubbles: true })); // attempt to collapse
+    });
+    const systemList = container.querySelector('#ghc-admin-sidebar-group-system');
+    expect(systemList).not.toBeNull();
+    expect(systemList!.hasAttribute('hidden')).toBe(false); // still visible
   });
 });
