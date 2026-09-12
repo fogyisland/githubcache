@@ -102,7 +102,7 @@ model User {
   email        String       @unique @db.VarChar(255)
   passwordHash String?      @map("password_hash") @db.VarChar(255)
   role         Role         @default(operator)
-  status       UserStatus   @default(active) @map("user_status")
+  status       Int          @default(0) @map("user_status")
   createdAt    DateTime     @default(now()) @map("created_at")
   lastLoginAt  DateTime?    @map("last_login_at")
   theme        Theme        @default(terminal)
@@ -132,11 +132,6 @@ model User {
 enum Role {
   admin
   operator
-}
-
-enum UserStatus {
-  active
-  disabled
 }
 
 // M26 — tracks how a user account was created. `invited` users were
