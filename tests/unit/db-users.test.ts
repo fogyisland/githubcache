@@ -97,13 +97,13 @@ describe('updateUserStatus', () => {
     );
   });
 
-  // M31.x — removed the audit_log shadow-write test. The M27.7
-  // users_status_audit trigger was dropped (migration
-  // 20260913000004_drop_users_status_audit_trigger) because its
-  // string-compare against the new INT user_status column broke.
-  // Coverage of the in-app audit write now lives in
-  // tests/integration/admin-users.test.ts:240 ('disables an active
-  // user and writes audit disable_user') and :262 ('re-enables a
-  // disabled user and writes audit enable_user'), which exercise
-  // the full PATCH /api/admin/users/[id] route.
+  // M31.x.b — restored the users_status_audit trigger in
+  // migration 20260913000005 (with CREATE TRIGGER body installed
+  // out-of-band via scripts/install-status-trigger.mjs). The trigger
+  // writes a `user_status_changed_shadow` audit row for any UPDATE
+  // that changes user_status, including direct SQL — see
+  // tests/integration/admin-users-shadow-trigger.test.ts for the
+  // trigger contract. In-app coverage of `disable_user` / `enable_user`
+  // audit rows still lives in tests/integration/admin-users.test.ts
+  // (lines 240, 262).
 });

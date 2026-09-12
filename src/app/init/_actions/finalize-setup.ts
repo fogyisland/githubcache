@@ -130,22 +130,41 @@ export async function createAdminSubtask(): Promise<SubtaskResult> {
   try {
     const existing = await oneShot.user.findUnique({ where: { email } });
     if (existing) {
+      // M31.x.b — split so the status flip goes through the
+      // users_status_audit shadow trigger. The wizard is a setup-time
+      // tool with no logged-in operator, so actor=0 is the honest
+      // value for the resulting user_status_changed_shadow audit row.
       await oneShot.user.update({
         where: { id: existing.id },
-        data: { passwordHash, role: 'admin', status: UserStatus.Active },
+        data: { passwordHash, role: 'admin' },
       });
+      await oneShot.$transaction([
+        oneShot.$executeRawUnsafe("SET @app_source = ''"),
+        oneShot.$executeRawUnsafe('SET @app_actor = 0'),
+        oneShot.user.update({
+          where: { id: existing.id },
+          data: { status: UserStatus.Active },
+        }),
+      ]);
     } else {
       await oneShot.user.create({
         data: {
           email,
           passwordHash,
           role: 'admin',
-          status: UserStatus.Active,
           theme: 'terminal',
           adminVariant: 'mission_control',
           lang: 'zh',
         },
       });
+      await oneShot.$transaction([
+        oneShot.$executeRawUnsafe("SET @app_source = ''"),
+        oneShot.$executeRawUnsafe('SET @app_actor = 0'),
+        oneShot.user.update({
+          where: { email },
+          data: { status: UserStatus.Active },
+        }),
+      ]);
     }
     return { ok: true };
   } catch (e) {

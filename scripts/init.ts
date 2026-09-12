@@ -313,28 +313,40 @@ async function bootstrapAdmin(cfg: Config): Promise<void> {
       console.log(`✓ already exists: ${cfg.adminEmail} (admin/active) — login with your existing password`);
       return;
     }
-    // Promote to admin/active if it was a downgraded user.
+    // Promote to admin/active if it was a downgraded user. M31.x.b —
+    // split so the status flip goes through the users_status_audit
+    // trigger and leaves a user_status_changed_shadow audit row with
+    // actor_user_id=0 (the CLI has no logged-in operator).
     await prisma.user.update({
       where: { id: existing.id },
-      data: { passwordHash, role: 'admin', status: 0 },
+      data: { passwordHash, role: 'admin' },
     });
+    await prisma.$transaction([
+      prisma.$executeRawUnsafe("SET @app_source = ''"),
+      prisma.$executeRawUnsafe('SET @app_actor = 0'),
+      prisma.user.update({ where: { id: existing.id }, data: { status: 0 } }),
+    ]);
     console.log(`✓ promoted to admin/active: ${cfg.adminEmail}`);
     return;
   }
 
   const user = await prisma.user.upsert({
     where: { email: cfg.adminEmail },
-    update: { passwordHash, role: 'admin', status: 0 },
+    update: { passwordHash, role: 'admin' },
     create: {
       email: cfg.adminEmail,
       passwordHash,
       role: 'admin',
-      status: 0,
       theme: 'terminal',
       adminVariant: 'mission_control',
       lang: 'zh',
     },
   });
+  await prisma.$transaction([
+    prisma.$executeRawUnsafe("SET @app_source = ''"),
+    prisma.$executeRawUnsafe('SET @app_actor = 0'),
+    prisma.user.update({ where: { id: user.id }, data: { status: 0 } }),
+  ]);
   console.log(`✓ ${existing ? 'updated' : 'created'} admin user: ${user.email} (id=${user.id})`);
 }
 

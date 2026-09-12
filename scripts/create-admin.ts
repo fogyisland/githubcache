@@ -17,6 +17,7 @@
  */
 import { prisma } from '@/lib/db/client';
 import { hashPassword } from '@/lib/auth/password';
+import { UserStatus } from '@/lib/db/users';
 import { logger } from '@/lib/logger';
 
 async function main(): Promise<void> {
@@ -37,16 +38,25 @@ async function main(): Promise<void> {
     update: {
       passwordHash,
       role: 'admin',
-      status: 0,
     },
     create: {
       email,
       passwordHash,
       role: 'admin',
-      status: 0,
     },
     select: { id: true, email: true, role: true, status: true, createdAt: true },
   });
+  // Force active via the trigger-friendly raw path: the
+  // `users_status_audit` BEFORE UPDATE trigger reads @app_actor and
+  // stamps actor_user_id on the resulting `user_status_changed_shadow`
+  // audit row. Scripts have no logged-in operator, so actor=0 is the
+  // honest value — operators reading /admin/audit can see the row
+  // exists but no human is falsely blamed for it.
+  await prisma.$transaction([
+    prisma.$executeRawUnsafe("SET @app_source = ''"),
+    prisma.$executeRawUnsafe('SET @app_actor = 0'),
+    prisma.user.update({ where: { id: user.id }, data: { status: UserStatus.Active } }),
+  ]);
 
   logger.info({ user }, 'admin user upserted');
   // eslint-disable-next-line no-console

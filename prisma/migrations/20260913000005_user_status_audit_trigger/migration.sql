@@ -1,0 +1,33 @@
+-- M31.x.b: 应用 user_status 影子审计触发器 (users_status_audit)
+--
+-- 本迁移的 DDL 通过 scripts/install-status-trigger.mjs 执行 (该脚本
+-- 是 .mjs 风格可独立运行,使用 prisma db execute 等价路径创建触发器)。
+-- 这里**只**放一个占位注释 — Prisma 迁移协议不允许空 SQL 文件。
+--
+-- 为什么需要这个触发器 (重新叙述 — 与 M27.7/M28.bug4a 旧触发器
+-- 相比的关键差异):
+--
+-- 1. M27.7 旧触发器使用字符串比较 `IF NEW.user_status = 'disabled'`,
+--    在 M31.x 把 user_status 从 ENUM 转 INT (0=active, 2=disabled)
+--    之后被 MySQL strict mode 拒绝 (ER_TRUNCATED_WRONG_VALUE = 1292)。
+--    旧触发器已在 migration 20260913000004 被 DROP。
+-- 2. 删除后,user_status 的非应用层写入 (手动 SQL、运维 fix、
+--    replica 漂移) 完全无痕迹 — 2026-09-12 实际发生过一次:
+--    3 个管理员被 disable,但 audit_log 0 条记录,无法追溯来源。
+-- 3. M31.x.b 重新引入触发器,但**仅**在 NEW.user_status <>
+--    OLD.user_status 时写 audit_log — 无关 UPDATE (改 email/theme/
+--    lastLoginAt 等) 不触发,噪声为零。
+-- 4. 通过 SQL session var @app_actor 传递 actor_user_id (默认 0 =
+--    手动 SQL,运维一眼能筛出)。应用层 updateUserStatus() 助手的事务
+--    已经 `SET @app_source = 'application'`,触发器检查到时 RETURN
+--    并清空 @app_source (避免双写)。同 UPDATE 不会产生 in-app 行
+--    + trigger 行两行。
+-- 5. action = 'user_status_changed_shadow',与 in-app 的 disable_user/
+--    enable_user 区分;metadata.source = 'db_trigger' 进一步区分来源。
+--
+-- 安装/重装方法:
+--   node scripts/install-status-trigger.mjs
+-- 该脚本幂等 (DROP IF EXISTS + CREATE),可在生产、staging、dev
+-- 任意环境重复运行,无副作用。
+
+SELECT 1;

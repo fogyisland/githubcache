@@ -93,11 +93,22 @@ async function main() {
   }
 
   const passwordHash = await bcrypt.hash(NEW_PASSWORD, BCRYPT_COST);
+  // M31.x.b — split the password rewrite from the status write so the
+  // status flip goes through the `users_status_audit` shadow trigger.
+  // Forcing status=0 here would produce a `user_status_changed_shadow`
+  // audit row with actor_user_id=0 (script has no logged-in operator),
+  // which is exactly the right shape — the row is visible but no human
+  // is falsely blamed.
   const updated = await prisma.user.update({
     where: { id: user.id },
-    data: { passwordHash, status: 0 },
+    data: { passwordHash },
     select: { id: true, email: true, role: true, status: true, createdAt: true },
   });
+  await prisma.$transaction([
+    prisma.$executeRawUnsafe("SET @app_source = ''"),
+    prisma.$executeRawUnsafe('SET @app_actor = 0'),
+    prisma.user.update({ where: { id: user.id }, data: { status: 0 } }),
+  ]);
   console.log('Updated:', JSON.stringify(
     {
       ...updated,

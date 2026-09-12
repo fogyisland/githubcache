@@ -33,6 +33,11 @@ const ACTIONS = [
   'repo_forbidden',
   'refresh.failed_review',
   'auto_disable_token',
+  // M31.x.b — shadow audit row written by the users_status_audit BEFORE
+  // UPDATE trigger when user_status changes via raw SQL (out-of-band,
+  // outside the PATCH /api/admin/users/[id] path). Filtering on this
+  // action surfaces every "someone ran a manual UPDATE" event.
+  'user_status_changed_shadow',
 ];
 
 const TARGET_TYPES = ['', 'session', 'user', 'invitation', 'api_key', 'github_token'];
