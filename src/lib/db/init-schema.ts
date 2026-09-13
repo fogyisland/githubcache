@@ -353,10 +353,19 @@ const CREATE_TABLE_STATEMENTS: ReadonlyArray<string> = [
 ];
 
 function listMigrations(): string[] {
-  return readdirSync(MIGRATIONS_DIR, { withFileTypes: true })
-    .filter((d) => d.isDirectory())
-    .map((d) => d.name)
-    .sort();
+  // 1.0 schema freeze (2026-09-12): the canonical baseline lives here as
+  // CREATE_TABLE_STATEMENTS + the shadow trigger installer in
+  // scripts/install-status-trigger.mjs. The prisma/migrations/ directory
+  // is empty post-freeze, so we return [] instead of throwing on ENOENT.
+  try {
+    return readdirSync(MIGRATIONS_DIR, { withFileTypes: true })
+      .filter((d) => d.isDirectory())
+      .map((d) => d.name)
+      .sort();
+  } catch (e: unknown) {
+    if (e instanceof Error && 'code' in e && e.code === 'ENOENT') return [];
+    throw e;
+  }
 }
 
 /**

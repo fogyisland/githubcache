@@ -19,9 +19,10 @@
  *      DATABASE_URL into .env, writes a fresh random SESSION_SECRET if it's
  *      missing or still on the placeholder default
  *   2. Verifies DATABASE_URL is set and the MySQL connection works
- *   3. Auto-runs `npx prisma migrate deploy` so a fresh DB lands on the
- *      latest schema (replaces the prior "check + warn" behavior — the
- *      deploy script needs the schema to exist before step 4 queries it)
+ *   3. Runs the 1.0 schema baseline (CREATE TABLE IF NOT EXISTS for every
+ *      model — fresh installs land on the published schema; idempotent
+ *      re-runs are no-ops). See src/lib/db/init-schema.ts for the source
+ *      of truth; prisma/migrations/ is empty post-1.0-freeze.
  *   4. Creates / promotes the bootstrap admin user
  *   5. Optionally registers a GitHub PAT (skipped if pool already has 1+ active)
  *   6. Optionally seeds a starter ingestion provider (skipped if any exist)
@@ -34,7 +35,6 @@
  */
 import { createHash, randomBytes } from 'node:crypto';
 import { readFileSync, writeFileSync, existsSync, copyFileSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
 import * as readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 
@@ -48,20 +48,28 @@ import { stdin as input, stdout as output } from 'node:process';
 let prisma!: import('@prisma/client').PrismaClient;
 let hashPassword!: (pw: string) => Promise<string>;
 let UserStatus!: typeof import('@/lib/db/users').UserStatus;
+let ensureFreshSchema!: () => Promise<{
+  ok: true;
+  alreadyInitialized: boolean;
+  createdTables: number;
+  markedMigrations: number;
+}>;
 let logger!: { error: (...args: unknown[]) => void };
 
 async function loadAppModules(): Promise<void> {
   if (prisma) return;
-  const [db, auth, log, users] = await Promise.all([
+  const [db, auth, log, users, initSchema] = await Promise.all([
     import('@/lib/db/client'),
     import('@/lib/auth/password'),
     import('@/lib/logger'),
     import('@/lib/db/users'),
+    import('@/lib/db/init-schema'),
   ]);
   prisma = db.prisma;
   hashPassword = auth.hashPassword;
   logger = log.logger;
   UserStatus = users.UserStatus;
+  ensureFreshSchema = initSchema.ensureFreshSchema;
 }
 
 // -----------------------------------------------------------------------------
@@ -272,31 +280,33 @@ async function checkDatabase(): Promise<void> {
 }
 
 // -----------------------------------------------------------------------------
-// Step 2: Run pending Prisma migrations
+// Step 2: Ensure the 1.0 schema baseline exists
 // -----------------------------------------------------------------------------
 //
-// M28.bug5 — replaces the old `checkMigrations()` which only warned. The
-// deploy pipeline needs the schema to exist before step 4 queries it, so
-// we now run `prisma migrate deploy` directly. If the DB is empty, this
-// creates _prisma_migrations and applies everything in order.
+// 1.0 schema freeze (2026-09-12): `prisma/migrations/` is empty — the
+// canonical baseline lives in `src/lib/db/init-schema.ts` as
+// CREATE_TABLE_STATEMENTS + the shadow trigger installer in
+// scripts/install-status-trigger.mjs. The previous step spawned
+// `npx prisma migrate deploy`, which now reports "No migration found"
+// — useless for fresh installs. We call ensureFreshSchema() instead:
+//   - on a fresh DB it runs CREATE TABLE IF NOT EXISTS for every model
+//   - on an already-initialized DB it's a no-op (SELECT 1 FROM users
+//     probe + INSERT IGNORE on _prisma_migrations)
+//   - either way it seeds _prisma_migrations so a future `migrate deploy`
+//     has a clean baseline to apply incremental migrations against.
 //
-// Per CLAUDE.md: migrations still run as a separate step from app startup
-// (a failed migration here aborts the init — the app never starts), but
-// it's the deploy script's job to invoke this, not the application's.
+// Per CLAUDE.md: schema setup still happens as a separate step from app
+// startup (a failure here aborts init — the app never starts), but the
+// actual SQL now lives in app code, not in `prisma/migrations/`.
 
-function runMigrations(): void {
-  section('2 · Prisma migrations');
-  // shell: true so Windows can resolve npx.cmd (npx is a .cmd shim on
-  // Windows; without shell, spawnSync returns exit=null with no output).
-  const result = spawnSync('npx prisma migrate deploy', {
-    stdio: 'inherit',
-    env: process.env,
-    shell: true,
-  });
-  if (result.status !== 0) {
-    throw new Error(`prisma migrate deploy failed (exit ${result.status})`);
+async function ensureSchema(): Promise<void> {
+  section('2 · Schema baseline');
+  const result = await ensureFreshSchema();
+  if (result.alreadyInitialized) {
+    console.log(`✓ schema already initialized (${result.markedMigrations} migration rows marked)`);
+  } else {
+    console.log(`✓ created ${result.createdTables} table(s); marked ${result.markedMigrations} migration row(s)`);
   }
-  console.log('✓ migrations applied');
 }
 
 // -----------------------------------------------------------------------------
@@ -620,7 +630,7 @@ async function main(): Promise<void> {
   writeSiteNameToEnv(cfg.siteName);
   await loadAppModules();
   await checkDatabase();
-  runMigrations();
+  await ensureSchema();
   await bootstrapAdmin(cfg);
   await ensureGithubToken(cfg);
   await maybeSeedProvider(cfg);
