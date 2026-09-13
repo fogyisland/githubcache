@@ -110,17 +110,53 @@ export async function checkDrift(
     const lastFinishedAt = lastMigration[0]?.finished_at ?? null;
 
     if (lastFinishedAt === null) {
+      // 1.0 schema freeze (2026-09-13): empty _prisma_migrations no longer
+      // means "un-migrated DB". Two cases share the empty-table state:
+      //   (a) genuinely fresh DB that hasn't run init yet — drift tables
+      //       will be missing too, treat as before (ok: false)
+      //   (b) post-init DB where `npm run init` ran CREATE TABLE via
+      //       init-schema.ts and then wiped _prisma_migrations to keep
+      //       it mirroring the (empty) prisma/migrations/ dir — all
+      //       expected tables are present, that's a clean state, not drift.
+      // Distinguish by re-running the information_schema probe: if every
+      // table we care about exists, the DB is initialized — ok: true.
+      const tables = (await prisma.$queryRawUnsafe(`
+        SELECT TABLE_NAME, CREATE_TIME
+        FROM information_schema.TABLES
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME IN (${DRIFT_CHECK_TABLES.map((t) => `'${t}'`).join(',')})
+        ORDER BY TABLE_NAME
+      `)) as TableRow[];
+      const foundNames = new Set(tables.map((t) => t.TABLE_NAME));
+      const missing: string[] = [];
+      for (const expected of DRIFT_CHECK_TABLES) {
+        if (!foundNames.has(expected)) missing.push(expected);
+      }
+      if (missing.length > 0) {
+        return {
+          ok: false,
+          noMigrations: true,
+          lastFinishedAt: null,
+          graceMin,
+          database: await currentDatabase(),
+          tablesScanned: tables.length,
+          missing,
+          drifted: [],
+          healthy: [],
+          error: 'no migrations recorded in _prisma_migrations',
+        };
+      }
       return {
-        ok: false,
+        ok: true,
         noMigrations: true,
         lastFinishedAt: null,
         graceMin,
         database: await currentDatabase(),
-        tablesScanned: 0,
+        tablesScanned: tables.length,
         missing: [],
         drifted: [],
-        healthy: [],
-        error: 'no migrations recorded in _prisma_migrations',
+        healthy: DRIFT_CHECK_TABLES.filter((t) => foundNames.has(t)),
+        error: null,
       };
     }
 

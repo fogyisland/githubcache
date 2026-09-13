@@ -50,10 +50,16 @@ export async function startupDatabaseChecks(): Promise<void> {
       { err: drift.error, database: drift.database },
       'schema-drift check could not run; DB may be unreachable. Run `npm run db:check-drift` for details.',
     );
-  } else if (drift.noMigrations) {
+  } else if (drift.noMigrations && !drift.ok) {
+    // 1.0 schema freeze: empty _prisma_migrations + missing tables = the DB
+    // was never initialized. Point operators at init (CLI or /init wizard),
+    // not at `prisma migrate deploy` (which is a no-op now). When
+    // noMigrations but ok (post-init, all tables present), checkDrift
+    // already returned ok:true — fall through to the info branch below.
     logger.warn(
-      { database: drift.database },
-      'schema-drift check found no applied migrations. Run `npx prisma migrate deploy` before serving traffic.',
+      { database: drift.database, missing: drift.missing },
+      'schema-drift check found no applied migrations and missing tables. ' +
+        'Run `npm run init` (or complete the /init wizard) to build the schema.',
     );
   } else if (!drift.ok) {
     logger.warn(
