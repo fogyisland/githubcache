@@ -436,6 +436,12 @@ const MIGRATIONS_TABLE_DDL = `
 /**
  * Mark every migration file as applied. INSERT IGNORE so re-running is
  * safe; the unique index on migration_name dedupes.
+ *
+ * 1.0 schema freeze: this assumes `_prisma_migrations` was cleared first
+ * (see `wipeMigrationHistory` below). On a fresh DB the table is empty;
+ * on an already-initialized DB the wipe removes any bookkeeping rows that
+ * no longer correspond to a file on disk under `prisma/migrations/`,
+ * then we re-seed with the (now authoritative) on-disk listing.
  */
 async function markMigrationsApplied(): Promise<number> {
   const migrations = listMigrations();
@@ -451,6 +457,21 @@ export async function markMigrationsAppliedWith(client: PrismaClient): Promise<n
     await insertMigrationRow(client, name);
   }
   return migrations.length;
+}
+
+/**
+ * Truncate `_prisma_migrations` so the table reflects exactly what's on
+ * disk under `prisma/migrations/`. The init flow wipes + reseeds every
+ * run, so the table is always a clean mirror of the on-disk history —
+ * no stale rows from deleted migration files can confuse a future
+ * `prisma migrate deploy` (checksum mismatch, "migration X not found").
+ */
+async function wipeMigrationHistory(): Promise<void> {
+  await prisma.$executeRawUnsafe('DELETE FROM _prisma_migrations');
+}
+
+export async function wipeMigrationHistoryWith(client: PrismaClient): Promise<void> {
+  await client.$executeRawUnsafe('DELETE FROM _prisma_migrations');
 }
 
 async function insertMigrationRow(client: PrismaClient, name: string): Promise<void> {
@@ -491,6 +512,7 @@ export async function ensureFreshSchema(): Promise<InitSchemaResult> {
     }
   }
   await ensureMigrationsTable();
+  await wipeMigrationHistory();
   const markedMigrations = await markMigrationsApplied();
   return { ok: true, alreadyInitialized: already, createdTables, markedMigrations };
 }
@@ -507,6 +529,7 @@ export async function ensureFreshSchemaWith(
     }
   }
   await ensureMigrationsTableWith(client);
+  await wipeMigrationHistoryWith(client);
   const markedMigrations = await markMigrationsAppliedWith(client);
   return { ok: true, alreadyInitialized: already, createdTables, markedMigrations };
 }
