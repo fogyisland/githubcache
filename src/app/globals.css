@@ -4973,3 +4973,64 @@ a {
   letter-spacing: 0.05em;
 }
 .ghc-uptime-bar[data-state="fail"] { background: var(--color-danger); }
+
+/* M32 — Token row layout (grid-based terminal record)
+ * Scope-limited: only applies to elements inside .ghc-term-frame.
+ */
+.ghc-term-row {
+  display: grid;
+  grid-template-columns: auto auto minmax(8rem, 1fr) auto auto auto auto auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--ghc-term-border);
+}
+
+.ghc-term-row:last-child {
+  border-bottom: none;
+}
+
+.ghc-term-row-dot {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.ghc-term-row-status {
+  font-size: 12px;
+  letter-spacing: 0.05em;
+}
+
+.ghc-term-row-label {
+  font-weight: 600;
+}
+
+.ghc-term-row-prefix {
+  font-size: 12px;
+}
+
+.ghc-term-row-usage {
+  font-variant-numeric: tabular-nums;
+}
+
+.ghc-term-row-test button {
+  font-family: inherit;
+  background: transparent;
+  color: var(--ghc-term-info);
+  border: 1px solid var(--ghc-term-info);
+  border-radius: 0;
+  padding: 0.125rem 0.5rem;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+
+.ghc-term-row-test button:hover {
+  background: var(--ghc-term-info);
+  color: var(--ghc-term-bg);
+}
+
+.ghc-term-row-test button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
