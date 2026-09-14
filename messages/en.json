@@ -1620,6 +1620,17 @@
         "active": "active",
         "revoked": "revoked"
       },
+      "listActions": {
+        "copy": "Copy",
+        "copying": "Copying…",
+        "copied": "Copied!",
+        "rotate": "Rotate",
+        "rotateAria": "Rotate API key {name}",
+        "copyAria": "Copy API key {name}",
+        "copyUnavailable": "Plaintext not available — rotate to get a new key.",
+        "revealFailed": "Copy failed.",
+        "rateLimited": "Too many copy attempts. Try again later."
+      },
       "request": {
         "title": "Request an API key",
         "body": "Tell us what you'll use this key for. An administrator will review your request.",

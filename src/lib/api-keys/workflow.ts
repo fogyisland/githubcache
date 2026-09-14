@@ -84,6 +84,9 @@ export async function approveKey(args: ApproveKeyArgs): Promise<ApproveKeyResult
   const row = await updateApiKeyByIdUnchecked(args.id, {
     keyHash: hash,
     keyPrefix: prefix,
+    // M31.x — persist plaintext so /account/keys list can offer an inline
+    // "copy" button. NULL for rows created before this column landed.
+    plaintextKey: plain,
     status: 'active',
     approvedAt: new Date(),
     approvedBy: args.actorUserId,

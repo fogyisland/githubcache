@@ -7,6 +7,7 @@ import { validateSession } from '@/lib/auth/session';
 import { prisma } from '@/lib/db/client';
 import { formatDate, formatDateTime } from '@/lib/format/datetime';
 import { resolveRequestTimezone } from '@/lib/timezone/resolve';
+import { CopyKeyButton } from './_components/copy-key-button';
 
 const PAGE_SIZE = 50;
 
@@ -57,6 +58,20 @@ export default async function AccountKeysPage({
     where,
     orderBy: { createdAt: 'desc' },
     take: PAGE_SIZE,
+    // plaintextKey included so the row's copy button knows whether
+    // reveal can succeed; still never returned to other users
+    // (authorization is enforced inside revealOwnKeyAction).
+    select: {
+      id: true,
+      userId: true,
+      name: true,
+      keyPrefix: true,
+      status: true,
+      plaintextKey: true,
+      createdAt: true,
+      approvedAt: true,
+      lastUsedAt: true,
+    },
   });
 
   const chipVariant: Record<ApiKeyStatus, 'ok' | 'warn' | 'danger'> = {
@@ -113,6 +128,7 @@ export default async function AccountKeysPage({
                 <th className="ghc-table-th">{t('columns.created')}</th>
                 <th className="ghc-table-th">{t('columns.approved')}</th>
                 <th className="ghc-table-th">{t('columns.lastUsed')}</th>
+                <th className="ghc-table-th">{t('listActions.copy')}</th>
               </tr>
             </thead>
             <tbody>
@@ -139,6 +155,13 @@ export default async function AccountKeysPage({
                   </td>
                   <td className="ghc-table-td text-sm">
                     {k.lastUsedAt ? formatDateTime(k.lastUsedAt, userTz) : t('never')}
+                  </td>
+                  <td className="ghc-table-td">
+                    <CopyKeyButton
+                      keyId={k.id.toString()}
+                      keyName={k.name}
+                      available={Boolean(k.plaintextKey)}
+                    />
                   </td>
                 </tr>
               ))}

@@ -171,6 +171,10 @@ model ApiKey {
   name            String       @db.VarChar(100)
   keyPrefix       String       @map("key_prefix") @db.VarChar(16)
   keyHash         String       @unique @map("key_hash") @db.VarChar(64)
+  // M31.x — plaintext copy on /account/keys list. Nullable: rows created
+  // before this column existed have no plaintext and cannot be revealed;
+  // only newly approved / rotated keys get one.
+  plaintextKey    String?      @map("plaintext_key") @db.VarChar(64)
   status          ApiKeyStatus @default(pending)
   rateLimitPerMin Int          @default(60) @map("rate_limit_per_min")
   dailyQuota      Int          @default(10000) @map("daily_quota")

@@ -126,6 +126,7 @@ const CREATE_TABLE_STATEMENTS: ReadonlyArray<string> = [
     \`name\` VARCHAR(100) NOT NULL,
     \`key_prefix\` VARCHAR(16) NOT NULL,
     \`key_hash\` VARCHAR(64) NOT NULL,
+    \`plaintext_key\` VARCHAR(64) NULL,
     \`status\` ENUM('pending','active','revoked') NOT NULL DEFAULT 'pending',
     \`rate_limit_per_min\` INT NOT NULL DEFAULT 60,
     \`daily_quota\` INT NOT NULL DEFAULT 10000,

@@ -134,6 +134,9 @@ export async function rotateOwnKeyAction(formData: FormData): Promise<RotateResu
         name: newKeyName,
         keyPrefix: 'ghc_usr_',
         keyHash: hash,
+        // M31.x — persist plaintext so the rotated key can be revealed
+        // (copied) from the /account/keys list after admin approval.
+        plaintextKey: plain,
         status: 'pending',
       },
     });
