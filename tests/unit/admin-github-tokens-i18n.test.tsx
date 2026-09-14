@@ -142,6 +142,14 @@ vi.mock('next/headers', () => ({
   headers: () => ({ get: () => null }),
 }));
 
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
+}));
+
+vi.mock('@/lib/csrf/client', () => ({
+  fetchCsrfToken: async () => 'csrf-stub',
+}));
+
 vi.mock('@/lib/auth/session', () => ({
   validateSession: async () => ({
     id: 1n,
@@ -165,7 +173,7 @@ vi.mock('@/lib/db/github-tokens', () => ({
         tokenHash: 'hash1',
         tokenFirst4: 'ghp1',
         tokenLast4: 'wxyz',
-        status: 0,
+        status: 'active',
         requestsUsed: 100,
         requestsLimit: 5000,
         resetAt: null,
@@ -181,7 +189,7 @@ vi.mock('@/lib/db/github-tokens', () => ({
     tokenHash: 'hash1',
     tokenFirst4: 'ghp1',
     tokenLast4: 'wxyz',
-    status: 0,
+    status: 'active',
     requestsUsed: 100,
     requestsLimit: 5000,
     resetAt: null,
@@ -203,10 +211,6 @@ vi.mock('@/app/admin/github-tokens/_components/add-token-form', () => ({
   AddTokenForm: () => createElement('div', { 'data-testid': 'add-token-form-stub' }),
 }));
 
-vi.mock('@/app/admin/github-tokens/_components/token-actions', () => ({
-  TokenActions: () => createElement('div', { 'data-testid': 'token-actions-stub' }),
-}));
-
 vi.mock('@/app/admin/_components/admin-page-header', () => ({
   AdminPageHeader: ({ title, description }: { title: string; description?: string }) =>
     createElement(
@@ -226,24 +230,30 @@ describe('AdminGithubTokensPage i18n', () => {
     // Page header title
     expect(html).toContain('GitHub Tokens');
     expect(html).toContain('Manage the GitHub token pool used by the refresh scheduler.');
-    // Section headings
-    expect(html).toContain('Add a token');
-    expect(html).toContain('Registered tokens');
-    // List column headers
-    expect(html).toContain('>Label<');
-    expect(html).toContain('>Prefix<');
-    expect(html).toContain('>Status<');
-    expect(html).toContain('>Pool state<');
-    expect(html).toContain('>Used / Limit<');
-    expect(html).toContain('>Last used<');
+    // Section headings (lowercased by terminal section-heading style)
+    expect(html).toContain('add a token');
+    expect(html).toContain('registered tokens');
+    // Terminal row contents (the column headers from the old AdminTable
+    // are gone — TokenRow is a flex-grid, not a table; only row cells).
+    expect(html).toContain('ci-token-1'); // label
+    expect(html).toContain('ghp1'); // prefix first4
+    expect(html).toContain('wxyz'); // prefix last4
+    expect(html).toContain('Status'); // aria-label on the status span
+    expect(html).toContain('100 / 5,000'); // usage cell
+    expect(html).toContain('2026-08-15'); // last-used date
   });
 
-  it('renders translated status and pool chips', async () => {
+  it('renders translated status chip + keycap buttons + terminal title bar', async () => {
     const html = renderToStaticMarkup(await AdminGithubTokensPage({ searchParams: Promise.resolve({}) }));
-    // Status chip text (from status.active)
-    expect(html).toContain('>active<');
-    // Pool chip text (from pool.inPool)
-    expect(html).toContain('>in pool<');
+    // Status label rendered by TokenRow is uppercased (ACTIVE).
+    expect(html).toContain('ACTIVE');
+    // TokenRow renders [d] (active) or [E] (disabled) plus [x] delete.
+    expect(html).toContain('[d]');
+    expect(html).toContain('[x]');
+    // Terminal frame title bar with count.
+    expect(html).toContain('github.tokens');
+    expect(html).toContain('·');
+    expect(html).toContain('1');
   });
 });
 

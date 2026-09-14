@@ -4,28 +4,30 @@ import { listAllTokens } from '@/lib/db/github-tokens';
 import { poolHasId } from '@/lib/github/pool';
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
-import { AdminPagination } from '@/app/admin/_components/admin-pagination';
-import { AdminTable, type AdminColumn } from '@/app/admin/_components/admin-table';
-import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
-import { AdminTokenTestButton } from '@/app/admin/_components/admin-token-test-button';
+import { TerminalFrame } from './_components/terminal-frame';
+import { TokenRow } from './_components/token-row';
+import { TerminalPagination } from './_components/terminal-pagination';
+import { TerminalEmptyState } from './_components/terminal-empty-state';
 import { AddTokenForm } from './_components/add-token-form';
-import { TokenActions } from './_components/token-actions';
-import { formatDate } from '@/lib/format/datetime';
 import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 
-type TokenRow = Awaited<ReturnType<typeof listAllTokens>>['rows'][number];
+type TokenRowData = Awaited<ReturnType<typeof listAllTokens>>['rows'][number];
 
 const PAGE_SIZE_DEFAULT = 25;
 const PAGE_SIZE_MAX = 200;
 
 /**
- * Admin → GitHub Tokens page (M11.10 rewrite, M14.2 pagination).
+ * Admin → GitHub Tokens page (M32 terminal rewrite).
  *
- * Admin-only. Shows pool size banner + quota warning (computed across ALL
- * tokens, not just the current page — quota totals use a separate count),
- * then AddTokenForm + AdminTable of tokens. Each row carries a status chip
- * (active/disabled), a pool-state chip (in-pool vs pending activation),
- * used/limit progress, and per-row TokenActions.
+ * Visual: AdminPageHeader (light) → TerminalFrame (dark) containing:
+ *   - Pool status summary
+ *   - Optional quota warning bar
+ *   - Token rows (each a terminal record)
+ *   - AddTokenForm
+ *   - Pagination
+ *
+ * AdminShell, AdminSidebar, AdminTable, AdminPagination, AdminStatusChip
+ * are reused where possible. CSS overrides are scoped to .ghc-term-frame.
  */
 export default async function AdminGithubTokensPage({
   searchParams,
@@ -47,106 +49,12 @@ export default async function AdminGithubTokensPage({
   const offset = Number.isFinite(rawOffset) ? Math.max(0, rawOffset) : 0;
 
   const { rows: tokens, total: totalTokens } = await listAllTokens({ skip: offset, take: limit });
-
-  // Quota totals must include tokens not on the current page so the
-  // warning doesn't flap based on which page the admin lands on. We
-  // recompute by aggregating across all tokens via a lightweight COUNT
-  // + SUM equivalent: fetch all rows just for the totals.
   const allTokens = await listAllTokens({ skip: 0, take: PAGE_SIZE_MAX });
   const totalQuotaUsed = allTokens.rows.reduce((a, tok) => a + tok.requestsUsed, 0);
   const totalQuotaLimit = allTokens.rows.reduce((a, tok) => a + tok.requestsLimit, 0);
   const quotaPct = totalQuotaLimit > 0 ? Math.round((totalQuotaUsed / totalQuotaLimit) * 100) : 0;
 
-  const columns: AdminColumn<TokenRow>[] = [
-    { key: 'label', header: t('list.column.label'), render: (tok) => tok.label },
-    {
-      key: 'prefix',
-      header: t('list.column.prefix'),
-      render: (tok) => (
-        <code className="ghc-admin-mono">
-          {tok.tokenFirst4}…{tok.tokenLast4}
-        </code>
-      ),
-    },
-    {
-      key: 'status',
-      header: t('list.column.status'),
-      render: (tok) => (
-        <AdminStatusChip variant={tok.status === 'active' ? 'ok' : 'warn'}>
-          {t(`status.${tok.status}` as 'status.active' | 'status.disabled')}
-        </AdminStatusChip>
-      ),
-    },
-    {
-      key: 'pool',
-      header: t('list.column.poolState'),
-      render: (tok) => {
-        const inPool = poolHasId(tok.id);
-        return (
-          <AdminStatusChip variant={inPool ? 'ok' : 'warn'}>
-            {inPool ? t('pool.inPool') : t('pool.notInPool')}
-          </AdminStatusChip>
-        );
-      },
-    },
-    {
-      key: 'usage',
-      header: t('list.column.usedLimit'),
-      render: (tok) => {
-        const pct = tok.requestsLimit > 0
-          ? Math.round((tok.requestsUsed / tok.requestsLimit) * 100)
-          : 0;
-        return (
-          <span className="ghc-admin-usage">
-            {tok.requestsUsed.toLocaleString()} / {tok.requestsLimit.toLocaleString()}
-            <span className="ghc-admin-usage-pct">({pct}%)</span>
-          </span>
-        );
-      },
-      align: 'right',
-    },
-    {
-      key: 'quotaRemaining',
-      header: t('list.column.quotaRemaining'),
-      render: (tok) => {
-        // tokensLimit === 0 means "disabled / legacy" — the
-        // requestsUsed / requestsLimit ratio on the same row reads
-        // `42 / 0 (0%)`. Showing `0` for remaining would contradict
-        // that, so we render an em-dash for consistency.
-        if (tok.requestsLimit === 0) {
-          return <span className="ghc-admin-mono">—</span>;
-        }
-        const remaining = Math.max(0, tok.requestsLimit - tok.requestsUsed);
-        return <span className="ghc-admin-usage">{remaining.toLocaleString()}</span>;
-      },
-      align: 'right',
-    },
-    {
-      key: 'lastUsed',
-      header: t('list.column.lastUsed'),
-      render: (tok) => (tok.lastUsedAt ? formatDate(tok.lastUsedAt, userTz) : t('list.never')),
-    },
-    {
-      key: 'lastError',
-      // TODO(M30.5): githubToken.lastError is not tracked in the schema.
-      // This column is reserved for the future field. When the schema
-      // gains it, replace the em-dash with the row's lastError string.
-      header: t('list.column.lastError'),
-      render: () => <span className="ghc-admin-mono">—</span>,
-    },
-    {
-      key: 'test',
-      header: t('list.column.test'),
-      render: (tok) => <AdminTokenTestButton tokenId={tok.id.toString()} />,
-    },
-    {
-      key: 'actions',
-      header: '',
-      render: (tok) => (
-        <TokenActions tokenId={tok.id.toString()} currentStatus={tok.status} />
-      ),
-    },
-  ];
+  const inPoolCount = tokens.filter((t) => poolHasId(t.id)).length;
 
   return (
     <div className="ghc-admin-page">
@@ -159,51 +67,78 @@ export default async function AdminGithubTokensPage({
         description={t('description')}
       />
 
-      {totalTokens > 0 && quotaPct >= 80 ? (
-        <div className="ghc-admin-quota-warning">
-          <AdminStatusChip variant="warn">{t('quota.chip')}</AdminStatusChip>
-          <span>
+      <TerminalFrame title="github.tokens" count={totalTokens}>
+        <p className="ghc-term-section-heading">
+          <span className="ghc-term-prompt">&gt;</span>pool
+        </p>
+        <p>
+          <span className="ghc-term-info">[{inPoolCount} active]</span>{' '}
+          <span className="ghc-term-dim">
+            {totalQuotaUsed.toLocaleString()} / {totalQuotaLimit.toLocaleString()} ({quotaPct}%)
+          </span>
+        </p>
+
+        {totalTokens > 0 && quotaPct >= 80 ? (
+          <p className="ghc-term-warn">
+            <span className="ghc-term-prompt">!</span>
             {t('quota.warning', {
               pct: quotaPct,
               used: totalQuotaUsed.toLocaleString(),
               limit: totalQuotaLimit.toLocaleString(),
             })}
-          </span>
-        </div>
-      ) : null}
+          </p>
+        ) : null}
 
-      <p className="ghc-admin-hint">{t('poolHintBody')}</p>
+        {totalTokens === 0 ? (
+          <TerminalEmptyState />
+        ) : (
+          <>
+            <p className="ghc-term-section-heading">
+              <span className="ghc-term-prompt">&gt;</span>{t('list.heading').toLowerCase()}
+            </p>
+            <div role="table" aria-label={t('list.ariaLabel')}>
+              {tokens.map((tok) => (
+                <TokenRow
+                  key={tok.id.toString()}
+                  token={{
+                    id: tok.id,
+                    label: tok.label,
+                    tokenFirst4: tok.tokenFirst4,
+                    tokenLast4: tok.tokenLast4,
+                    status: tok.status,
+                    requestsUsed: tok.requestsUsed,
+                    requestsLimit: tok.requestsLimit,
+                    lastUsedAt: tok.lastUsedAt,
+                  }}
+                  userTz={userTz}
+                  t={t}
+                />
+              ))}
+            </div>
+            <TerminalPagination
+              basePath="/admin/github-tokens"
+              offset={offset}
+              limit={limit}
+              total={totalTokens}
+              rowsOnPage={tokens.length}
+              label={tPag('showing', {
+                start: totalTokens === 0 ? 0 : offset + 1,
+                end: offset + tokens.length,
+                total: totalTokens,
+              })}
+            />
+          </>
+        )}
 
-      <section>
-        <h2 className="ghc-admin-section-title">{t('addHeading')}</h2>
-        <AddTokenForm />
-      </section>
-
-      <section>
-        <h2 className="ghc-admin-section-title">
-          {t('list.heading')}{' '}
-          <span className="ghc-admin-section-count">({totalTokens})</span>
-        </h2>
-        <AdminTable<TokenRow>
-          columns={columns}
-          rows={tokens}
-          emptyTitle={t('list.empty.title')}
-          emptyDescription={t('list.empty.description')}
-          ariaLabel={t('list.ariaLabel')}
-        />
-        <AdminPagination
-          basePath="/admin/github-tokens"
-          offset={offset}
-          limit={limit}
-          total={totalTokens}
-          rowsOnPage={tokens.length}
-          label={tPag('showing', {
-            start: totalTokens === 0 ? 0 : offset + 1,
-            end: offset + tokens.length,
-            total: totalTokens,
-          })}
-        />
-      </section>
+        {totalTokens > 0 ? (
+          <>
+            <p className="ghc-term-section-heading">
+              <span className="ghc-term-prompt">&gt;</span>{t('addHeading').toLowerCase()}
+            </p>
+            <AddTokenForm />
+          </>
+        ) : null}
+      </TerminalFrame>
     </div>
   );
 }
