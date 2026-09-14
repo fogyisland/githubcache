@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
+import { DEFAULT_DEV_PORT } from '@/lib/config/dev-port';
 
 /**
  * /docs/deployment — environment & operations guide (M26.x).
@@ -55,7 +56,7 @@ export default async function DeploymentPage(): Promise<ReactElement> {
             <tbody>
               <EnvRow var="DATABASE_URL" required="yes" default="—" notes={t('env.notes.databaseUrl')} />
               <EnvRow var="SESSION_SECRET" required="yes" default="—" notes={t('env.notes.sessionSecret')} />
-              <EnvRow var="PORT" required="no" default="5002" notes={t('env.notes.port')} />
+              <EnvRow var="PORT" required="no" default={String(DEFAULT_DEV_PORT)} notes={t('env.notes.port')} />
               <EnvRow var="NODE_ENV" required="no" default="development" notes={t('env.notes.nodeEnv')} />
               <EnvRow var="LOG_LEVEL" required="no" default="info" notes={t('env.notes.logLevel')} />
               <EnvRow var="SCHEDULER_TICK_MS" required="no" default="60000" notes={t('env.notes.schedulerTick')} />

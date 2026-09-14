@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DEFAULT_DEV_PORT } from './dev-port';
 
 /**
  * Preprocess step: an empty-string env var (`SCHEDULER_BATCH_SIZE=`)
@@ -45,7 +46,7 @@ const schema = z.object({
   // (build needs to succeed with no .env), and Prisma's actual connect
   // call surfaces the real connection error at request time.
   DATABASE_URL: z.string().optional(),
-  PORT: z.coerce.number().int().positive().default(3000),
+  PORT: z.coerce.number().int().positive().default(DEFAULT_DEV_PORT),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   SESSION_SECRET: z

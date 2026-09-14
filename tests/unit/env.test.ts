@@ -25,7 +25,7 @@ describe('env loader', () => {
     process.env.DATABASE_URL = 'mysql://u:p@localhost:3306/db';
     const { env } = await import('@/lib/config/env');
     expect(env.DATABASE_URL).toBe('mysql://u:p@localhost:3306/db');
-    expect(env.PORT).toBe(3000);
+    expect(env.PORT).toBe(5002);
     expect(env.LOG_LEVEL).toBe('info');
     expect(env.NODE_ENV).toBe('development');
     expect(env.SESSION_SECRET.length).toBeGreaterThanOrEqual(32);

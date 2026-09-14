@@ -24,9 +24,11 @@
 
 export {};
 
+import { DEFAULT_DEV_PORT } from './lib/config/dev-port';
+
 const env = process.env as Record<string, string | undefined>;
 if (!env.NODE_ENV) env.NODE_ENV = 'production';
-if (!env.PORT) env.PORT = '5002';
+if (!env.PORT) env.PORT = String(DEFAULT_DEV_PORT);
 
 const { bootServer } = await import('./server.js');
 
