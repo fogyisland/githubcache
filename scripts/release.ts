@@ -87,6 +87,16 @@ const EXCLUDE_DIRS = new Set([
   'release',     // M28.bug27 — exclude this script's own output to prevent
                  // the matryoshka (release/githubcache/release/githubcache/...)
   'backups',
+  // M32.6.3 — root-level scratch / debug dirs that crept in during local
+  // debugging. None of these are needed for the recipient to run the app.
+  'CLA',
+  'reports',
+  'testgit',
+  'testjson',
+  'test',        // ad-hoc shell scripts + dumps, not vitest (which lives in tests/)
+  // scripts/ subdirs that hold dev-only utilities, not deploy-time tools.
+  'migrations',  // scripts/migrations/ — backfill helpers (e.g. backfill-pending-jobs.ts)
+  'test-ignore-schema',
 ]);
 
 const EXCLUDE_FILES = new Set([
@@ -117,16 +127,95 @@ const SCRIPT_EXCLUDE = new Set([
   'm21-smoke-provider.ts', // throws when no admin session
   'smoke-session.ts',     // needs a live session cookie
   'list-providers.ts',   // admin utility, not deploy-time
+  // M32.6.3 — dev-only debug / verification / smoke / repro scripts. These
+  // were useful during local development but the recipient has no use for
+  // them; shipping them bloats the artifact and clutters the script dir.
+  'debug-admin-header.mjs',
+  'debug-csrf-headers.mjs',
+  'debug-keys-request.mjs',
+  'debug-keys-request-2.mjs',
+  'debug-login-flow.mjs',
+  'debug-prisma-query.mjs',
+  'debug-refresh-jobs-prisma.mjs',
+  'debug-refresh-jobs-schema.mjs',
+  'debug-rotate-button.mjs',
+  'debug-rotate-button-2.mjs',
+  'debug-seed-admin.mts',
+  'e2e-api-fixture-verify.mjs',
+  'gen-fixture-repos.mjs',
+  'inspect-error-page.mjs',
+  'query-100-repos.mjs',
+  'repro-login-404.mjs',
+  'smoke-50-repos.mjs',
+  'test-client-omit.mjs',
+  'test-default-findmany.mjs',
+  'test-query-omit.mjs',
+  'verify-admin-pages.mjs',
+  'verify-btn-primary-fix.mjs',
+  'verify-bug17-baseline.mjs',
+  'verify-bug17-fix.mjs',
+  'verify-flat-fix.mjs',
+  'verify-init-schema.ts',
+  'verify-list-actions.mjs',
+  'verify-list-actions-via-curl.mjs',
+  'verify-shield-active.mjs',
+  'verify-sync-prod-sql.ts',
+  // ad-hoc probes / dev-box utilities — none belong on a deploy target.
+  'probe-login.mjs',
+  'probe-providers.mjs',
+  'probe-providers2.mjs',
+  'probe-users.mjs',
+  'probe-ports.ps1',
+  'probe-status.ps1',
+  'port-free.ps1',
+  'kill-all-node.ps1',
+  'kill-pid-15540.ps1',
+  'kill-port-5002.ps1',
+  'kill-port.ps1',
+  'kill-server-38036.ps1',
+  'restart-dev-server.ps1',
+  'wait-for-port.ps1',
+  'dev-fresh.cjs',
+  'dev-fresh.ps1',
+  'dev-fresh.sh',
+  'next15-await-cookies.mjs',
+  'admin-smoke.mjs',
+  'admin-smoke-m30-8.mjs',
+  'setup-smoke-users.mjs',
+  'trace-api-data.mjs',
+  'seed-test-key.mjs',
+  'seed-token.mjs',
+  'load-100.mjs',
+  'delete-flat-fix-fixtures.mjs',
+  'install-status-trigger.mjs',
+  'audit-admin.mjs',
+  'add-token.mjs',
+  // one-shot prod-sync SQL the recipient doesn't need on first deploy —
+  // they would only use these if migrating from an older version, and
+  // we ship a release note per-version explaining when to run them.
+  'sync-prod-api-keys-plaintext.sql',
+  'sync-prod-refresh-jobs.sql',
+]);
+
+// Top-level src/app subdirs that are debug surfaces, not production routes.
+const APP_EXCLUDE = new Set([
+  // M32.6.3 — api-demo was a temporary page to inspect API responses
+  // during M30 development; it has no production audience.
+  'api-demo',
 ]);
 
 // -----------------------------------------------------------------------------
 // File collection
 // -----------------------------------------------------------------------------
 
-function shouldExclude(absPath: string, name: string): boolean {
+function shouldExclude(absPath: string, name: string, prefix: string): boolean {
   if (EXCLUDE_DIRS.has(name)) return true;
   if (EXCLUDE_FILES.has(name)) return true;
   if (SCRIPT_EXCLUDE.has(name) && absPath.includes(`${'\\'}scripts${'\\'}`)) return true;
+  // APP_EXCLUDE keys are checked against the parent path normalized to
+  // forward slashes (so the rule works on both Windows and POSIX).
+  const parentParts = prefix.split(/[\\/]+/).filter(Boolean);
+  if (APP_EXCLUDE.has(name) && parentParts.join('/') === 'src/app') return true;
   return EXCLUDE_GLOBS_RE.some((re) => re.test(name));
 }
 
@@ -153,10 +242,10 @@ function walk(dir: string, prefix: string): CollectedFile[] {
       continue;
     }
     if (st.isDirectory()) {
-      if (shouldExclude(abs, entry)) continue;
+      if (shouldExclude(abs, entry, prefix)) continue;
       out.push(...walk(abs, rel));
     } else if (st.isFile()) {
-      if (shouldExclude(abs, entry)) continue;
+      if (shouldExclude(abs, entry, prefix)) continue;
       out.push({ src: abs, dest: rel });
     }
   }
