@@ -135,15 +135,25 @@
         "email-log": "Email log"
       },
       "groups": {
-        "overview":   { "label": "Overview" },
-        "access":     { "label": "Access" },
-        "data":       { "label": "Data" },
-        "operations": { "label": "Operations" },
-        "system":     { "label": "System" }
+        "overview": {
+          "label": "Overview"
+        },
+        "access": {
+          "label": "Access"
+        },
+        "data": {
+          "label": "Data"
+        },
+        "operations": {
+          "label": "Operations"
+        },
+        "system": {
+          "label": "System"
+        }
       },
       "groupToggle": {
         "collapse": "Collapse {group}",
-        "expand":   "Expand {group}"
+        "expand": "Expand {group}"
       },
       "statusbar": {
         "db": "DB",
@@ -1641,6 +1651,28 @@
         "history": {
           "heading": "Recent activity",
           "empty": "No audit entries for this key yet."
+        },
+        "rotate": {
+          "button": "Rotate & copy new key",
+          "rotating": "Rotating…",
+          "aria": "Rotate API key {name}",
+          "confirm": "Rotate \"{name}\"? The current key will be revoked immediately and a new pending request will be created. The new plaintext is only shown once.",
+          "modal": {
+            "title": "Your new API key",
+            "warning": "Treat this like a password. Copy it now — you will not see it again.",
+            "copy": "Copy",
+            "copied": "Copied!",
+            "hint": "An administrator must approve the new request before your integrations can authenticate with it.",
+            "done": "Done"
+          }
+        },
+        "rotateErrors": {
+          "not_signed_in": "You must be signed in.",
+          "forbidden": "You do not own this key.",
+          "not_found": "Key not found.",
+          "not_active": "Only active keys can be rotated.",
+          "rate_limited": "You can only rotate once every 24 hours. Try again later.",
+          "invalid": "Invalid request."
         }
       }
     },

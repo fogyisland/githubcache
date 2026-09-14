@@ -135,15 +135,25 @@
         "email-log": "邮件日志"
       },
       "groups": {
-        "overview":   { "label": "概览" },
-        "access":     { "label": "访问" },
-        "data":       { "label": "数据" },
-        "operations": { "label": "运维" },
-        "system":     { "label": "系统" }
+        "overview": {
+          "label": "概览"
+        },
+        "access": {
+          "label": "访问"
+        },
+        "data": {
+          "label": "数据"
+        },
+        "operations": {
+          "label": "运维"
+        },
+        "system": {
+          "label": "系统"
+        }
       },
       "groupToggle": {
         "collapse": "折叠 {group}",
-        "expand":   "展开 {group}"
+        "expand": "展开 {group}"
       },
       "statusbar": {
         "db": "数据库",
@@ -1641,6 +1651,28 @@
         "history": {
           "heading": "最近活动",
           "empty": "该 key 暂无审计记录。"
+        },
+        "rotate": {
+          "button": "轮换并复制新 key",
+          "rotating": "轮换中…",
+          "aria": "轮换 API key {name}",
+          "confirm": "确定要轮换 \"{name}\" 吗？当前 key 会立刻被撤销,并生成一条新的待审批请求。新 key 明文只会显示一次。",
+          "modal": {
+            "title": "你的新 API key",
+            "warning": "请像对待密码一样对待它。现在立即复制 — 之后再也不会显示。",
+            "copy": "复制",
+            "copied": "已复制!",
+            "hint": "新的请求需要管理员审批通过后,你的集成才能用它鉴权。",
+            "done": "完成"
+          }
+        },
+        "rotateErrors": {
+          "not_signed_in": "你需要先登录。",
+          "forbidden": "你没有这个 key 的所有权。",
+          "not_found": "找不到该 key。",
+          "not_active": "只有已激活的 key 才能轮换。",
+          "rate_limited": "每 24 小时只能轮换一次,请稍后再试。",
+          "invalid": "请求无效。"
         }
       }
     },

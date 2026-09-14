@@ -8,6 +8,7 @@ import { queryAuditLog } from '@/lib/db/audit';
 import { formatDateTime } from '@/lib/format/datetime';
 import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 import { RevokeOwnKeyButton } from './_components/revoke-button';
+import { RotateOwnKeyButton } from './_components/rotate-button';
 
 /**
  * M26 — /account/keys/[id].
@@ -102,7 +103,10 @@ export default async function AccountKeyDetailPage({
       <section className="ghc-card p-6">
         <h3 className="font-semibold">{t('actions.heading')}</h3>
         <p className="mt-1 text-sm ghc-text-muted">{t('actions.body')}</p>
-        <div className="mt-3">
+        <div className="mt-3" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          {key.status === 'active' && (
+            <RotateOwnKeyButton keyId={key.id.toString()} oldKeyName={key.name} />
+          )}
           {key.status !== 'revoked' && <RevokeOwnKeyButton keyId={key.id.toString()} />}
           {key.status === 'revoked' && (
             <span className="text-sm ghc-text-muted">{t('actions.alreadyRevoked')}</span>
