@@ -71,13 +71,12 @@ export async function bootServer(): Promise<ServerHandle> {
   // scheduler + token pool (both need DB). After the operator runs
   // /init and restarts the process, full boot resumes.
   //
-  // M32.6.1 — empty-DB guard. DATABASE_URL set but tables not yet
-  // created is the common case on a fresh deploy (operator copied
-  // .env.example and ran `npm run start:server` before /init). The
-  // raw check below would let initPool() fire off queries that throw
-  // P2021 ("table does not exist") and crash the process. Instead we
-  // probe the users table once; if it errors we drop into setup mode
-  // just like the missing-URL case. /init runs the migration step
+  // M32.6.1 — empty-DB guard. The common fresh-deploy case is the
+  // operator copying .env.example (so DATABASE_URL is set) but running
+  // `npm run start:server` before /init has created the schema. We
+  // probe INFORMATION_SCHEMA.TABLES for the `users` table — that query
+  // is metadata and never throws on a missing table, so the process
+  // can still come up in setup mode. /init runs the migration step
   // (ensureFreshSchema) which creates the tables, and on the next
   // restart this probe succeeds and the full stack comes online.
   const dbUrlSet = !!process.env.DATABASE_URL;
@@ -85,20 +84,23 @@ export async function bootServer(): Promise<ServerHandle> {
   if (dbUrlSet) {
     try {
       const { prisma } = await import('@/lib/db/client');
-      await prisma.user.count();
-      dbReady = true;
-    } catch (e) {
-      const code = (e as { code?: string }).code;
-      if (code === 'P2021') {
+      const rows = await prisma.$queryRaw<Array<{ count: bigint | number }>>`
+        SELECT COUNT(*) AS count
+        FROM INFORMATION_SCHEMA.TABLES
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'users'
+      `;
+      dbReady = Number(rows[0]?.count ?? 0) > 0;
+      if (!dbReady) {
         logger.warn(
-          'DATABASE_URL is set but tables are missing — starting in setup mode. Run /init, then restart the server.',
-        );
-      } else {
-        logger.warn(
-          { err: (e as Error).message },
-          'DATABASE_URL is set but the DB probe failed — starting in setup mode.',
+          'DATABASE_URL is set but the users table is missing — starting in setup mode. Run /init, then restart the server.',
         );
       }
+    } catch (e) {
+      logger.warn(
+        { err: (e as Error).message },
+        'DATABASE_URL is set but the DB probe failed — starting in setup mode.',
+      );
       dbReady = false;
     }
   } else {

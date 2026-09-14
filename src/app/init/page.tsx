@@ -16,14 +16,11 @@ import { getSetupStatus } from '@/lib/init/setup-status';
  *      is a route handler allowed to mutate cookies. That handler then
  *      308's to / once the cookie is set.
  *
- * Fresh-empty DB guard (M32.6.1): on a brand-new deploy the URL is set
- * but the `users` table doesn't exist yet. `getSetupStatus()` queries
- * `prisma.user.count(...)` and Prisma raises P2021 ("table does not
- * exist"). Without the catch the wizard itself 500s and the operator
- * can't even reach step 1 to create the tables. We swallow the
- * specific P2021 error and fall through to /init/db — the wizard's
- * step-1 form lets the operator fill DATABASE_URL (if missing) and
- * then run CREATE TABLE statements.
+ * Fresh-empty DB (M32.6.1) is handled inside getSetupStatus(): it
+ * checks INFORMATION_SCHEMA.TABLES first so a missing `users` table
+ * returns { done: false, reason: 'users_table_missing' } instead of
+ * throwing P2021. This page just needs to honor that result and let
+ * the wizard take over.
  *
  * Server-component "use server" pages need dynamic rendering because the
  * setup state can change between requests (a wizard step just finished).
@@ -37,26 +34,11 @@ export default async function InitPage(): Promise<never> {
   // landing on the site after a fresh deploy — where the wizard ran in
   // a different browser session — would loop through /init forever.
   //
-  // On a fresh-empty DB (URL set, tables not yet created) getSetupStatus
-  // throws P2021. We treat that the same as `done=false` and fall through
-  // to the wizard; otherwise the operator can't reach the wizard to
-  // create the tables in the first place.
-  let statusDone = false;
-  try {
-    const status = await getSetupStatus();
-    statusDone = status.done;
-  } catch (e) {
-    // P2021 = "table does not exist" — expected on fresh DB. Anything
-    // else is genuinely unexpected, log it so the operator can diagnose
-    // (e.g. DATABASE_URL pointing at a non-MySQL host).
-    const code = (e as { code?: string }).code;
-    if (code !== 'P2021') {
-      // eslint-disable-next-line no-console
-      console.error('[init] getSetupStatus threw, treating as not-done:', e);
-    }
-    statusDone = false;
-  }
-  if (statusDone) {
+  // getSetupStatus() never throws on an empty DB (M32.6.1): it returns
+  // { done: false, reason: 'users_table_missing' } so the wizard can
+  // take over and create the tables in step 1.
+  const status = await getSetupStatus();
+  if (status.done) {
     redirect('/api/setup/backfill');
   }
   redirect('/init/db');
