@@ -3,6 +3,7 @@ import { cookies, headers } from 'next/headers';
 import { getTranslations } from 'next-intl/server';
 import { LangSwitcher } from '@/app/_components/lang-switcher';
 import { TimezoneSwitcher } from '@/app/_components/timezone-switcher';
+import { shouldHideSiteHeader } from '@/app/_components/site-header-visibility';
 import { readLangFromCookieHeader } from '@/lib/lang/cookie';
 import { resolveRequestTimezone } from '@/lib/timezone/resolve';
 import { resolveLocale, LOCALES } from '@/lib/lang/registry';
@@ -25,6 +26,12 @@ import { AccountMenu } from './account-menu';
  */
 export async function SiteHeader() {
   const headerStore = await headers();
+  // The /admin shell has its own top utility bar. Rendering SiteHeader
+  // here produces two top bars with misaligned inner edges (max-w-6xl
+  // vs 100% width) — see shouldHideSiteHeader for the full rationale.
+  if (shouldHideSiteHeader(headerStore.get('x-pathname'))) {
+    return null;
+  }
   const cookieHeader = headerStore.get('cookie') ?? null;
   const currentLang = resolveLocale({
     cookieValue: readLangFromCookieHeader(cookieHeader),

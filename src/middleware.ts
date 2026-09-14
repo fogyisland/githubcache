@@ -60,10 +60,15 @@ export async function middleware(req: NextRequest): Promise<NextResponse> {
     }
     // Cookie exists — let the page render. Page-level validation will
     // do the DB lookup and handle expired/forged cookies.
-    const res = NextResponse.next();
-    // Expose pathname to server components (used by admin layout to
-    // highlight the active sidebar section).
-    res.headers.set('x-pathname', path);
+    //
+    // We have to forward the pathname through request headers (not
+    // response headers) so server components reading it via
+    // `headers()` from next/headers actually see it. Setting it on the
+    // response alone is a common pitfall — Next.js only propagates
+    // request-side headers into the React tree.
+    const requestHeaders = new Headers(req.headers);
+    requestHeaders.set('x-pathname', path);
+    const res = NextResponse.next({ request: { headers: requestHeaders } });
     return applyRequestId(req, res);
   }
 
