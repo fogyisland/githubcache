@@ -7,6 +7,7 @@ import {
   updateApiKeyByIdUnchecked,
 } from '@/lib/db/api-keys';
 import { logger } from '@/lib/logger';
+import { env } from '@/lib/config/env';
 import type { ApiKey } from '@prisma/client';
 
 export interface RequestKeyArgs {
@@ -16,9 +17,30 @@ export interface RequestKeyArgs {
 }
 
 /**
+ * Derive per-minute rate limit from the API setting `PUBLIC_REPO_RATE_PER_HOUR`.
+ *
+ * The /admin/api-settings panel exposes `PUBLIC_REPO_RATE_PER_HOUR` as the
+ * canonical per-key hourly ceiling (default 50_000). To keep the
+ * "申请时显示 60/分钟" prompt honest with whatever the operator sets in
+ * the API settings UI, new key requests inherit rateLimitPerMin =
+ * ceil(PUBLIC_REPO_RATE_PER_HOUR / 60). At 50_000/h that's 834/min.
+ *
+ * Floor of 1 — even a 1/h test setting yields a usable key instead of a
+ * zero-quota row that would 429 on the first request.
+ */
+export function deriveDefaultRatePerMin(perHour: number): number {
+  return Math.max(1, Math.ceil(perHour / 60));
+}
+
+/**
  * Create a pending ApiKey row. Plain key is generated on approval, not here.
  * A placeholder hash is stored so the unique constraint on keyHash holds;
  * the real hash overwrites it on approve.
+ *
+ * rateLimitPerMin / dailyQuota are stamped from operator-tunable defaults
+ * here so a fresh request inherits the API settings panel values rather
+ * than the schema @default (which is hard-coded 60/10000 and not in sync
+ * with PUBLIC_REPO_RATE_PER_HOUR). Approve can still override.
  */
 export async function requestKey(args: RequestKeyArgs): Promise<ApiKey> {
   const { hash: placeholderHash } = generateApiKey();
@@ -28,6 +50,8 @@ export async function requestKey(args: RequestKeyArgs): Promise<ApiKey> {
     keyPrefix: 'pending',
     keyHash: placeholderHash,
     status: 'pending',
+    rateLimitPerMin: deriveDefaultRatePerMin(env.PUBLIC_REPO_RATE_PER_HOUR),
+    dailyQuota: 10_000,
   });
   await writeAudit({
     ...(args.ip !== undefined ? { ip: args.ip } : {}),
