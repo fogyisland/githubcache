@@ -37,6 +37,15 @@
   --color-warn: #b45309;
   --color-danger: #b91c1c;
 
+  /* Primary button brand — must be defined at :root so the default
+     light / professional theme has a visible primary color. Without
+     these tokens, .ghc-btn-primary (background: var(--brand)) rendered
+     as transparent + white text on a white card and disappeared.
+     Dark/terminal themes redefine these inside [data-theme="…"] below. */
+  --brand: #3B82F6;
+  --brand-hover: #2563EB;
+  --brand-soft: color-mix(in srgb, #3B82F6 10%, transparent);
+
   --font-display: 'IBM Plex Sans', system-ui, sans-serif;
   --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
