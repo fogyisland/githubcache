@@ -189,12 +189,13 @@ export default async function AdminGithubTokensPage({
         ) : null}
       </section>
 
-      {totalTokens > 0 ? (
-        <section className="ghc-admin-section" aria-label={t('addHeading')}>
-          <h2 className="ghc-admin-section-heading">{t('addHeading')}</h2>
-          <AddTokenForm />
-        </section>
+      {totalTokens === 0 ? (
+        <p className="ghc-admin-empty-hint">{t('list.empty.hintAddFirst')}</p>
       ) : null}
+      <section className="ghc-admin-section" aria-label={t('addHeading')}>
+        <h2 className="ghc-admin-section-heading">{t('addHeading')}</h2>
+        <AddTokenForm />
+      </section>
     </div>
   );
 }

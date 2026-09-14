@@ -525,7 +525,8 @@
         },
         "empty": {
           "title": "No GitHub tokens registered",
-          "description": "Add one with the form below to enable refresh."
+          "description": "Add one with the form below to enable refresh.",
+          "hintAddFirst": "Use the form below to register your first token — the refresh scheduler is idle until at least one active token is added."
         }
       },
       "test": {

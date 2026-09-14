@@ -525,7 +525,8 @@
         },
         "empty": {
           "title": "暂无已注册的 GitHub 令牌",
-          "description": "使用下方表单添加令牌以启用刷新。"
+          "description": "使用下方表单添加令牌以启用刷新。",
+          "hintAddFirst": "用下方表单注册第一个令牌 — 至少有一个活跃令牌之前,刷新调度器是空闲的。"
         }
       },
       "addForm": {
