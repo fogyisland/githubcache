@@ -19,7 +19,6 @@ interface Props {
  *   - `available=false` (row predates plaintext_key column): button is
  *     disabled with a tooltip telling the user to rotate.
  *   - server returns `no_plaintext`: same UX as `available=false`.
- *   - server returns `rate_limited`: show a transient warning.
  *   - clipboard.writeText rejects (insecure context, etc.): fall
  *     back to showing the plaintext in an alert-style banner for the
  *     user to copy manually.
@@ -40,9 +39,7 @@ export function CopyKeyButton({ keyId, keyName, available }: Props): ReactElemen
       fd.set('keyId', keyId);
       const result = await revealOwnKeyAction(fd);
       if (!result.ok) {
-        if (result.error === 'rate_limited') {
-          setWarning(t('rateLimited'));
-        } else if (result.error === 'no_plaintext' || result.error === 'not_found') {
+        if (result.error === 'no_plaintext' || result.error === 'not_found') {
           setWarning(t('copyUnavailable'));
         } else {
           setWarning(t('revealFailed'));

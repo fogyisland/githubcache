@@ -1628,8 +1628,7 @@
         "rotateAria": "Rotate API key {name}",
         "copyAria": "Copy API key {name}",
         "copyUnavailable": "Plaintext not available — rotate to get a new key.",
-        "revealFailed": "Copy failed.",
-        "rateLimited": "Too many copy attempts. Try again later."
+        "revealFailed": "Copy failed."
       },
       "request": {
         "title": "Request an API key",

@@ -13,14 +13,7 @@ const RevealSchema = z.object({
 
 export type RevealResult =
   | { ok: true; plaintext: string }
-  | { ok: false; error: 'not_signed_in' | 'forbidden' | 'not_found' | 'no_plaintext' | 'rate_limited' };
-
-/**
- * Per-user cooldown for revealing a plaintext key. Tight window — the
- * plaintext is the user's own key, but we rate-limit anyway to bound
- * blast radius if a session is hijacked.
- */
-const REVEAL_COOLDOWN_MS = 60 * 1000;
+  | { ok: false; error: 'not_signed_in' | 'forbidden' | 'not_found' | 'no_plaintext' };
 
 function getClientIp(headersList: Headers): string {
   const fwd = headersList.get('x-forwarded-for');
@@ -43,7 +36,8 @@ function getClientIp(headersList: Headers): string {
  * rows return `no_plaintext` — the UI must then guide the user to
  * rotate.
  *
- * Rate limit: 60s per user. Audit log is the source of truth.
+ * No cooldown — users may copy as often as they want. Audit log still
+ * records every reveal so a hijacked session can be investigated.
  */
 export async function revealOwnKeyAction(formData: FormData): Promise<RevealResult> {
   const parsed = RevealSchema.safeParse({
@@ -86,20 +80,6 @@ export async function revealOwnKeyAction(formData: FormData): Promise<RevealResu
   }
   if (!key.plaintextKey) {
     return { ok: false, error: 'no_plaintext' };
-  }
-
-  // Cooldown: any reveal_key_self audit by this user in the last 60s.
-  const cooldownSince = new Date(Date.now() - REVEAL_COOLDOWN_MS);
-  const recent = await prisma.auditLog.findFirst({
-    where: {
-      action: 'reveal_key_self',
-      actorUserId: session.id,
-      createdAt: { gte: cooldownSince },
-    },
-    select: { id: true },
-  });
-  if (recent) {
-    return { ok: false, error: 'rate_limited' };
   }
 
   await writeAudit({
