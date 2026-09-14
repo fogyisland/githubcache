@@ -12,6 +12,10 @@ import { AdminTable, type AdminColumn } from '@/app/admin/_components/admin-tabl
 import { AdminStatusChip, type AdminChipVariant } from '@/app/admin/_components/admin-status-chip';
 import { formatDateTime } from '@/lib/format/datetime';
 import { resolveRequestTimezone } from '@/lib/timezone/resolve';
+import {
+  bucketRepoNode,
+  NodeBucketSection,
+} from '@/lib/admin/repo-node-sections';
 
 interface PageProps {
   params: Promise<{ owner: string; name: string }>;
@@ -267,18 +271,20 @@ export default async function AdminRepositoryDetailPage({
  </div>
  </dl>
 
- {/* Collapsible node JSON preview — mirrors the public /repo/.../api-shape.tsx
- aesthetic so operators recognise the same dump they saw there. */}
+ {/* Collapsible node JSON preview — bucketed by operator-meaningful
+ sections (stats / license / owner / ...) so the ~50-field GitHub
+ response doesn't read as one undifferentiated blob. The `stats`
+ bucket opens by default; the rest collapse to avoid wall-of-JSON. */}
  <div className="ghc-api-shape mt-4" data-testid="ghc-admin-repo-node">
- <details className="ghc-api-shape-details">
- <summary className="ghc-api-shape-summary">
+ <div className="ghc-api-shape-summary" data-testid="ghc-admin-repo-node-header">
  <span className="ghc-section-eyebrow">node</span>
  <span className="ghc-api-shape-hint">{canonicalId}</span>
- </summary>
- <pre className="ghc-code-block ghc-api-shape-pre">
- <code>{JSON.stringify(repo.node, null, 2)}</code>
- </pre>
- </details>
+ </div>
+ <div className="ghc-admin-repo-node-sections">
+ {bucketRepoNode(repo.node).map((b) => (
+ <NodeBucketSection key={b.id} bucket={b} />
+ ))}
+ </div>
  </div>
 
  <form action={enqueueRefreshAction} className="mt-4">
