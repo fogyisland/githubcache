@@ -1,5 +1,38 @@
 import { z } from 'zod';
 
+/**
+ * Preprocess step: an empty-string env var (`SCHEDULER_BATCH_SIZE=`)
+ * should be treated as "missing" so the `.default()` kicks in. Without
+ * this, zod's `coerce.number()` turns `""` into `0`, and the
+ * `.positive()` constraint rejects it — taking down every route that
+ * transitively imports `@/lib/config/env` (M31.x — broke login, csrf,
+ * /api/v1/status, etc.).
+ *
+ * Also normalises a literal "0" string to undefined: some existing
+ * .env files contain `SCHEDULER_TICK_MS=0` (legacy bug, admin form
+ * submitted `Number('') === 0`), and we want defaults to recover rather
+ * than crash the whole service after restart.
+ *
+ * Root cause chain:
+ *   1. Admin UI's api-settings form submits `Number(value)`, which
+ *      returns 0 for an empty input field.
+ *   2. writeTunables writes `SCHEDULER_BATCH_SIZE=0` (or empty).
+ *   3. After a restart, process.env has those values.
+ *   4. zod's `.positive()` rejects 0. The next request crashes with
+ *      ZodError.
+ */
+const emptyOrZeroToUndefined = (v: unknown): unknown => {
+  if (typeof v === 'string' && v.trim() === '') return undefined;
+  if (typeof v === 'string' && v.trim() === '0') return undefined;
+  return v;
+};
+
+const positiveIntWithDefault = (dflt: number) =>
+  z.preprocess(
+    emptyOrZeroToUndefined,
+    z.coerce.number().int().positive().default(dflt),
+  );
+
 const schema = z.object({
   // M28.bug16 — DATABASE_URL is OPTIONAL in the schema so the build
   // (`next build` page-data collection) can succeed before the wizard
@@ -19,20 +52,20 @@ const schema = z.object({
     .string()
     .min(32, 'SESSION_SECRET must be at least 32 chars')
     .default('dev-secret-change-me-32-chars-min-aaaaa'),
-  SCHEDULER_BATCH_SIZE: z.coerce.number().int().positive().default(10),
-  SCHEDULER_TICK_MS: z.coerce.number().int().positive().default(60_000),
-  NIGHTLY_SWEEP_INTERVAL_MS: z.coerce.number().int().positive().default(24 * 60 * 60_000),
+  SCHEDULER_BATCH_SIZE: positiveIntWithDefault(10),
+  SCHEDULER_TICK_MS: positiveIntWithDefault(60_000),
+  NIGHTLY_SWEEP_INTERVAL_MS: positiveIntWithDefault(24 * 60 * 60_000),
   SCHEDULER_ENABLED: z.coerce.boolean().default(true),
-  WEBHOOK_WORKER_TICK_MS: z.coerce.number().int().positive().default(15_000),
-  WEBHOOK_WORKER_BATCH_SIZE: z.coerce.number().int().positive().default(25),
+  WEBHOOK_WORKER_TICK_MS: positiveIntWithDefault(15_000),
+  WEBHOOK_WORKER_BATCH_SIZE: positiveIntWithDefault(25),
   // Per-IP rate limit for the public lookup form (no X-API-Key required).
   // Protects the GitHub token pool from anonymous abuse.
-  PUBLIC_LOOKUP_RATE_PER_MIN: z.coerce.number().int().positive().default(30),
+  PUBLIC_LOOKUP_RATE_PER_MIN: positiveIntWithDefault(30),
   // M26.x — /api/v1/repos/[owner]/[name] now requires an API key; this
   // is the per-key hourly ceiling. 50_000 is generous (≈14 req/sec)
   // and matches the M26 signup rate limit so all limits across the
   // service share the same order of magnitude.
-  PUBLIC_REPO_RATE_PER_HOUR: z.coerce.number().int().positive().default(50_000),
+  PUBLIC_REPO_RATE_PER_HOUR: positiveIntWithDefault(50_000),
   // M27.3 — read-path switch. When true, getRepoMetadata sources data
   // from the new typed columns + repo_releases / repo_branches tables
   // instead of the legacy `metadata` JSON. Off by default; flip on

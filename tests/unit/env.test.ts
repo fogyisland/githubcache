@@ -43,4 +43,38 @@ describe('env loader', () => {
     process.env.LOG_LEVEL = 'banana';
     await expect(import('@/lib/config/env')).rejects.toThrow();
   });
+
+  it('treats empty-string SCHEDULER_BATCH_SIZE as missing (uses default)', async () => {
+    // Regression: when .env contains `SCHEDULER_BATCH_SIZE=` (empty value),
+    // an admin saved a blank form field. process.env sees "" which zod's
+    // coerce.number() turns into 0 and then `.positive()` rejects. Treat
+    // empty string as undefined so the default kicks in.
+    process.env.DATABASE_URL = 'mysql://u:p@localhost:3306/db';
+    process.env.SCHEDULER_BATCH_SIZE = '';
+    process.env.SCHEDULER_TICK_MS = '';
+    process.env.NIGHTLY_SWEEP_INTERVAL_MS = '';
+    const { env } = await import('@/lib/config/env');
+    expect(env.SCHEDULER_BATCH_SIZE).toBe(10);
+    expect(env.SCHEDULER_TICK_MS).toBe(60_000);
+    expect(env.NIGHTLY_SWEEP_INTERVAL_MS).toBe(24 * 60 * 60_000);
+  });
+
+  it('treats literal "0" SCHEDULER_BATCH_SIZE as missing (legacy .env drift)', async () => {
+    // Regression: production .env contained SCHEDULER_BATCH_SIZE=0 because
+    // the admin form submitted Number('') === 0. zod's .positive() rejects
+    // 0, taking down login. Normalise "0" string to undefined so default
+    // recovers the service without manual intervention.
+    process.env.DATABASE_URL = 'mysql://u:p@localhost:3306/db';
+    process.env.SCHEDULER_BATCH_SIZE = '0';
+    process.env.SCHEDULER_TICK_MS = '0';
+    process.env.NIGHTLY_SWEEP_INTERVAL_MS = '0';
+    process.env.TOKEN_AUTO_DISABLE_THRESHOLD = '0';
+    const { env } = await import('@/lib/config/env');
+    expect(env.SCHEDULER_BATCH_SIZE).toBe(10);
+    expect(env.SCHEDULER_TICK_MS).toBe(60_000);
+    expect(env.NIGHTLY_SWEEP_INTERVAL_MS).toBe(24 * 60 * 60_000);
+    // TOKEN_AUTO_DISABLE_THRESHOLD allows 0 (it means "disable auto-disable"),
+    // so it should pass through as 0.
+    expect(env.TOKEN_AUTO_DISABLE_THRESHOLD).toBe(0);
+  });
 });
