@@ -40,33 +40,62 @@ export function AddTokenForm(): ReactElement {
   }
 
   return (
-    <form onSubmit={onSubmit}>
-      <label>
-        {t('labelLabel')}{' '}
+    <form onSubmit={onSubmit} className="ghc-term-form" noValidate>
+      <label className="ghc-term-field">
+        <span className="ghc-term-field-label">
+          <span className="ghc-term-prompt">&gt;</span>
+          LABEL
+        </span>
         <input
           type="text"
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           placeholder={t('labelPlaceholder')}
           required
+          className="ghc-term-input"
+          autoComplete="off"
+          spellCheck={false}
         />
       </label>
-      <label>
-        {t('tokenLabel')}{' '}
+      <label className="ghc-term-field">
+        <span className="ghc-term-field-label">
+          <span className="ghc-term-prompt">&gt;</span>
+          TOKEN
+        </span>
         <textarea
           value={token}
           onChange={(e) => setToken(e.target.value)}
           placeholder={t('tokenPlaceholder')}
           required
           rows={3}
-          className="ghc-input-mono"
+          className="ghc-term-input"
+          autoComplete="off"
+          spellCheck={false}
         />
+        <span className="ghc-term-field-hint ghc-term-dim">
+          {t('tokenLabel')}
+        </span>
       </label>
-      <button type="submit" disabled={busy || !token || !label}>
-        {t('submit')}
-      </button>
-      {error && <p role="alert">{error}</p>}
-      {success && <p role="status">{success}</p>}
+      <div className="ghc-term-form-actions">
+        <button
+          type="submit"
+          className="ghc-term-keycap"
+          data-variant="ok"
+          disabled={busy || !token || !label}
+        >
+          [ {busy ? '…' : t('submit')} ]
+        </button>
+        {success ? (
+          <span className="ghc-term-form-msg ghc-term-ok" role="status">
+            <span className="ghc-term-prompt">&gt;</span>ok {success}
+          </span>
+        ) : null}
+        {error ? (
+          <span className="ghc-term-form-msg ghc-term-err" role="alert">
+            <span className="ghc-term-prompt">!</span>err {error}
+          </span>
+        ) : null}
+      </div>
     </form>
   );
 }
