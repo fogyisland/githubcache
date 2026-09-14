@@ -190,10 +190,13 @@ const CREATE_TABLE_STATEMENTS: ReadonlyArray<string> = [
     PRIMARY KEY (\`id\`)
   ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 
-  // refresh_jobs — M5 + M27 facet kind (FK to repositories)
+  // refresh_jobs — M5 + M27 facet kind + M31 owner/name mirror
+  // (FK to repositories remains; repository_id nullable for queue-on-miss)
   `CREATE TABLE IF NOT EXISTS \`refresh_jobs\` (
     \`id\` BIGINT NOT NULL AUTO_INCREMENT,
-    \`repository_id\` BIGINT NOT NULL,
+    \`repository_id\` BIGINT NULL,
+    \`owner\` VARCHAR(100) NOT NULL,
+    \`name\` VARCHAR(200) NOT NULL,
     \`job_kind\` ENUM('core','releases','branches') NOT NULL DEFAULT 'core',
     \`priority\` INT NOT NULL DEFAULT 50,
     \`scheduled_for\` DATETIME(3) NOT NULL,
@@ -205,6 +208,7 @@ const CREATE_TABLE_STATEMENTS: ReadonlyArray<string> = [
     \`updated_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
     INDEX \`refresh_jobs_status_scheduled_for_idx\`(\`status\`, \`scheduled_for\`),
     INDEX \`refresh_jobs_status_priority_idx\`(\`status\`, \`priority\`),
+    INDEX \`refresh_jobs_owner_name_idx\`(\`owner\`, \`name\`),
     PRIMARY KEY (\`id\`),
     CONSTRAINT \`refresh_jobs_repository_id_fkey\` FOREIGN KEY (\`repository_id\`) REFERENCES \`repositories\`(\`id\`) ON DELETE RESTRICT ON UPDATE CASCADE
   ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
