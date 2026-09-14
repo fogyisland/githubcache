@@ -541,7 +541,7 @@
         "disable": "Disable",
         "enable": "Enable",
         "delete": "Delete",
-        "confirmDelete": "Delete this token from the registry and remove it from the pool? It will stop taking effect immediately.",
+        "confirmDelete": "Confirm delete token?",
         "failedWithError": "Failed: {error}",
         "disabledOk": "Token disabled (takes effect on next service restart).",
         "enabledOk": "Token enabled.",
@@ -1374,7 +1374,20 @@
       "saving": "Saving…",
       "saved": "Saved {count} setting(s).",
       "needsRestart": "Restart the server to apply.",
-      "saveFailed": "Save failed: {error}"
+      "saveFailed": "Save failed: {error}",
+      "restart": {
+        "heading": "Restart service",
+        "description": "Trigger a graceful restart of the running Next.js process. The process manager (pm2 / systemd / 宝塔) is expected to start a fresh process afterwards.",
+        "button": "Restart service",
+        "modalTitle": "Restart service",
+        "modalBody": "This will send SIGTERM to the current process. Your process manager will then start a fresh process — a brief outage is expected. Type the word restart below to confirm.",
+        "confirmPlaceholder": "Type restart to confirm",
+        "confirmMismatch": "Confirmation phrase does not match — please type the word restart exactly.",
+        "submit": "Yes, restart now",
+        "cancel": "Cancel",
+        "submitting": "Restarting…",
+        "submitted": "Restart initiated. The server will be back in a few seconds."
+      }
     }
   },
   "insights": {
@@ -1898,6 +1911,24 @@
       "description": "That repo doesn't exist on GitHub (or is private and not accessible).",
       "backToHome": "← Back to home"
     }
+  },
+  "apiDemo": {
+    "title": "API demo",
+    "lede": "Every cached repo is reachable via the public API route /api/v1/repos/owner/name. Below: a curl command for the route, then a few real cached repos with the response shape you'd see.",
+    "curlHeading": "Quickstart",
+    "curlNote": "You'll need an active API key — create one under /admin/api-keys (admin login required).",
+    "liveHeading": "Live examples",
+    "noCached": "No cached repos yet. Hit /repo/owner/name on a few popular repos and they'll appear here once the scheduler writes them.",
+    "curlLabel": "curl",
+    "responseLabel": "HTTP response (excerpt)",
+    "schemaLink": "Full schema reference",
+    "codesHeading": "Response codes",
+    "code200": "Cache hit — full metadata returned in the body. The row was written by a prior scheduler tick.",
+    "code202": "Cache miss — owner/name was enqueued into refresh_jobs. The body includes queuedAt, scheduledFor, and expectedAt.",
+    "code401": "Missing x-api-key header. The public route is authenticated since M26.x.",
+    "code403": "x-api-key present but unknown, revoked, or disabled.",
+    "code404": "GitHub returned 404 for this owner/name — terminal state, no further fetch attempts.",
+    "code503": "Upstream GitHub 5xx, network error, or a transient scheduler failure. Refresh job retries on the next tick."
   },
   "docs": {
     "landing": {

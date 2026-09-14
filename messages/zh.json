@@ -535,7 +535,7 @@
         "disable": "禁用",
         "enable": "启用",
         "delete": "删除",
-        "confirmDelete": "从注册表删除该令牌并将其从池中移除？该令牌将立即停止生效。",
+        "confirmDelete": "确认删除此令牌？",
         "failedWithError": "失败：{error}",
         "disabledOk": "令牌已禁用（下次服务重启后生效）。",
         "enabledOk": "令牌已启用。",
@@ -1374,7 +1374,20 @@
       "saving": "保存中…",
       "saved": "已保存 {count} 项设置。",
       "needsRestart": "重启服务以应用。",
-      "saveFailed": "保存失败：{error}"
+      "saveFailed": "保存失败：{error}",
+      "restart": {
+        "heading": "重启服务",
+        "description": "向当前 Next.js 进程发送 SIGTERM 信号触发优雅重启。宝塔 / pm2 / systemd 等进程管理器会再拉起一个新进程。",
+        "button": "重启服务",
+        "modalTitle": "重启服务",
+        "modalBody": "此操作会向当前进程发送 SIGTERM 信号，进程管理器（宝塔 / pm2 / systemd 等）随后会拉起新进程，期间会有短暂不可用。在下方输入 restart 字样以确认。",
+        "confirmPlaceholder": "输入 restart 字样以确认",
+        "confirmMismatch": "确认字符串不一致——请输入准确的 restart 字样。",
+        "submit": "确认重启",
+        "cancel": "取消",
+        "submitting": "重启中…",
+        "submitted": "重启指令已发出。几秒钟后服务将恢复。"
+      }
     }
   },
   "insights": {
@@ -1898,6 +1911,24 @@
       "description": "该仓库在 GitHub 上不存在 (或为私有仓库,无法访问)。",
       "backToHome": "← 返回首页"
     }
+  },
+  "apiDemo": {
+    "title": "API 演示",
+    "lede": "所有已缓存的仓库都可以通过公共路由 /api/v1/repos/owner/name 访问。下面展示公共路由的 curl 调用,以及几个真实缓存仓库的响应结构示例。",
+    "curlHeading": "快速开始",
+    "curlNote": "需要有效的 API key——可在 /admin/api-keys 创建 (需要管理员登录)。",
+    "liveHeading": "实时示例",
+    "noCached": "暂无已缓存的仓库。访问几个流行仓库的 /repo/owner/name 页面,scheduler 写入后即可在此显示。",
+    "curlLabel": "curl",
+    "responseLabel": "HTTP 响应 (节选)",
+    "schemaLink": "完整 schema 参考",
+    "codesHeading": "响应码",
+    "code200": "缓存命中——完整 metadata 在 body 返回。该行由之前的 scheduler tick 写入。",
+    "code202": "缓存未命中——owner/name 已入队 refresh_jobs。body 包含 queuedAt、scheduledFor 和 expectedAt。",
+    "code401": "缺少 x-api-key header。自 M26.x 起公共路由需要鉴权。",
+    "code403": "x-api-key 存在但无效、已撤销或已禁用。",
+    "code404": "GitHub 对该 owner/name 返回 404——终态,不再尝试拉取。",
+    "code503": "上游 GitHub 5xx、网络错误或 scheduler 暂时性失败。下一次 tick 自动重试。"
   },
   "docs": {
     "landing": {
