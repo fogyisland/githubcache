@@ -95,7 +95,7 @@ export function RotateOwnKeyButton({ keyId, oldKeyName }: Props): ReactElement {
     <>
       <button
         type="button"
-        className="ghc-btn-secondary ghc-btn-sm"
+        className="ghc-btn-primary ghc-btn-sm"
         disabled={pending}
         onClick={onClickRotate}
         aria-label={t('aria', { name: oldKeyName })}
