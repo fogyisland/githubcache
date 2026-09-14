@@ -16,6 +16,15 @@ import { getSetupStatus } from '@/lib/init/setup-status';
  *      is a route handler allowed to mutate cookies. That handler then
  *      308's to / once the cookie is set.
  *
+ * Fresh-empty DB guard (M32.6.1): on a brand-new deploy the URL is set
+ * but the `users` table doesn't exist yet. `getSetupStatus()` queries
+ * `prisma.user.count(...)` and Prisma raises P2021 ("table does not
+ * exist"). Without the catch the wizard itself 500s and the operator
+ * can't even reach step 1 to create the tables. We swallow the
+ * specific P2021 error and fall through to /init/db — the wizard's
+ * step-1 form lets the operator fill DATABASE_URL (if missing) and
+ * then run CREATE TABLE statements.
+ *
  * Server-component "use server" pages need dynamic rendering because the
  * setup state can change between requests (a wizard step just finished).
  */
@@ -27,8 +36,27 @@ export default async function InitPage(): Promise<never> {
   // is allowed to set cookies; this page is not). Without this, any user
   // landing on the site after a fresh deploy — where the wizard ran in
   // a different browser session — would loop through /init forever.
-  const status = await getSetupStatus();
-  if (status.done) {
+  //
+  // On a fresh-empty DB (URL set, tables not yet created) getSetupStatus
+  // throws P2021. We treat that the same as `done=false` and fall through
+  // to the wizard; otherwise the operator can't reach the wizard to
+  // create the tables in the first place.
+  let statusDone = false;
+  try {
+    const status = await getSetupStatus();
+    statusDone = status.done;
+  } catch (e) {
+    // P2021 = "table does not exist" — expected on fresh DB. Anything
+    // else is genuinely unexpected, log it so the operator can diagnose
+    // (e.g. DATABASE_URL pointing at a non-MySQL host).
+    const code = (e as { code?: string }).code;
+    if (code !== 'P2021') {
+      // eslint-disable-next-line no-console
+      console.error('[init] getSetupStatus threw, treating as not-done:', e);
+    }
+    statusDone = false;
+  }
+  if (statusDone) {
     redirect('/api/setup/backfill');
   }
   redirect('/init/db');
