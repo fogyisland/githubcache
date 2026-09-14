@@ -4,7 +4,7 @@ import { verifyCsrf } from '@/lib/auth/csrf';
 import { applyRequestId } from '@/lib/api/request-id';
 
 /**
- * Next.js 14 middleware for the entire app.
+ * Next.js middleware for the entire app.
  *
  * Runs on the Edge runtime (no Node.js APIs, no Prisma). Does:
  *
@@ -12,20 +12,34 @@ import { applyRequestId } from '@/lib/api/request-id';
  *    error) carries `x-request-id`. Inbound header echoed if valid;
  *    otherwise a fresh UUID generated via Web Crypto. Edge-safe.
  *
- * 2. **`/admin/*` pages** — if no session cookie, redirect to `/login`.
+ * 2. **M32.6 setup wizard gate** — historically read the
+ *    `ghc_setup_done=1` cookie directly. The cookie-only signal broke
+ *    whenever a fresh dev:server started (no browser cookie) or whenever
+ *    the cookie expired/cleared, even though the underlying DB was
+ *    fully provisioned.
+ *
+ *    The cookie is now **written by `src/server.ts` on every response**
+ *    based on a cached DB query at server boot. Server.ts queries
+ *    `users WHERE role='admin'` once, then for any incoming request
+ *    whose cookie is missing, it sets `ghc_setup_done=1` before
+ *    forwarding to Next.js. Middleware just reads the cookie. If the
+ *    cache says setup-done and the cookie is missing, server.ts has
+ *    already injected it by the time middleware runs. If the cache
+ *    says not-done, no injection happens and middleware sees the
+ *    genuine "not done" state.
+ *
+ *    When `done=false`, non-`/init` requests redirect to `/init`.
+ *    When `done=true`, the `/init` wizard bounces back to `/` (stale
+ *    bookmark).
+ *
+ * 3. **`/admin/*` pages** — if no session cookie, redirect to `/login`.
  *    Cookie existence is NOT full session validation — expired/forged
  *    cookies pass middleware but fail at the page level (which calls
  *    the full `validateSession` from @/lib/auth/session).
  *
- * 3. **`/api/admin/*` non-GET** — require CSRF token (double-submit pattern:
+ * 4. **`/api/admin/*` non-GET** — require CSRF token (double-submit pattern:
  *    `ghc_csrf` cookie value must match `X-CSRF-Token` header). GETs
  *    are exempt (idempotent reads).
- *
- * 4. **M28.bug12 — setup wizard gate**: when the `ghc_setup_done=1` cookie
- *    is absent (fresh deploy that hasn't run `/init` yet), redirect every
- *    non-`/init` request to `/init` so the operator is forced through DB
- *    config + admin bootstrap. The wizard sets the cookie via a Server
- *    Action at the very end, after migrations + admin creation succeed.
  *
  * CSRF failure body intentionally stays as `{error: 'csrf'}` (legacy
  * shape) — admin CSRF failures are not part of the M15 OpenAPI surface.
@@ -33,10 +47,10 @@ import { applyRequestId } from '@/lib/api/request-id';
 export async function middleware(req: NextRequest): Promise<NextResponse> {
   const path = req.nextUrl.pathname;
 
-  // --- M28.bug12: setup wizard gate ----------------------------------------
-  // Cookie-not-set = fresh deploy. PinYinCharacter uses a DB flag for this,
-  // which we can't (DB isn't set up yet). A long-lived cookie is the
-  // cheapest Edge-runtime-safe signal. Set when the wizard finishes.
+  // --- M28.bug12 / M32.6 setup wizard gate ---------------------------------
+  // Cookie-only signal; src/server.ts auto-injects it when DB shows
+  // setup is done, so a missing cookie on a provisioned DB is impossible
+  // in normal operation.
   const setupDone = req.cookies.get('ghc_setup_done')?.value === '1';
   if (!setupDone && !path.startsWith('/init') && !path.startsWith('/api/init')) {
     const initUrl = new URL('/init', req.url);
@@ -93,6 +107,6 @@ export const config = {
   // Note: Next.js middleware matcher does NOT support capturing groups
   // inside the negative lookahead. Use a single alternation per file.
   matcher: [
-    '/((?!_next|_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next|_next/static|_next/image|favicon.ico|api/setup/backfill).*)',
   ],
 };

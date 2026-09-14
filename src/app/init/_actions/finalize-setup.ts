@@ -176,10 +176,16 @@ export async function createAdminSubtask(): Promise<SubtaskResult> {
 }
 
 /**
- * Subtask 3: lock the wizard — clear stash cookie, set ghc_setup_done cookie,
- * redirect to /login.
+ * Subtask 3: lock the wizard — clear the admin-stash cookie and stamp
+ * the long-lived `ghc_setup_done=1` cookie that middleware reads.
  *
- * Idempotent: re-setting ghc_setup_done just refreshes the cookie's expiry.
+ * The middleware gate is cookie-based for runtime efficiency (Edge
+ * runtime can't run Prisma, so it needs a cheap signal). The cookie is
+ * set on successful wizard completion — without it, even an admin-
+ * populated DB gets redirected back to /init because middleware can't
+ * see the DB.
+ *
+ * Idempotent: re-setting the cookie just refreshes the expiry.
  */
 export async function lockSetupSubtask(): Promise<SubtaskResult> {
   await clearAdminStash();
