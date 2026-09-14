@@ -9,10 +9,17 @@ import { pino } from 'pino';
 // mirror it in env.ts and keep these defaults in sync.
 const level = process.env.LOG_LEVEL ?? 'info';
 const isDev = (process.env.NODE_ENV ?? 'development') === 'development';
+// LOG_PRETTY=false forces raw JSON output even in dev — the pino-pretty
+// worker thread crashes under Next.js dev HMR (worker chunk gets evicted
+// from .next/server/vendor-chunks but the worker handle is still alive).
+// Operators set this in .env to silence the noise; see the project
+// memory file `project_dev_pino_pretty_worker_quirk.md`.
+const prettyEnv = process.env.LOG_PRETTY;
+const usePretty = prettyEnv === undefined ? isDev : prettyEnv !== 'false';
 
 export const logger = pino({
   level,
-  ...(isDev
+  ...(usePretty
     ? {
         transport: {
           target: 'pino-pretty',
