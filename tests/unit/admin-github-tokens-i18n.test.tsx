@@ -23,10 +23,7 @@ const githubTokensDict = flattenDict({
   addHeading: 'Add a token',
   status: { active: 'active', disabled: 'disabled' },
   pool: { inPool: 'in pool', notInPool: 'not in pool' },
-  quota: { chip: 'quota', warning: '{pct}% of combined token quota used ({used} / {limit}).' },
-  poolHintPrefix: 'Pool size (currently active in memory):',
-  poolHintBody:
-    'Tokens added here are stored in the database and take effect immediately. To revoke a leaked token, delete it from this list or rotate it on GitHub.',
+  quota: { heading: 'Pool quota', warning: '{pct}% of combined token quota used ({used} / {limit}).' },
   list: {
     heading: 'Registered tokens',
     ariaLabel: 'GitHub tokens',
@@ -38,10 +35,11 @@ const githubTokensDict = flattenDict({
       poolState: 'Pool state',
       usedLimit: 'Used / Limit',
       lastUsed: 'Last used',
+      test: 'Test',
     },
     empty: {
       title: 'No GitHub tokens registered',
-      description: 'Add one with the form above to enable refresh.',
+      description: 'Add one with the form below to enable refresh.',
     },
   },
 });
@@ -72,7 +70,7 @@ const detailDict = flattenDict({
 });
 
 const addFormDict = flattenDict({
-  labelLabel: 'Label:',
+  labelLabel: 'Label',
   labelPlaceholder: 'e.g. user-ci-token',
   tokenLabel: 'Token (plaintext, stored in DB — revoke on GitHub if leaked):',
   tokenPlaceholder: 'ghp_...',
@@ -230,9 +228,9 @@ describe('AdminGithubTokensPage i18n', () => {
     // Page header title
     expect(html).toContain('GitHub Tokens');
     expect(html).toContain('Manage the GitHub token pool used by the refresh scheduler.');
-    // Section headings (lowercased by terminal section-heading style)
-    expect(html).toContain('add a token');
-    expect(html).toContain('registered tokens');
+    // Section headings
+    expect(html).toContain('Add a token');
+    expect(html).toContain('Registered tokens');
     // Terminal row contents (the column headers from the old AdminTable
     // are gone — TokenRow is a flex-grid, not a table; only row cells).
     expect(html).toContain('ci-token-1'); // label
@@ -243,17 +241,21 @@ describe('AdminGithubTokensPage i18n', () => {
     expect(html).toContain('2026-08-15'); // last-used date
   });
 
-  it('renders translated status chip + keycap buttons + terminal title bar', async () => {
+  it('renders translated section headings + AdminTable status chip + ghc-btn action buttons', async () => {
     const html = renderToStaticMarkup(await AdminGithubTokensPage({ searchParams: Promise.resolve({}) }));
-    // Status label rendered by TokenRow is uppercased (ACTIVE).
-    expect(html).toContain('ACTIVE');
-    // TokenRow renders [d] (active) or [E] (disabled) plus [x] delete.
-    expect(html).toContain('[d]');
-    expect(html).toContain('[x]');
-    // Terminal frame title bar with count.
-    expect(html).toContain('github.tokens');
-    expect(html).toContain('·');
-    expect(html).toContain('1');
+    // Section heading "Pool quota" from t('quota.heading')
+    expect(html).toContain('Pool quota');
+    // AdminTable column headers — translated
+    expect(html).toContain('Label');
+    expect(html).toContain('Prefix');
+    expect(html).toContain('Status');
+    expect(html).toContain('Pool state');
+    expect(html).toContain('Used / Limit');
+    // Status chip content (active token has "active" label inside chip)
+    expect(html).toContain('active');
+    // Action buttons (M32.5: ghc-btn-* instead of [d]/[E]/[x] keycaps)
+    expect(html).toContain('Disable');
+    expect(html).toContain('Delete');
   });
 });
 

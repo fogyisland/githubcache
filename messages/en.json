@@ -505,11 +505,9 @@
         "notInPool": "not in pool"
       },
       "quota": {
-        "chip": "quota",
+        "heading": "Pool quota",
         "warning": "{pct}% of combined token quota used ({used} / {limit})."
       },
-      "poolHintPrefix": "Pool size (currently active in memory):",
-      "poolHintBody": "Tokens added here are stored in the database and take effect immediately. To revoke a leaked token, delete it from this list or rotate it on GitHub.",
       "list": {
         "heading": "Registered tokens",
         "ariaLabel": "GitHub tokens",
@@ -527,7 +525,7 @@
         },
         "empty": {
           "title": "No GitHub tokens registered",
-          "description": "Add one with the form above to enable refresh."
+          "description": "Add one with the form below to enable refresh."
         }
       },
       "test": {
@@ -537,7 +535,7 @@
         "fail": "Failed"
       },
       "addForm": {
-        "labelLabel": "Label:",
+        "labelLabel": "Label",
         "labelPlaceholder": "e.g. user-ci-token",
         "tokenLabel": "Token (plaintext, stored in DB — revoke on GitHub if leaked):",
         "tokenPlaceholder": "ghp_...",

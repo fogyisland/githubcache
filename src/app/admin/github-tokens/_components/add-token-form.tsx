@@ -6,6 +6,11 @@ import type { ReactElement } from 'react';
 import { adminFetch } from '@/lib/api/admin-fetch';
 import { fetchCsrfToken } from '@/lib/csrf/client';
 
+/**
+ * M32.5 — Add a GitHub token form. Renders inline within an
+ * AdminTable section, styled with the shared ghc-* form tokens
+ * (was previously terminal-frame keycaps).
+ */
 export function AddTokenForm(): ReactElement {
   const t = useTranslations('admin.githubTokens.addForm');
   const router = useRouter();
@@ -40,59 +45,50 @@ export function AddTokenForm(): ReactElement {
   }
 
   return (
-    <form onSubmit={onSubmit} className="ghc-term-form" noValidate>
-      <label className="ghc-term-field">
-        <span className="ghc-term-field-label">
-          <span className="ghc-term-prompt">&gt;</span>
-          LABEL
-        </span>
+    <form onSubmit={onSubmit} className="ghc-admin-form" noValidate>
+      <label className="ghc-admin-field">
+        <span className="ghc-admin-field-label">{t('labelLabel')}</span>
         <input
           type="text"
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           placeholder={t('labelPlaceholder')}
           required
-          className="ghc-term-input"
+          className="ghc-input"
           autoComplete="off"
           spellCheck={false}
         />
       </label>
-      <label className="ghc-term-field">
-        <span className="ghc-term-field-label">
-          <span className="ghc-term-prompt">&gt;</span>
-          TOKEN
-        </span>
+      <label className="ghc-admin-field">
+        <span className="ghc-admin-field-label">{t('tokenLabel')}</span>
         <textarea
           value={token}
           onChange={(e) => setToken(e.target.value)}
           placeholder={t('tokenPlaceholder')}
           required
           rows={3}
-          className="ghc-term-input"
+          className="ghc-input ghc-input-mono"
           autoComplete="off"
           spellCheck={false}
         />
-        <span className="ghc-term-field-hint ghc-term-dim">
-          {t('tokenLabel')}
-        </span>
       </label>
-      <div className="ghc-term-form-actions">
+      <div className="ghc-admin-form-actions">
         <button
           type="submit"
-          className="ghc-term-keycap"
-          data-variant="ok"
+          className="ghc-btn-primary"
           disabled={busy || !token || !label}
+          aria-busy={busy}
         >
-          [ {busy ? '…' : t('submit')} ]
+          {busy ? '…' : t('submit')}
         </button>
         {success ? (
-          <span className="ghc-term-form-msg ghc-term-ok" role="status">
-            <span className="ghc-term-prompt">&gt;</span>ok {success}
+          <span className="ghc-admin-form-msg" role="status">
+            {success}
           </span>
         ) : null}
         {error ? (
-          <span className="ghc-term-form-msg ghc-term-err" role="alert">
-            <span className="ghc-term-prompt">!</span>err {error}
+          <span className="ghc-admin-form-msg ghc-text-danger" role="alert">
+            {error}
           </span>
         ) : null}
       </div>
