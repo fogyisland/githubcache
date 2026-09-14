@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import { requireAdmin } from '@/lib/auth/require-admin';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { ApiSettingsForm } from './_components/api-settings-form';
+import { RestartControl } from './_components/restart-control';
 import { readTunables } from '@/lib/config/settings-store';
 
 /**
@@ -52,6 +53,14 @@ export default async function AdminApiSettingsPage(): Promise<ReactElement> {
         <p className="ghc-admin-section-desc">{t('publicApi.description')}</p>
         <div className="ghc-api-settings-card">
           <ApiSettingsForm section="api" current={current} />
+        </div>
+      </section>
+
+      <section>
+        <h2 className="ghc-admin-section-title">{t('restart.heading')}</h2>
+        <p className="ghc-admin-section-desc">{t('restart.description')}</p>
+        <div className="ghc-api-settings-card">
+          <RestartControl />
         </div>
       </section>
     </div>
