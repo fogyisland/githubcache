@@ -191,7 +191,8 @@ export function LoginForm(): ReactElement {
       <button
         type="submit"
         className="ghc-btn-primary"
-        disabled={loading || csrfLoading || csrfToken === ''}
+        disabled={loading}
+        aria-busy={loading || csrfLoading}
       >
         {loading ? t('submitting') : t('submit')}
       </button>

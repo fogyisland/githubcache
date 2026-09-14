@@ -11,7 +11,9 @@ import { clientIpFromHeaders } from '@/lib/http/client-ip';
 import { logger } from '@/lib/logger';
 
 interface RouteContext {
-  params: { owner: string; name: string };
+  // Next.js 15 ships `params` as a Promise — must be awaited before
+  // reading properties (sync-dynamic-apis).
+  params: Promise<{ owner: string; name: string }>;
 }
 
 /**
@@ -27,7 +29,7 @@ interface RouteContext {
  *     traffic to the owner.
  */
 export async function GET(req: Request, ctx: RouteContext): Promise<Response> {
-  const { owner, name } = ctx.params;
+  const { owner, name } = await ctx.params;
   const start = Date.now();
   const ip = clientIpFromHeaders(req.headers);
   const repoRequested = `${owner}/${name}`;

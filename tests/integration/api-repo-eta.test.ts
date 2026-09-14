@@ -58,7 +58,7 @@ describe('GET /api/v1/repos — 202 ETA payload', () => {
       `http://localhost/api/v1/repos/${OWNER}/${NAME}`,
       { headers: { 'x-api-key': activeKeyPlain } },
     );
-    const res = await GET(req, { params: { owner: OWNER, name: NAME } });
+    const res = await GET(req, { params: Promise.resolve({ owner: OWNER, name: NAME }) });
     expect(res.status).toBe(202);
     const body = await res.json();
     expect(body.fetch_status).toBe('pending');

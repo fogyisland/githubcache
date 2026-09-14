@@ -21,7 +21,9 @@ import { getBackupPath } from '@/lib/database/backup';
  */
 export async function GET(
   req: Request,
-  ctx: { params: { id: string } },
+  // Next.js 15 ships `params` as a Promise — must be awaited before
+  // reading properties (sync-dynamic-apis).
+  ctx: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   const cookies = cookiesFromRequest(req);
   const user = await validateSession({ headers: req.headers, cookies });
@@ -29,7 +31,8 @@ export async function GET(
     return apiError('forbidden', 'forbidden', {}, req);
   }
 
-  const abs = await getBackupPath(ctx.params.id);
+  const { id } = await ctx.params;
+  const abs = await getBackupPath(id);
   if (!abs) {
     return apiError('not_found', 'backup not found', {}, req);
   }
@@ -54,7 +57,7 @@ export async function GET(
     status: 200,
     headers: {
       'Content-Type': 'application/gzip',
-      'Content-Disposition': `attachment; filename="${ctx.params.id}"`,
+      'Content-Disposition': `attachment; filename="${id}"`,
       // Disable caching — a backup taken at T+0 is a different artifact
       // from one taken at T+60s even if the name collides.
       'Cache-Control': 'no-store',
