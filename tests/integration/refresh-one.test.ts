@@ -204,23 +204,26 @@ describe('refreshOne', () => {
     expect(refreshed?.status).toBe('done');
   });
 
-  it('on 404: leaves repository row UNCHANGED, status=pending, reschedules via failureDelay(1) = 5min', async () => {
+  it('on 404: writes terminal fetchStatus=not_found row, marks job done, schedules ~24h', async () => {
     pickQueue.push({ id: BigInt(1), octokit: fakeOctokit() });
     server.use(ghNotFound());
     const job = await claimAndMake();
     const result = await refreshOne(job);
 
-    expect(result.status).toBe('pending');
+    // M31.x — first 404 is terminal. refreshOne returns 'done' after
+    // writing a fetchStatus='not_found' repositories row.
+    expect(result.status).toBe('done');
 
-    // M31 — failure paths no longer mutate the repositories row. The row
-    // should still reflect the seeded 'ok' state from beforeEach.
     const updated = await prisma.repository.findUnique({ where: { id: repo.id } });
-    expect(updated?.fetchStatus).toBe('ok');
+    expect(updated?.fetchStatus).toBe('not_found');
+    expect(updated?.fetchError?.toLowerCase()).toContain('not found');
 
     const refreshed = await prisma.refreshJob.findUnique({ where: { id: job.id } });
     expect(refreshed?.attempts).toBe(1);
-    expect(refreshed?.status).toBe('pending');
-    expect(refreshed!.scheduledFor!.getTime() - Date.now()).toBeGreaterThan(5 * 60_000 - 10_000);
+    expect(refreshed?.status).toBe('done');
+    // 24h reschedule (aging will move it forward if the row is touched).
+    const actualMs = refreshed!.scheduledFor!.getTime() - Date.now();
+    expect(actualMs).toBeGreaterThan(24 * 60 * 60_000 - 10_000);
   });
 
   it('on 403: leaves repository row UNCHANGED, writes audit log, marks failed (no requeue)', async () => {
@@ -278,31 +281,32 @@ describe('refreshOne', () => {
     expect(refreshed?.attempts).toBe(3); // unchanged
   });
 
-  it('on 5 consecutive 404s: marks job failed, writes refresh.failed_review audit with kind=not_found', async () => {
+  it('on repeated 404s: first 404 already terminated — attempts irrelevant, writes repo_not_found audit', async () => {
     pickQueue.push({ id: BigInt(1), octokit: fakeOctokit() });
     server.use(ghNotFound());
-    // In production, the same job is re-claimed by claimBatch which increments
-    // attempts each time. Here we pre-set attempts:4 so the next refreshOne
-    // call increments to 5 — exercising the "5 consecutive failures → terminal"
-    // branch.
+    // Pre-set attempts:4 — irrelevant in M31.x. The first 404 is always
+    // terminal regardless of prior attempt count. We assert the run is
+    // 'done' and the new repo_not_found audit action is emitted (not the
+    // legacy refresh.failed_review escalation).
     const job = await claimAndMake({ attempts: 4 });
     const result = await refreshOne(job);
 
-    expect(result.status).toBe('failed');
-    if (result.status === 'failed') {
-      expect(result.error.toLowerCase()).toContain('not found');
-    }
+    expect(result.status).toBe('done');
+
+    const updated = await prisma.repository.findUnique({ where: { id: repo.id } });
+    expect(updated?.fetchStatus).toBe('not_found');
 
     const refreshed = await prisma.refreshJob.findUnique({ where: { id: job.id } });
-    expect(refreshed?.status).toBe('failed');
+    expect(refreshed?.status).toBe('done');
+    // attempts increments to 5 (4 + 1) for diagnostics, but the row is
+    // terminal regardless.
     expect(refreshed?.attempts).toBe(5);
 
-    // Spec §10.4: terminal refresh failures escalate to admin via
-    // action='refresh.failed_review'. metadata.kind distinguishes 404 from
-    // unexpected-error escalations.
+    // M31.x — terminal 404 emits action='repo_not_found' (NOT the legacy
+    // 'refresh.failed_review'). metadata carries kind=not_found.
     const audits = await prisma.auditLog.findMany({
       where: {
-        action: 'refresh.failed_review',
+        action: 'repo_not_found',
         targetType: 'repository',
         targetId: `${TEST_OWNER}/r1`,
       },
@@ -315,8 +319,6 @@ describe('refreshOne', () => {
     };
     expect(metadata.kind).toBe('not_found');
     expect(metadata.attempts).toBe(5);
-    // M31 — metadata.repoId dropped (repositoryId may be null on the job row;
-    // owner/name on the audit targetId is the stable identifier).
   });
 
   it('on 5 consecutive unexpected errors: marks job failed, writes refresh.failed_review with kind=unexpected', async () => {
@@ -357,26 +359,29 @@ describe('refreshOne', () => {
     expect(metadata.message).toContain('mock network failure');
   });
 
-  it('on 4 attempts (not terminal): does NOT write refresh.failed_review', async () => {
+  it('on 4 attempts (404 path): writes terminal not_found + repo_not_found audit regardless of attempt count', async () => {
     pickQueue.push({ id: BigInt(1), octokit: fakeOctokit() });
     server.use(ghNotFound());
     const job = await claimAndMake({ attempts: 3 });
     const result = await refreshOne(job);
 
-    expect(result.status).toBe('pending');
+    // M31.x — first 404 always terminates, regardless of prior attempt
+    // count. The legacy "5-strike escalation" no longer applies to 404.
+    expect(result.status).toBe('done');
 
     const refreshed = await prisma.refreshJob.findUnique({ where: { id: job.id } });
-    expect(refreshed?.status).toBe('pending');
-    expect(refreshed?.attempts).toBe(4); // incremented, but still under terminal
+    expect(refreshed?.status).toBe('done');
+    expect(refreshed?.attempts).toBe(4); // incremented for diagnostics
 
+    // repo_not_found audit IS written (terminal write happened).
     const audits = await prisma.auditLog.findMany({
       where: {
-        action: 'refresh.failed_review',
+        action: 'repo_not_found',
         targetType: 'repository',
         targetId: `${TEST_OWNER}/r1`,
       },
     });
-    expect(audits).toHaveLength(0);
+    expect(audits).toHaveLength(1);
   });
 
   it('on unexpected error: increments attempts, uses failureDelay', async () => {

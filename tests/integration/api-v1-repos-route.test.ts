@@ -79,7 +79,7 @@ describe('GET /api/v1/repos/[owner]/[name] (M26.x authenticated)', () => {
   it('returns 401 when X-API-Key is missing', async () => {
     await createTestRepo({ owner: 'octocat', name: 'Hello-World', status: 'ok' });
     const req = new Request('http://localhost/api/v1/repos/octocat/Hello-World');
-    const res = await GET(req, { params: { owner: 'octocat', name: 'Hello-World' } });
+    const res = await GET(req, { params: Promise.resolve({ owner: 'octocat', name: 'Hello-World' }) });
     expect(res.status).toBe(401);
   });
 
@@ -89,7 +89,7 @@ describe('GET /api/v1/repos/[owner]/[name] (M26.x authenticated)', () => {
       'http://localhost/api/v1/repos/octocat/Hello-World',
       'ghc_test_definitely_not_a_real_key',
     );
-    const res = await GET(req, { params: { owner: 'octocat', name: 'Hello-World' } });
+    const res = await GET(req, { params: Promise.resolve({ owner: 'octocat', name: 'Hello-World' }) });
     expect(res.status).toBe(403);
   });
 
@@ -99,7 +99,7 @@ describe('GET /api/v1/repos/[owner]/[name] (M26.x authenticated)', () => {
       'http://localhost/api/v1/repos/octocat/Hello-World',
       revokedKeyPlain,
     );
-    const res = await GET(req, { params: { owner: 'octocat', name: 'Hello-World' } });
+    const res = await GET(req, { params: Promise.resolve({ owner: 'octocat', name: 'Hello-World' }) });
     expect(res.status).toBe(403);
   });
 
@@ -109,7 +109,7 @@ describe('GET /api/v1/repos/[owner]/[name] (M26.x authenticated)', () => {
       'http://localhost/api/v1/repos/octocat/Hello-World',
       activeKeyPlain,
     );
-    const res = await GET(req, { params: { owner: 'octocat', name: 'Hello-World' } });
+    const res = await GET(req, { params: Promise.resolve({ owner: 'octocat', name: 'Hello-World' }) });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.fetch_status).toBe('ok');
@@ -134,7 +134,7 @@ describe('GET /api/v1/repos/[owner]/[name] (M26.x authenticated)', () => {
       activeKeyPlain,
       '203.0.113.2',
     );
-    const res = await GET(req, { params: { owner: 'ghost', name: 'nope' } });
+    const res = await GET(req, { params: Promise.resolve({ owner: 'ghost', name: 'nope' }) });
     expect(res.status).toBe(404);
     const body = await res.json();
     expect(body.fetch_status).toBe('not_found');
@@ -158,7 +158,7 @@ describe('GET /api/v1/repos/[owner]/[name] (M26.x authenticated)', () => {
         activeKeyPlain,
         '203.0.113.4',
       ),
-      { params: { owner: 'octocat', name: 'Hello-World' } },
+      { params: Promise.resolve({ owner: 'octocat', name: 'Hello-World' }) },
     );
     expect(res.status).toBe(429);
     expect(res.headers.get('retry-after')).not.toBeNull();

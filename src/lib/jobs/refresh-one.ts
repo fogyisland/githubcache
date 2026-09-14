@@ -427,46 +427,70 @@ async function handleError(
   e: unknown,
   job: RefreshJob,
 ): Promise<RefreshJobResult> {
-  // 404 / 410 — repo missing or gone. Not terminal; keep trying per spec.
-  // M31 — DO NOT call storeRepoMetadata here. Pending refresh_jobs may not
-  // have a backing repositories row; failure is recorded only on the
-  // refresh_jobs row + audit log.
+  // 404 / 410 — repo missing or gone. First occurrence immediately
+  // records a terminal `fetchStatus='not_found'` row on `repositories`
+  // so subsequent GETs return 404 with a user-friendly error body
+  // instead of bouncing through the 202 pending → re-poll loop.
+  // M31.x — refresh_jobs without a backing repositories row (the
+  // queue-on-miss path) get a stub row created here. Existing rows
+  // are upserted in place so concurrent re-fetches converge.
   if (
     e instanceof NotFoundError ||
     (e instanceof GitHubError && (e.httpStatus === 404 || e.httpStatus === 410))
   ) {
     const attempts = job.attempts + 1;
-    const delay = nextDelay(attempts, -1); // failure mode
-    const terminal = attempts >= 5;
+    const message = e.message;
+    try {
+      await storeRepoMetadata({
+        owner: job.owner,
+        name: job.name,
+        node: null,
+        metadata: { notFound: true, githubStatus: e instanceof GitHubError ? e.httpStatus : 404 },
+        fetchStatus: 'not_found',
+        fetchError: message,
+      });
+    } catch (storeErr: unknown) {
+      // If the terminal write fails (DB hiccup), fall through to the
+      // legacy retry loop so we get another shot — better than losing
+      // the 404 evidence entirely.
+      logger.error(
+        { err: storeErr, owner: job.owner, name: job.name },
+        'failed to persist not_found row; will retry',
+      );
+      const delay = nextDelay(attempts, -1); // failure mode
+      await prisma.refreshJob.update({
+        where: { id: job.id },
+        data: {
+          status: 'pending',
+          lockedUntil: null,
+          scheduledFor: new Date(Date.now() + delay.ms),
+          lastError: message,
+          attempts,
+        },
+      });
+      return { status: 'pending' };
+    }
     await prisma.refreshJob.update({
       where: { id: job.id },
       data: {
-        status: terminal ? 'failed' : 'pending',
+        status: 'done',
         lockedUntil: null,
-        scheduledFor: new Date(Date.now() + delay.ms),
-        lastError: e.message,
+        scheduledFor: new Date(Date.now() + 24 * 60 * 60_000), // 24h, aging will reschedule if repo is touched
+        lastError: message,
         attempts,
       },
     });
-    if (terminal) {
-      // 5 consecutive not_founds — escalate to admin.
-      await writeAudit({
-        action: ESCALATION_AUDIT_ACTION,
-        targetType: 'repository',
-        targetId: `${job.owner}/${job.name}`,
-        metadata: { attempts, message: e.message, kind: 'not_found' },
-      });
-      logger.warn(
-        { jobId: job.id.toString(), owner: job.owner, name: job.name, attempts },
-        'refresh: 404 escalation, status=failed',
-      );
-      return { status: 'failed', error: e.message };
-    }
-    logger.info(
+    await writeAudit({
+      action: 'repo_not_found',
+      targetType: 'repository',
+      targetId: `${job.owner}/${job.name}`,
+      metadata: { attempts, message, kind: 'not_found' },
+    });
+    logger.warn(
       { jobId: job.id.toString(), owner: job.owner, name: job.name, attempts },
-      'refresh: 404, will retry',
+      'refresh: 404 terminal, fetchStatus=not_found persisted',
     );
-    return { status: 'pending' };
+    return { status: 'done' };
   }
 
   // 403 — terminal. Admin must intervene.

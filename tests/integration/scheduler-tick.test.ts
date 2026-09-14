@@ -231,7 +231,7 @@ describe('runTick', () => {
     }
   });
 
-  it('marks job rescheduled as pending on 404 (counts as pending in tick summary)', async () => {
+  it('marks job done on first 404 (M31.x — terminal not_found write)', async () => {
     pickQueue.fill(12);
     server.use(ghNotFound('tick-repo'));
     // Use priority=1 to ensure our test job gets claimed
@@ -239,10 +239,17 @@ describe('runTick', () => {
     await runTick();
 
     const updated = await prisma.refreshJob.findUnique({ where: { id: job.id } });
-    // 404 on first attempt → refreshOne marks status='pending' (will retry)
-    expect(updated?.status).toBe('pending');
-    // attempt count goes from 0 → 1 (404 counts in attempts)
+    // M31.x — first 404 is terminal. refreshOne writes a fetchStatus='not_found'
+    // row and marks the job status='done' (24h reschedule, no further retries).
+    expect(updated?.status).toBe('done');
     expect(updated?.attempts).toBeGreaterThanOrEqual(1);
+
+    // Side-effect of the terminal write: a repositories row now exists
+    // with fetchStatus='not_found', so subsequent GETs return 404 directly.
+    const repo = await prisma.repository.findUnique({
+      where: { owner_name: { owner: TEST_OWNER, name: 'tick-repo' } },
+    });
+    expect(repo?.fetchStatus).toBe('not_found');
   });
 
   it('does not process future-scheduled jobs', async () => {

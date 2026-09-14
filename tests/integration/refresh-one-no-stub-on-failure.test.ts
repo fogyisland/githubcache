@@ -7,22 +7,20 @@ import { prisma } from '@/lib/db/client';
 import { refreshOne } from '@/lib/jobs/refresh-one';
 
 /**
- * M31 — refresh-one failure paths must NOT write a `repositories` row.
- *
- * Pre-M31 the failure branches called `storeRepoMetadata` with
- * `fetchStatus: 'not_found' / 'forbidden'`, which created or updated a
- * repositories row. Post-M31 those branches only update refresh_jobs
- * (+ audit log). The repositories row stays absent unless GitHub
- * returns 200/304, in which case the worker writes it via the new
- * create-vs-update split.
+ * M31.x — refresh-one 404 / 410 paths immediately write a terminal
+ * `repositories` row with `fetchStatus='not_found'`, so subsequent
+ * GETs return 404 with a user-friendly error body instead of bouncing
+ * through the 202 pending → re-poll loop. 403 stays terminal but
+ * leaves repositories empty (admin must intervene).
  *
  * This test creates a claimed refresh_job whose `repositoryId` is null
  * (no backing repositories row), then runs refreshOne against a mock
  * GitHub endpoint that returns each failure code. After the run:
  *
- *   - The repositories row is still absent.
- *   - refresh_jobs reflects the failure (attempts, status, lastError).
- *   - Audit log carries the right action + targetId + metadata.
+ *   - 404 / 410 → repositories row written with fetchStatus='not_found';
+ *     refresh_job marked status='done' (terminal, 24h reschedule).
+ *   - 403 → repositories row stays empty; refresh_job status='failed';
+ *     audit log carries repo_forbidden.
  */
 
 const pickQueue = vi.hoisted(() => {
@@ -125,50 +123,52 @@ function ghForbidden(name = 'orphan') {
   );
 }
 
-describe('refreshOne on 404 (M31 — no stub row)', () => {
-  it('leaves repositories table empty; refresh_jobs records attempts+lastError', async () => {
+describe('refreshOne on 404 (M31.x — terminal not_found row)', () => {
+  it('writes repositories row with fetchStatus=not_found; refresh_job status=done', async () => {
     pickQueue.push({ id: BigInt(1), octokit: fakeOctokit() });
     server.use(ghNotFound());
 
     const job = await claimOrphan();
     const result = await refreshOne(job);
 
-    // 404 is non-terminal — refreshOne returns 'pending' on the first
-    // attempts (<5) and reschedules.
-    expect(result.status).toBe('pending');
+    // 404 is terminal on first occurrence — refreshOne returns 'done'.
+    expect(result.status).toBe('done');
 
-    // M31 — the repositories table stays empty. Pre-M31 this would
-    // have written a row with fetchStatus='not_found'.
-    const repoCount = await prisma.repository.count({
-      where: { owner: TEST_OWNER, name: 'orphan' },
+    // M31.x — repositories row IS written with fetchStatus='not_found'.
+    // Subsequent GETs hit the lookupRepo cache and return 404 directly.
+    const repo = await prisma.repository.findUnique({
+      where: { owner_name: { owner: TEST_OWNER, name: 'orphan' } },
     });
-    expect(repoCount).toBe(0);
+    expect(repo).not.toBeNull();
+    expect(repo?.fetchStatus).toBe('not_found');
+    expect(repo?.fetchError?.toLowerCase()).toContain('not found');
 
     const refreshed = await prisma.refreshJob.findUnique({ where: { id: job.id } });
     expect(refreshed?.attempts).toBe(1);
-    expect(refreshed?.status).toBe('pending');
+    expect(refreshed?.status).toBe('done');
     expect(refreshed?.lastError?.toLowerCase()).toContain('not found');
   });
 });
 
-describe('refreshOne on 410 (M31 — no stub row)', () => {
-  it('leaves repositories table empty; refresh_jobs records attempts+lastError', async () => {
+describe('refreshOne on 410 (M31.x — terminal not_found row)', () => {
+  it('writes repositories row with fetchStatus=not_found', async () => {
     pickQueue.push({ id: BigInt(1), octokit: fakeOctokit() });
     server.use(ghGone());
 
     const job = await claimOrphan();
     const result = await refreshOne(job);
 
-    expect(result.status).toBe('pending');
+    expect(result.status).toBe('done');
 
-    const repoCount = await prisma.repository.count({
-      where: { owner: TEST_OWNER, name: 'orphan' },
+    const repo = await prisma.repository.findUnique({
+      where: { owner_name: { owner: TEST_OWNER, name: 'orphan' } },
     });
-    expect(repoCount).toBe(0);
+    expect(repo).not.toBeNull();
+    expect(repo?.fetchStatus).toBe('not_found');
 
     const refreshed = await prisma.refreshJob.findUnique({ where: { id: job.id } });
     expect(refreshed?.attempts).toBe(1);
-    expect(refreshed?.status).toBe('pending');
+    expect(refreshed?.status).toBe('done');
     // 410 falls into the same not-found branch as 404; lastError is
     // the GitHub response body. Either substring is acceptable.
     const msg = refreshed?.lastError?.toLowerCase() ?? '';
@@ -218,36 +218,38 @@ describe('refreshOne on 403 (M31 — no stub row, audit only)', () => {
   });
 });
 
-describe('refreshOne on 5 consecutive 404s (M31 — no stub row, escalation audit)', () => {
-  it('writes refresh.failed_review audit with kind=not_found; repositories still empty', async () => {
+describe('refreshOne on repeated 404s (M31.x — first occurrence is terminal)', () => {
+  it('writes repo_not_found audit; refreshOne ignores prior attempts since first 404 already terminated', async () => {
     pickQueue.push({ id: BigInt(1), octokit: fakeOctokit() });
     server.use(ghNotFound());
 
-    // Pre-set attempts:4 so the next refreshOne call increments to 5
-    // and trips the terminal branch.
+    // Pre-set attempts:4 — irrelevant now. First 404 always terminates
+    // immediately in M31.x, regardless of attempts count. We assert that
+    // the run is still 'done' and the audit carries the repo_not_found
+    // action (not the legacy refresh.failed_review escalation).
     const job = await claimOrphan({ attempts: 4 });
     const result = await refreshOne(job);
 
-    expect(result.status).toBe('failed');
-    if (result.status === 'failed') {
-      expect(result.error.toLowerCase()).toContain('not found');
-    }
+    expect(result.status).toBe('done');
 
-    // M31 — repositories table still empty even on terminal 404.
-    const repoCount = await prisma.repository.count({
-      where: { owner: TEST_OWNER, name: 'orphan' },
+    // M31.x — repositories row IS written with fetchStatus='not_found'.
+    const repo = await prisma.repository.findUnique({
+      where: { owner_name: { owner: TEST_OWNER, name: 'orphan' } },
     });
-    expect(repoCount).toBe(0);
+    expect(repo).not.toBeNull();
+    expect(repo?.fetchStatus).toBe('not_found');
 
     const refreshed = await prisma.refreshJob.findUnique({ where: { id: job.id } });
-    expect(refreshed?.status).toBe('failed');
+    expect(refreshed?.status).toBe('done');
+    // attempts is job.attempts + 1 = 5 — recorded for diagnostics,
+    // but the row is terminal regardless.
     expect(refreshed?.attempts).toBe(5);
 
-    // Escalation audit row. M31 — targetId is owner/name, metadata
-    // carries kind=not_found + attempts + message (no repoId field).
+    // Audit log: action=repo_not_found (the new M31.x terminal-write
+    // action). targetId is owner/name. metadata carries attempts + message.
     const audits = await prisma.auditLog.findMany({
       where: {
-        action: 'refresh.failed_review',
+        action: 'repo_not_found',
         targetType: 'repository',
         targetId: `${TEST_OWNER}/orphan`,
       },
@@ -260,8 +262,5 @@ describe('refreshOne on 5 consecutive 404s (M31 — no stub row, escalation audi
     };
     expect(metadata.kind).toBe('not_found');
     expect(metadata.attempts).toBe(5);
-    // M31 — metadata does NOT include repoId. Audit consumers should
-    // use targetId = `${owner}/${name}` for stable identification.
-    expect(metadata).not.toHaveProperty('repoId');
   });
 });
