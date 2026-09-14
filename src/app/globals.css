@@ -4818,4 +4818,158 @@ a {
   bottom: 1.5rem;
   justify-content: flex-end;
 }
+
+/* M32 — /admin/github-tokens terminal theme
+ * Scope-limited: only applies to elements inside .ghc-term-frame.
+ * Other admin pages are unaffected.
+ */
+.ghc-term-frame {
+  --ghc-term-bg: #0d0d0d;
+  --ghc-term-fg: #e8e8e8;
+  --ghc-term-dim: #888888;
+  --ghc-term-ok: #00ff88;
+  --ghc-term-warn: #ffaa00;
+  --ghc-term-info: #00aaff;
+  --ghc-term-border: #444444;
+  --ghc-term-err: #ff5555;
+
+  background: var(--ghc-term-bg);
+  color: var(--ghc-term-fg);
+  font-family: 'Berkeley Mono', 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  border: 1px solid var(--ghc-term-border);
+  border-radius: 0;
+  padding: 1.25rem 1.5rem;
+}
+
+.ghc-term-title {
+  display: block;
+  font-size: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ghc-term-ok);
+  margin: 0 0 1rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--ghc-term-border);
+}
+
+.ghc-term-prompt {
+  color: var(--ghc-term-ok);
+  margin-right: 0.5rem;
+}
+
+.ghc-term-section-heading {
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ghc-term-dim);
+  font-size: 12px;
+  margin: 1rem 0 0.5rem 0;
+}
+
+.ghc-term-dim {
+  color: var(--ghc-term-dim);
+}
+
+.ghc-term-ok {
+  color: var(--ghc-term-ok);
+}
+
+.ghc-term-warn {
+  color: var(--ghc-term-warn);
+}
+
+.ghc-term-info {
+  color: var(--ghc-term-info);
+}
+
+.ghc-term-err {
+  color: var(--ghc-term-err);
+}
+
+/* Keycap-style buttons inside the frame */
+.ghc-term-keycap {
+  display: inline-block;
+  min-width: 2.5rem;
+  padding: 0.125rem 0.5rem;
+  font-family: inherit;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: 0;
+  cursor: pointer;
+  color: var(--ghc-term-fg);
+}
+
+.ghc-term-keycap:hover {
+  background: currentColor;
+  opacity: 0.85;
+}
+
+.ghc-term-keycap:focus-visible {
+  outline: 2px solid var(--ghc-term-info);
+  outline-offset: 2px;
+}
+
+.ghc-term-keycap:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ghc-term-keycap[data-variant='info'] { color: var(--ghc-term-info); }
+.ghc-term-keycap[data-variant='warn'] { color: var(--ghc-term-warn); }
+.ghc-term-keycap[data-variant='err']  { color: var(--ghc-term-err); }
+.ghc-term-keycap[data-variant='ok']   { color: var(--ghc-term-ok); }
+
+/* Inputs inside the frame — borderless with bottom rule */
+.ghc-term-input {
+  display: block;
+  width: 100%;
+  background: transparent;
+  color: var(--ghc-term-fg);
+  font-family: inherit;
+  font-size: 14px;
+  border: 0;
+  border-bottom: 1px solid var(--ghc-term-border);
+  padding: 0.5rem 0;
+  outline: none;
+}
+
+.ghc-term-input:focus {
+  border-bottom-color: var(--ghc-term-info);
+}
+
+/* Scoped override: pagination inside terminal frame */
+.ghc-term-frame .mt-4 {
+  margin-top: 1rem;
+  color: var(--ghc-term-dim);
+}
+
+.ghc-term-frame .mt-4 nav a,
+.ghc-term-frame .mt-4 nav span {
+  font-family: inherit;
+  background: transparent;
+  color: var(--ghc-term-fg);
+  border: 1px solid var(--ghc-term-border);
+  border-radius: 0;
+}
+
+.ghc-term-frame .mt-4 nav span[aria-disabled='true'] {
+  color: var(--ghc-term-dim);
+  border-color: var(--ghc-term-border);
+  opacity: 0.4;
+}
+
+/* Scoped override: status chip inside terminal frame */
+.ghc-term-frame .ghc-admin-chip {
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: 0;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
 .ghc-uptime-bar[data-state="fail"] { background: var(--color-danger); }
