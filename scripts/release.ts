@@ -102,13 +102,18 @@ const EXCLUDE_DIRS = new Set([
 
 // M32.7.1 — Dirs in EXCLUDE_DIRS that share names with legitimate src/
 // subdirs. These are root-level only and must NOT exclude their src/
-// lookalikes. The only collision today is `reports/` (root-level dev
-// logs) vs `src/lib/reports/` (real code). If more collisions appear,
-// add them here. Other root-level scratch dirs (CLA, testgit, testjson,
-// test, migrations, test-ignore-schema) are kept in EXCLUDE_DIRS only
-// and excluded at any depth — they don't collide with src/ subdirs.
+// lookalikes. Collisions:
+//   - `reports/` (root-level dev logs) vs `src/lib/reports/` (real code)
+//   - `test/` (root-level ad-hoc scripts) vs any src/.../test/ Next.js
+//     route folder (e.g. `src/app/api/admin/github-tokens/[id]/test/`).
+//     The token test endpoint was silently stripped from the release
+//     artifact until M32.7.5 caught it. If more collisions appear, add
+//     them here. Other root-level scratch dirs (CLA, testgit, testjson,
+//     migrations, test-ignore-schema) are kept in EXCLUDE_DIRS only and
+//     excluded at any depth — they don't collide with src/ subdirs.
 const ROOT_ONLY_EXCLUDE_DIRS = new Set([
   'reports',
+  'test',
 ]);
 
 const EXCLUDE_FILES = new Set([
