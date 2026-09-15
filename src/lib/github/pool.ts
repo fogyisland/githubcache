@@ -20,18 +20,103 @@ interface PoolEntry {
   dirty: boolean;
 }
 
-const pool: Map<bigint, PoolEntry> = new Map();
-let persistCounter = 0;
-let lastPersistAt: number = Date.now();
-let persistTimer: ReturnType<typeof setInterval> | null = null;
-let consecutive429s = 0;
+// M32.7 — pin pool state on globalThis so it survives Next.js dev mode
+// HMR and the webpack split-chunks that give different route workers
+// their own module instances of this file. Production is unaffected
+// (single process), but tests benefit too: state survives
+// `vi.resetModules()`, so the test file's `beforeEach` clears the slot
+// explicitly.
+//
+// Strategy: Maps are reference types — `const pool = poolGlobal().pool`
+// aliases the same Map object across every module instance, so mutations
+// (`pool.set(...)`, `pool.delete(...)`) are visible to every other
+// instance. Primitives (numbers, the setInterval handle, the shuttingDown
+// flag) must go through getter/setter helpers, because a `let` would
+// create a local copy that is NOT shared across module instances.
+
+const GHC_POOL_KEY = '__ghcPool' as const;
+
+interface GhcPoolGlobal {
+  pool: Map<bigint, PoolEntry>;
+  persistCounter: number;
+  lastPersistAt: number;
+  persistTimer: ReturnType<typeof setInterval> | null;
+  consecutive429s: number;
+  consecutive429ByToken: Map<bigint, number>;
+  shuttingDown: boolean;
+}
+
+function poolGlobal(): GhcPoolGlobal {
+  const gt = globalThis as unknown as Record<string, GhcPoolGlobal | undefined>;
+  if (gt[GHC_POOL_KEY] === undefined) {
+    gt[GHC_POOL_KEY] = {
+      pool: new Map(),
+      persistCounter: 0,
+      lastPersistAt: Date.now(),
+      persistTimer: null,
+      consecutive429s: 0,
+      consecutive429ByToken: new Map(),
+      shuttingDown: false,
+    };
+  }
+  return gt[GHC_POOL_KEY]!;
+}
+
+// Map aliases — every module instance points at the same object.
+const pool: Map<bigint, PoolEntry> = poolGlobal().pool;
 // M14.4 — per-token consecutive-429 counter for auto-disable. Reset on a
 // successful call for that token. When a counter reaches
 // env.TOKEN_AUTO_DISABLE_THRESHOLD the token is auto-disabled and dropped
 // from the pool. In-memory only — process restart resets counters.
-const consecutive429ByToken: Map<bigint, number> = new Map();
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-let shuttingDown = false;
+const consecutive429ByToken: Map<bigint, number> =
+  poolGlobal().consecutive429ByToken;
+
+// Primitive getters/setters — every read/write goes through poolGlobal()
+// so all module instances see the same value.
+function getPersistCounter(): number {
+  return poolGlobal().persistCounter;
+}
+function setPersistCounter(v: number): void {
+  poolGlobal().persistCounter = v;
+}
+function bumpPersistCounter(): number {
+  const s = poolGlobal();
+  s.persistCounter += 1;
+  return s.persistCounter;
+}
+
+function getLastPersistAt(): number {
+  return poolGlobal().lastPersistAt;
+}
+function setLastPersistAt(v: number): void {
+  poolGlobal().lastPersistAt = v;
+}
+
+function getPersistTimer(): ReturnType<typeof setInterval> | null {
+  return poolGlobal().persistTimer;
+}
+function setPersistTimer(t: ReturnType<typeof setInterval> | null): void {
+  poolGlobal().persistTimer = t;
+}
+
+function getConsecutive429s(): number {
+  return poolGlobal().consecutive429s;
+}
+function setConsecutive429s(v: number): void {
+  poolGlobal().consecutive429s = v;
+}
+function bumpConsecutive429s(): number {
+  const s = poolGlobal();
+  s.consecutive429s += 1;
+  return s.consecutive429s;
+}
+
+function isShuttingDown(): boolean {
+  return poolGlobal().shuttingDown;
+}
+function setShuttingDown(v: boolean): void {
+  poolGlobal().shuttingDown = v;
+}
 
 const FLUSH_INTERVAL_CALLS = 25;
 const FLUSH_INTERVAL_MS = 60_000;
@@ -44,7 +129,7 @@ export interface PooledToken {
 }
 
 export async function initPool(): Promise<void> {
-  shuttingDown = false;
+  setShuttingDown(false);
   const dbRows = (await listAllTokens({ skip: 0, take: 1000 })).rows;
   pool.clear();
 
@@ -70,12 +155,14 @@ export async function initPool(): Promise<void> {
     });
   }
 
-  if (persistTimer) clearInterval(persistTimer);
-  persistTimer = setInterval(() => {
-    if (Date.now() - lastPersistAt >= FLUSH_INTERVAL_MS) {
-      void persistQuota().catch((e) => logger.error({ err: e }, 'periodic persist failed'));
-    }
-  }, FLUSH_INTERVAL_MS);
+  if (getPersistTimer()) clearInterval(getPersistTimer()!);
+  setPersistTimer(
+    setInterval(() => {
+      if (Date.now() - getLastPersistAt() >= FLUSH_INTERVAL_MS) {
+        void persistQuota().catch((e) => logger.error({ err: e }, 'periodic persist failed'));
+      }
+    }, FLUSH_INTERVAL_MS),
+  );
 
   logger.info({ poolSize: pool.size }, 'pool initialized');
 }
@@ -114,14 +201,14 @@ export async function recordUsage(
   entry.resetAt = new Date(resetAtUnix * 1000);
   entry.lastUsedAt = new Date();
   entry.dirty = true;
-  persistCounter += 1;
+  bumpPersistCounter();
   // Distinguish 429 from success by `remaining === 0`. A resetAt in the
   // future is the actual 429 signal — a past resetAt with remaining=0 is
   // just "fully used and ready to reset", not an over-limit hit.
   const resetAtMs = resetAtUnix * 1000;
   const isOverLimit = remaining === 0 && resetAtMs > Date.now();
   if (isOverLimit) {
-    consecutive429s += 1; // global backoff counter (used by getBackoff)
+    bumpConsecutive429s(); // global backoff counter (used by getBackoff)
     const threshold = env.TOKEN_AUTO_DISABLE_THRESHOLD;
     if (threshold > 0) {
       const next = (consecutive429ByToken.get(tokenId) ?? 0) + 1;
@@ -131,10 +218,10 @@ export async function recordUsage(
       }
     }
   } else {
-    consecutive429s = 0; // global backoff counter — reset on any success
+    setConsecutive429s(0); // global backoff counter — reset on any success
     consecutive429ByToken.delete(tokenId); // per-token counter — reset on this token's success
   }
-  if (persistCounter >= FLUSH_INTERVAL_CALLS) {
+  if (getPersistCounter() >= FLUSH_INTERVAL_CALLS) {
     await persistQuota();
   }
 }
@@ -168,8 +255,8 @@ export async function persistQuota(): Promise<void> {
     if (entry.dirty) dirty.push(entry);
   }
   if (dirty.length === 0) {
-    persistCounter = 0;
-    lastPersistAt = Date.now();
+    setPersistCounter(0);
+    setLastPersistAt(Date.now());
     return;
   }
   // Single-flight: guard against concurrent persists
@@ -186,22 +273,22 @@ export async function persistQuota(): Promise<void> {
       // Leave dirty=true so next persist retries
     }
   }
-  persistCounter = 0;
-  lastPersistAt = Date.now();
+  setPersistCounter(0);
+  setLastPersistAt(Date.now());
 }
 
 export function getBackoff(): number {
   // Exponential: 1s, 2s, 4s, 8s, ..., capped at 60s. Resets on success via recordUsage.
-  consecutive429s += 1;
-  const ms = Math.min(BACKOFF_CAP_MS, BACKOFF_BASE_MS * 2 ** (consecutive429s - 1));
+  const next = bumpConsecutive429s();
+  const ms = Math.min(BACKOFF_CAP_MS, BACKOFF_BASE_MS * 2 ** (next - 1));
   return ms;
 }
 
 export async function shutdownPool(): Promise<void> {
-  shuttingDown = true;
-  if (persistTimer) {
-    clearInterval(persistTimer);
-    persistTimer = null;
+  setShuttingDown(true);
+  if (getPersistTimer()) {
+    clearInterval(getPersistTimer()!);
+    setPersistTimer(null);
   }
   await persistQuota(); // final flush
 }

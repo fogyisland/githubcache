@@ -85,6 +85,10 @@ function mkRow(overrides: Partial<GithubToken> = {}): GithubToken {
 
 beforeEach(async () => {
   vi.resetModules();
+  // M32.7 — pool state is pinned to globalThis so it survives HMR and
+  // webpack split-chunks. Tests must explicitly clear the slot to
+  // avoid state leaking across `vi.resetModules()`.
+  delete (globalThis as { __ghcPool?: unknown }).__ghcPool;
   mocks.dbRows = [];
   mocks.updatedRows = [];
   mocks.dbRowIdSeq = 1;
@@ -401,5 +405,37 @@ describe('M21 addTokenToPool / removeTokenToPool / poolHasId', () => {
     addTokenToPool(mkRow({ id: BigInt(1) }));
     removeTokenFromPool(BigInt(1));
     expect(poolHasId(BigInt(1))).toBe(false);
+  });
+});
+
+describe('M32.7 pool state pinned to globalThis (HMR + split-chunks survival)', () => {
+  it('poolHasId returns true from a fresh module instance after addTokenToPool in another', async () => {
+    // Simulates Next.js dev mode: the POST /api/admin/github-tokens route
+    // worker and the GET /admin/github-tokens page worker each get a
+    // separate module instance (different webpack split-chunks). Adding
+    // a token from one must be visible to poolHasId in the other.
+    mocks.dbRows = [];
+    await initPool();
+    // Add token in the ORIGINAL module instance (captured by beforeEach)
+    addTokenToPool(mkRow({ id: BigInt(42) }));
+    // Simulate "another route worker loaded this module fresh"
+    vi.resetModules();
+    const freshMod = await import('@/lib/github/pool');
+    // Query from the FRESH module instance — must see the same pool
+    expect(freshMod.poolHasId(BigInt(42))).toBe(true);
+    expect(freshMod.poolSize()).toBe(1);
+  });
+
+  it('pool state survives vi.resetModules — consecutive429s persisted across reload', async () => {
+    mocks.dbRows = [mkRow({ id: BigInt(1) })];
+    await initPool();
+    getBackoff(); // 1 -> 1000
+    getBackoff(); // 2 -> 2000
+    expect(getBackoff()).toBe(4000); // 3
+    vi.resetModules();
+    const freshMod = await import('@/lib/github/pool');
+    // After resetModules, freshMod.getBackoff() reads the SAME globalThis
+    // slot — counter is at 3, so the next call returns 4th tier: 8000.
+    expect(freshMod.getBackoff()).toBe(8000);
   });
 });

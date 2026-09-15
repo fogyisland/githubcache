@@ -1,10 +1,10 @@
 'use server';
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { cookies } from 'next/headers';
 import { PrismaClient } from '@prisma/client';
 import { redirect } from 'next/navigation';
-import { ENV_PATH } from '@/lib/setup';
+import { ENV_PATH, upsertEnvLine } from '@/lib/setup';
 import { ensureFreshSchemaWith } from '@/lib/db/init-schema';
 import { readAdminStash, clearAdminStash } from './submit-admin-config';
 import { logger } from '@/lib/logger';
@@ -176,16 +176,24 @@ export async function createAdminSubtask(): Promise<SubtaskResult> {
 }
 
 /**
- * Subtask 3: lock the wizard — clear the admin-stash cookie and stamp
- * the long-lived `ghc_setup_done=1` cookie that middleware reads.
+ * Subtask 3: lock the wizard — clear the admin-stash cookie, stamp the
+ * long-lived `ghc_setup_done=1` cookie for in-session browsers, AND
+ * persist `GHC_SETUP_DONE=1` to .env so a fresh `dev:server` boot
+ * picks it up via `process.env` (M32.6.5).
  *
- * The middleware gate is cookie-based for runtime efficiency (Edge
- * runtime can't run Prisma, so it needs a cheap signal). The cookie is
- * set on successful wizard completion — without it, even an admin-
- * populated DB gets redirected back to /init because middleware can't
- * see the DB.
+ * The middleware gate reads BOTH signals:
+ *   - the cookie (per-browser, fast, works on Edge runtime)
+ *   - `process.env.GHC_SETUP_DONE === '1'` (process-wide, durable
+ *     across server restarts because `.env` is loaded by Next's
+ *     `loadEnvConfig` at boot)
  *
- * Idempotent: re-setting the cookie just refreshes the expiry.
+ * Writing to `.env` is the durability fix: without it, every fresh
+ * `dev:server` boot would re-bounce to /init because no browser has
+ * the cookie yet. With it, init is one-shot — after completion the
+ * service runs without the wizard ever being re-entered.
+ *
+ * Idempotent: re-running refreshes the cookie and re-upserts the
+ * .env line (`upsertEnvLine` replaces, doesn't append).
  */
 export async function lockSetupSubtask(): Promise<SubtaskResult> {
   await clearAdminStash();
@@ -199,6 +207,55 @@ export async function lockSetupSubtask(): Promise<SubtaskResult> {
     path: '/',
     maxAge: 60 * 60 * 24 * 365 * 10,
   });
+
+  // Persist to .env so a fresh process boot picks the signal up via
+  // process.env before the first request hits middleware. Next.js's
+  // `loadEnvConfig` runs once per `bootServer()` and merges .env into
+  // process.env (verified at node_modules/next/dist/server/base-server.js:320).
+  //
+  // We write THREE signals in one read-modify-write cycle so the file
+  // is touched exactly once and partial failures don't leave the disk
+  // state out of sync with the cookie:
+  //   - GHC_SETUP_DONE=1            — kills the /init middleware gate
+  //   - SCHEDULER_TICK_MS=1000      — drain pending repos at ~1/sec
+  //                                    instead of the slow 60s default
+  //   - SCHEDULER_BATCH_SIZE=1      — paired with the 1s tick so we
+  //                                    process 1 repo per tick (200 OK
+  //                                    verified against GitHub)
+  try {
+    const defaults: Record<string, string> = {
+      GHC_SETUP_DONE: '1',
+      SCHEDULER_TICK_MS: '1000',
+      SCHEDULER_BATCH_SIZE: '1',
+    };
+    let current = readFileSync(ENV_PATH, 'utf8');
+    for (const [key, value] of Object.entries(defaults)) {
+      current = upsertEnvLine(current, key, value);
+    }
+    writeFileSync(ENV_PATH, current);
+    // Mirror into process.env so the current process sees the new values
+    // without needing a restart. Next.js loadEnvConfig runs at boot, so
+    // the on-disk write is what matters for future boots — this just
+    // keeps in-process callers (e.g. the scheduler reading
+    // process.env.SCHEDULER_TICK_MS after init) consistent.
+    for (const [key, value] of Object.entries(defaults)) {
+      process.env[key] = value;
+    }
+    logger.info(
+      { keys: Object.keys(defaults) },
+      'init: setup defaults persisted to .env (GHC_SETUP_DONE, SCHEDULER_TICK_MS, SCHEDULER_BATCH_SIZE)',
+    );
+  } catch (e) {
+    // .env write failure must NOT block init completion — the cookie
+    // signal is sufficient for the current session, and the operator
+    // can re-run /init/execute if the file write fails. Surface the
+    // error so it shows up in logs but return ok=true.
+    logger.error(
+      { err: (e as Error).message },
+      'init: failed to persist setup defaults to .env; current session still works',
+    );
+  }
+
   return { ok: true };
 }
 
