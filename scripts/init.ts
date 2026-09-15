@@ -225,11 +225,14 @@ function ensureEnvFile(): void {
   // them up on next boot. .env.example's DATABASE_URL is a syntactically
   // valid placeholder but doesn't actually point anywhere; build + start
   // would fail with a ZodError on DATABASE_URL if init left it untouched.
+  // M32.7.4 — added NODE_ENV so `NODE_ENV=production npm run init -- --non-interactive`
+  // explicitly writes the production flag to .env.
   const FLUSH_TO_ENV: ReadonlyArray<string> = [
     'DATABASE_URL',
     'INIT_ADMIN_EMAIL',
     'INIT_ADMIN_PASSWORD',
     'INIT_SITE_NAME',
+    'NODE_ENV',
   ];
   let flushed = content;
   let didFlush = false;
@@ -247,6 +250,33 @@ function ensureEnvFile(): void {
   if (didFlush) {
     writeFileSync('.env', flushed);
     content = flushed;
+  }
+
+  // M32.7.4 — runtime defense: in non-interactive deploys (--non-interactive
+  // flag OR stdin not a TTY), force NODE_ENV=production regardless of what
+  // .env.example or shell env supplied. Local devs running `npm run init`
+  // interactively (TTY attached, no --non-interactive) are NOT affected —
+  // they can keep `development` if they want. Cloud deploys run with stdin
+  // not a TTY (CI/scripted), so this always fires for them. This is the
+  // most important runtime write in the init flow: even if .env.example
+  // ships the wrong value, this Layer catches it before the server boots.
+  // Note: we gate on TTY-as-non-TTY so a dev who runs `npm run init <
+  // /dev/null` (stdin redirected) still gets the safe default — the
+  // alternative is a misconfigured deploy silently booting as dev.
+  const NON_INTERACTIVE_FOR_NODE_ENV =
+    process.argv.includes('--non-interactive') || !input.isTTY;
+  if (NON_INTERACTIVE_FOR_NODE_ENV) {
+    const fromFile = readEnvLine(content, 'NODE_ENV');
+    if (fromFile !== 'production') {
+      content = upsertEnvLine(content, 'NODE_ENV', 'production');
+      writeFileSync('.env', content);
+      // process.env.NODE_ENV is readonly in TypeScript's strict mode.
+      // Cast through unknown to assign — the env subsystem reads
+      // process.env at call time, so the mutation takes effect for
+      // any caller in this same process.
+      (process.env as Record<string, string | undefined>)['NODE_ENV'] = 'production';
+      console.log('✓ NODE_ENV → production (non-interactive deploy)');
+    }
   }
 
   // Regenerate SESSION_SECRET if it's the placeholder or missing.

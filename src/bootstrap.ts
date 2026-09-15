@@ -25,9 +25,15 @@
 export {};
 
 import { DEFAULT_DEV_PORT } from './lib/config/dev-port';
+// M32.7.4 — last-line-of-defense against NODE_ENV misconfiguration.
+// See src/lib/bootstrap-node-env.ts for rationale. Runs BEFORE the
+// dynamic import('./server.js') below because Next.js reads NODE_ENV
+// at module-load time and ships react.development.js if it sees
+// 'development'.
+import { enforceProductionNodeEnv } from './lib/bootstrap-node-env.js';
 
 const env = process.env as Record<string, string | undefined>;
-if (!env.NODE_ENV) env.NODE_ENV = 'production';
+enforceProductionNodeEnv(env);
 if (!env.PORT) env.PORT = String(DEFAULT_DEV_PORT);
 
 const { bootServer } = await import('./server.js');

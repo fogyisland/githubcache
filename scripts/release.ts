@@ -277,12 +277,27 @@ function walk(dir: string, prefix: string): CollectedFile[] {
 
 function buildReleaseNotes(files: CollectedFile[]): string {
   const scriptFiles = files.filter((f) => f.dest.startsWith('scripts' + '/')).map((f) => f.dest);
+  // M32.7.4 — prominent warning block BEFORE the TL;DR. Previous cloud
+  // deploys ran `npm start` (Next.js only — no scheduler, no pool) and
+  // wondered why refresh_jobs never drained. This block makes the right
+  // command unmissable. Layer 7 in package.json also adds a `prestart`
+  // trap that aborts `npm start` at runtime; this doc is the
+  // human-facing counterpart.
+  const startWarning = `> **⚠ DO NOT run \`npm start\` — it skips the scheduler + GitHub token pool.**
+>
+> \`npm start\` runs \`next start\` only. Your \`refresh_jobs\` backlog will never
+> drain and \`/api/v1/repos\` will return 503 even with tokens configured.
+> Use \`npm run start:server\` (or \`NODE_ENV=production npm run start:server\`)
+> for any production deployment. The \`prestart\` script in package.json
+> also aborts \`npm start\` at runtime with this same message.
+
+`;
   return `# githubcache v${VERSION} — deploy guide
 
 This release artefact contains a clean source tree of githubcache v${VERSION},
 ready to initialise and start on a fresh server.
 
-## TL;DR
+${startWarning}## TL;DR
 
 Copy the \`githubcache/\` directory to the server (rsync, scp,
 USB — whatever you have), then run:
@@ -418,7 +433,7 @@ function main(): void {
   console.log(`                     #   rm -rf .next && npm run build`);
   console.log(`                     # Stale .next/ chunks can ship react-dom.development`);
   console.log(`                     # and cause React 'startTime' render errors in the browser.`);
-  console.log(`  npm run start:server`);
+  console.log(`  NODE_ENV=production npm run start:server`);
   console.log(`  # Browser: hard-refresh (Ctrl+Shift+R) to clear stale chunks`);
 }
 

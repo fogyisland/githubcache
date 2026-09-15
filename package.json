@@ -26,6 +26,7 @@
     "dev:server": "tsx src/server.ts",
     "prebuild": "node -e \"const fs=require('fs');if(fs.existsSync('.next')){console.log('→ wiping stale .next/ before build');fs.rmSync('.next',{recursive:true,force:true})};\"",
     "build": "next build",
+    "prestart": "node -e \"console.error('FATAL: npm start is disabled — it runs Next.js without the refresh scheduler + GitHub token pool, so refresh_jobs will never drain and /api/v1/repos will return 503. Use npm run start:server (production) or npm run dev:server (local dev). See RELEASE.md.');process.exit(1)\"",
     "start": "next start -p 5002",
     "start:server": "tsx src/bootstrap.ts",
     "lint": "eslint .",
