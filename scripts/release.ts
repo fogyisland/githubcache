@@ -89,6 +89,7 @@ const EXCLUDE_DIRS = new Set([
   'backups',
   // M32.6.3 — root-level scratch / debug dirs that crept in during local
   // debugging. None of these are needed for the recipient to run the app.
+  // M32.7.1 — these are root-level only; see ROOT_ONLY_EXCLUDE_DIRS below.
   'CLA',
   'reports',
   'testgit',
@@ -97,6 +98,17 @@ const EXCLUDE_DIRS = new Set([
   // scripts/ subdirs that hold dev-only utilities, not deploy-time tools.
   'migrations',  // scripts/migrations/ — backfill helpers (e.g. backfill-pending-jobs.ts)
   'test-ignore-schema',
+]);
+
+// M32.7.1 — Dirs in EXCLUDE_DIRS that share names with legitimate src/
+// subdirs. These are root-level only and must NOT exclude their src/
+// lookalikes. The only collision today is `reports/` (root-level dev
+// logs) vs `src/lib/reports/` (real code). If more collisions appear,
+// add them here. Other root-level scratch dirs (CLA, testgit, testjson,
+// test, migrations, test-ignore-schema) are kept in EXCLUDE_DIRS only
+// and excluded at any depth — they don't collide with src/ subdirs.
+const ROOT_ONLY_EXCLUDE_DIRS = new Set([
+  'reports',
 ]);
 
 const EXCLUDE_FILES = new Set([
@@ -209,13 +221,20 @@ const APP_EXCLUDE = new Set([
 // -----------------------------------------------------------------------------
 
 function shouldExclude(absPath: string, name: string, prefix: string): boolean {
-  if (EXCLUDE_DIRS.has(name)) return true;
+  const parts = prefix.split(/[\\/]+/).filter(Boolean);
+  // Path-aware guard: dirs that share names with src/ subdirs must only
+  // be excluded when they actually live at the repo root. Without this,
+  // `src/lib/reports/` (legitimate source) is incorrectly skipped
+  // because the root-level `reports/` scratch dir (dev logs, debug PNGs)
+  // shares its name. The build then fails on the server with
+  // "Module not found: @/lib/reports/ingestion" etc.
+  if (EXCLUDE_DIRS.has(name) && ROOT_ONLY_EXCLUDE_DIRS.has(name) && parts.length === 0) return true;
+  if (EXCLUDE_DIRS.has(name) && !ROOT_ONLY_EXCLUDE_DIRS.has(name)) return true;
   if (EXCLUDE_FILES.has(name)) return true;
   if (SCRIPT_EXCLUDE.has(name) && absPath.includes(`${'\\'}scripts${'\\'}`)) return true;
   // APP_EXCLUDE keys are checked against the parent path normalized to
   // forward slashes (so the rule works on both Windows and POSIX).
-  const parentParts = prefix.split(/[\\/]+/).filter(Boolean);
-  if (APP_EXCLUDE.has(name) && parentParts.join('/') === 'src/app') return true;
+  if (APP_EXCLUDE.has(name) && parts.join('/') === 'src/app') return true;
   return EXCLUDE_GLOBS_RE.some((re) => re.test(name));
 }
 
