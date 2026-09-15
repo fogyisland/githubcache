@@ -197,6 +197,14 @@
           "title": "近 6 小时请求量",
           "hoursAgo": "{hours} 小时前",
           "totalRecent": "{count, plural, other {# 次请求}}"
+        },
+        "githubVolume": {
+          "heading": "GitHub 上游 API 调用",
+          "hint": "每次成功 HTTP 调用记一行,保留 7 天。",
+          "core": "core (repos.get)",
+          "releases": "releases (listReleases)",
+          "branches": "branches (listBranches)",
+          "empty": "本时间窗口内无 GitHub 上游调用。"
         }
       }
     },

@@ -157,6 +157,21 @@ const CREATE_TABLE_STATEMENTS: ReadonlyArray<string> = [
     PRIMARY KEY (\`id\`)
   ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
 
+  // github_request_events — M32.7.6
+  // Per-call upstream GitHub request log for the /admin
+  // "GitHub upstream API calls" chart. Retention: 7 days
+  // (src/lib/scheduler/cron-prune-events.ts).
+  `CREATE TABLE IF NOT EXISTS \`github_request_events\` (
+    \`id\` BIGINT NOT NULL AUTO_INCREMENT,
+    \`endpoint\` VARCHAR(32) NOT NULL,
+    \`token_id\` BIGINT NULL,
+    \`status_code\` INT NOT NULL,
+    \`occurred_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    INDEX \`github_request_events_occurred_at_idx\`(\`occurred_at\`),
+    INDEX \`github_request_events_endpoint_occurred_at_idx\`(\`endpoint\`, \`occurred_at\`),
+    PRIMARY KEY (\`id\`)
+  ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
+
   // request_log — M3
   `CREATE TABLE IF NOT EXISTS \`request_log\` (
     \`id\` BIGINT NOT NULL AUTO_INCREMENT,

@@ -5,6 +5,7 @@ import { coreSweep, releasesSweep, branchesSweep } from './sweep';
 import { runWorkerTick } from '@/lib/webhooks/worker';
 import { runDailyReportTick } from './cron-daily-report';
 import { runWeeklyReportTick } from './cron-weekly-report';
+import { runPruneGithubEventsTick } from './cron-prune-events';
 import {
   pauseRefreshTick,
   resumeRefreshTick,
@@ -129,6 +130,15 @@ export function startScheduler(): SchedulerHandle {
   }, env.EMAIL_WEEKLY_REPORT_INTERVAL_MS);
   weeklyReportInterval.unref?.();
 
+  // M32.7.6 — prune github_request_events older than 7 days. Fires at
+  // 00:05..00:09 UTC; default cadence 5min = 1 hit/day in the window.
+  const pruneEventsInterval = setInterval(() => {
+    runPruneGithubEventsTick().catch((e: unknown) => {
+      logger.error({ err: e }, 'prune github events tick failed');
+    });
+  }, env.PRUNE_GITHUB_REQUEST_EVENTS_INTERVAL_MS);
+  pruneEventsInterval.unref?.();
+
   // Don't keep the process alive solely for these timers (in case Next.js exits)
   sweepIntervals.forEach((i) => i.unref?.());
   webhookWorkerInterval.unref?.();
@@ -155,6 +165,7 @@ export function startScheduler(): SchedulerHandle {
       clearInterval(webhookWorkerInterval);
       clearInterval(dailyReportInterval);
       clearInterval(weeklyReportInterval);
+      clearInterval(pruneEventsInterval);
       activeHandle = null;
       logger.info('scheduler stopped');
     },

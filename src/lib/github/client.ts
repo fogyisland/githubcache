@@ -6,6 +6,7 @@ import {
   getBackoff,
   initPool,
 } from '@/lib/github/pool';
+import { recordGithubCall } from '@/lib/admin/github-request-volume';
 
 let poolInitPromise: Promise<void> | null = null;
 
@@ -129,6 +130,21 @@ async function fetchVersionExtras(
       'github listBranches failed; storing empty branches',
     );
   }
+
+  // M32.7.6 — log upstream calls (gated on 'fulfilled' so a 304 / 403
+  // path isn't double-counted; the caller's recordUsage already covers
+  // rejected quota cases).
+  if (releasesResult.status === 'fulfilled') {
+    await recordGithubCall('releases', null, 200).catch((e: unknown) =>
+      logger.warn({ err: e }, 'github_request_events insert failed (releases)'),
+    );
+  }
+  if (branchesResult.status === 'fulfilled') {
+    await recordGithubCall('branches', null, 200).catch((e: unknown) =>
+      logger.warn({ err: e }, 'github_request_events insert failed (branches)'),
+    );
+  }
+
   const releases =
     releasesResult.status === 'fulfilled'
       ? (releasesResult.value.data as unknown[]).map(toReleaseSummary)
@@ -190,6 +206,12 @@ export async function fetchReleasesOnly(
           await recordUsage(picked.id, remaining, reset);
         }
       }
+
+      // M32.7.6 — log upstream call for the /admin chart.
+      await recordGithubCall('releases', picked.id, 200).catch((e: unknown) =>
+        logger.warn({ err: e, fn: 'fetchReleasesOnly' }, 'github_request_events insert failed'),
+      );
+
       // Octokit returns 200 typed-narrow; the underlying axios call
       // can still be 304 when the If-None-Match header is honored.
       const status = (res as { status?: number }).status;
@@ -249,6 +271,12 @@ export async function fetchBranchesOnly(
           await recordUsage(picked.id, remaining, reset);
         }
       }
+
+      // M32.7.6 — log upstream call for the /admin chart.
+      await recordGithubCall('branches', picked.id, 200).catch((e: unknown) =>
+        logger.warn({ err: e, fn: 'fetchBranchesOnly' }, 'github_request_events insert failed'),
+      );
+
       const status = (res as { status?: number }).status;
       if (status === 304) {
         return {
@@ -324,6 +352,13 @@ export async function fetchRepoCore(
           await recordUsage(picked.id, remaining, reset);
         }
       }
+
+      // M32.7.6 — log upstream call for the /admin chart. .catch() so a
+      // DB hiccup never breaks the GitHub call; cumulative
+      // requests_used on github_tokens is unaffected.
+      await recordGithubCall('core', picked.id, 200).catch((e: unknown) =>
+        logger.warn({ err: e, fn: 'fetchRepoCore' }, 'github_request_events insert failed'),
+      );
 
       // M20.8: also fetch top-N releases + top-N branches for version data.
       // Non-fatal: a flaky listReleases / listBranches call does NOT poison

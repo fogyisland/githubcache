@@ -11,6 +11,16 @@
  * so it's only excluded at the repo root, not inside src/. This test
  * pins that contract by reading the source and asserting the constant.
  *
+ * M32.7.6 — same pattern for `migrations`. After the 1.0 schema freeze
+ * (commit dac89b1) `prisma/migrations/` was empty, so the global
+ * `migrations` exclude was benign. M32.7.6 added a real migration file
+ * under `prisma/migrations/20260915120000_add_github_request_events/`
+ * — it must ship in the artifact or `prisma migrate deploy` on a fresh
+ * recipient DB will not create the `github_request_events` table. The
+ * fix: `migrations` joins `ROOT_ONLY_EXCLUDE_DIRS`, plus a path-aware
+ * carve-out so `scripts/migrations/` (backfill helpers, dev-only)
+ * remains excluded.
+ *
  * If you change `EXCLUDE_DIRS` or `ROOT_ONLY_EXCLUDE_DIRS`, this test
  * tells future-you whether the rule still applies.
  */
@@ -24,7 +34,7 @@ function readReleaseSource(): string {
   return readFileSync(RELEASE_TS, 'utf8');
 }
 
-describe('release.ts path-aware excludes (M32.7.5)', () => {
+describe('release.ts path-aware excludes (M32.7.5 + M32.7.6)', () => {
   it('declares `test` in ROOT_ONLY_EXCLUDE_DIRS (not just EXCLUDE_DIRS)', () => {
     const src = readReleaseSource();
 
@@ -63,5 +73,45 @@ describe('release.ts path-aware excludes (M32.7.5)', () => {
       /const EXCLUDE_DIRS\s*=\s*new Set\(\[([\s\S]*?)\]\)/,
     );
     expect(excludeMatch![1]).toMatch(/['"]test['"]/);
+  });
+
+  it('declares `migrations` in ROOT_ONLY_EXCLUDE_DIRS so prisma/migrations ships (M32.7.6)', () => {
+    const src = readReleaseSource();
+
+    // `migrations` must be in ROOT_ONLY_EXCLUDE_DIRS so it's NOT excluded
+    // at depth — `prisma/migrations/` must ship.
+    const rootOnlyMatch = src.match(
+      /const ROOT_ONLY_EXCLUDE_DIRS\s*=\s*new Set\(\[([\s\S]*?)\]\)/,
+    );
+    expect(rootOnlyMatch, 'ROOT_ONLY_EXCLUDE_DIRS literal not found').toBeTruthy();
+    expect(rootOnlyMatch![1]).toMatch(/['"]migrations['"]/);
+
+    // And `migrations` should still appear in EXCLUDE_DIRS so the
+    // root-level exclusion still fires (root-level scratch `migrations/`
+    // dirs, if any appear, stay excluded).
+    const excludeMatch = src.match(
+      /const EXCLUDE_DIRS\s*=\s*new Set\(\[([\s\S]*?)\]\)/,
+    );
+    expect(excludeMatch![1]).toMatch(/['"]migrations['"]/);
+  });
+
+  it('still excludes scripts/migrations/ via a path-aware carve-out (M32.7.6)', () => {
+    // Sanity: the original purpose — excluding the backfill helpers in
+    // `scripts/migrations/` (dev-only one-shots like backfill-pending-jobs.ts)
+    // — must be preserved. With `migrations` in ROOT_ONLY_EXCLUDE_DIRS the
+    // global rule no longer covers this case, so the script must carry a
+    // path-aware line that excludes `scripts/migrations/` specifically.
+    const src = readReleaseSource();
+    // Look for a path-aware `parts.join('/') === 'scripts'` (or the
+    // '\\' Windows form) check whose body mentions `migrations`. The
+    // matching expression tolerates the literal / or \ separator used
+    // by release.ts (the file normalizes with .join('/') in the
+    // APP_EXCLUDE check, but uses a different form elsewhere — accept
+    // either as long as both `'scripts'` and `migrations` appear
+    // within ~200 chars of each other).
+    const scriptsMigration = /['"`\/]scripts['"`\/]/.test(src)
+      && /migrations/.test(src)
+      && (src.match(/parts\.join\([^)]+\)\s*===\s*['"`\/]scripts['"`\/]/m) !== null);
+    expect(scriptsMigration, 'expected a path-aware exclusion for scripts/migrations/').toBe(true);
   });
 });

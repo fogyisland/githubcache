@@ -96,7 +96,9 @@ const EXCLUDE_DIRS = new Set([
   'testjson',
   'test',        // ad-hoc shell scripts + dumps, not vitest (which lives in tests/)
   // scripts/ subdirs that hold dev-only utilities, not deploy-time tools.
-  'migrations',  // scripts/migrations/ — backfill helpers (e.g. backfill-pending-jobs.ts)
+  'migrations',  // root-only — see ROOT_ONLY_EXCLUDE_DIRS below. The dev-only
+                 // backfill helpers in scripts/migrations/ are excluded via a
+                 // path-aware rule in shouldExclude().
   'test-ignore-schema',
 ]);
 
@@ -107,13 +109,22 @@ const EXCLUDE_DIRS = new Set([
 //   - `test/` (root-level ad-hoc scripts) vs any src/.../test/ Next.js
 //     route folder (e.g. `src/app/api/admin/github-tokens/[id]/test/`).
 //     The token test endpoint was silently stripped from the release
-//     artifact until M32.7.5 caught it. If more collisions appear, add
-//     them here. Other root-level scratch dirs (CLA, testgit, testjson,
-//     migrations, test-ignore-schema) are kept in EXCLUDE_DIRS only and
-//     excluded at any depth — they don't collide with src/ subdirs.
+//     artifact until M32.7.5 caught it.
+//   - `migrations/` (root-level `prisma/migrations/` — real schema
+//     history required for `prisma migrate deploy`) vs the dev-only
+//     backfill helpers under `scripts/migrations/`. The schema-history
+//     case was silently stripped until M32.7.6 caught it; the
+//     scripts/migrations/ case is now handled via the path-aware carve-out
+//     in shouldExclude().
+//
+// If more collisions appear, add them here. Other root-level scratch
+// dirs (CLA, testgit, testjson, test-ignore-schema) are kept in
+// EXCLUDE_DIRS only and excluded at any depth — they don't collide
+// with src/ subdirs.
 const ROOT_ONLY_EXCLUDE_DIRS = new Set([
   'reports',
   'test',
+  'migrations',
 ]);
 
 const EXCLUDE_FILES = new Set([
@@ -240,6 +251,12 @@ function shouldExclude(absPath: string, name: string, prefix: string): boolean {
   // APP_EXCLUDE keys are checked against the parent path normalized to
   // forward slashes (so the rule works on both Windows and POSIX).
   if (APP_EXCLUDE.has(name) && parts.join('/') === 'src/app') return true;
+  // M32.7.6 — scripts/migrations/ holds dev-only backfill helpers
+  // (e.g. backfill-pending-jobs.ts). `migrations` is in
+  // ROOT_ONLY_EXCLUDE_DIRS so the global rule no longer covers it; this
+  // path-aware carve-out keeps the dev-only helpers out of the artifact
+  // while letting `prisma/migrations/` ship.
+  if (name === 'migrations' && parts.join('/') === 'scripts') return true;
   return EXCLUDE_GLOBS_RE.some((re) => re.test(name));
 }
 

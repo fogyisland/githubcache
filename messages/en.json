@@ -197,6 +197,14 @@
           "title": "Requests in the last 6 hours",
           "hoursAgo": "{hours}h ago",
           "totalRecent": "{count, plural, one {# request} other {# requests}}"
+        },
+        "githubVolume": {
+          "heading": "GitHub upstream API calls",
+          "hint": "One row per successful HTTP round-trip. 7-day retention.",
+          "core": "core (repos.get)",
+          "releases": "releases (listReleases)",
+          "branches": "branches (listBranches)",
+          "empty": "No upstream GitHub calls in this window."
         }
       }
     },

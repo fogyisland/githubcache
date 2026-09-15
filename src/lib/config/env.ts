@@ -114,6 +114,10 @@ const schema = z.object({
   // M25 — Cron cadence for the weekly report. Fires on Monday
   // 00:10..00:14 UTC. Default 60min = 1 hit/week inside the window.
   EMAIL_WEEKLY_REPORT_INTERVAL_MS: z.coerce.number().int().positive().default(60 * 60_000),
+  // M32.7.6 — Cron cadence for the github_request_events retention
+  // prune. Fires at 00:05..00:09 UTC. Default 5min = 1 hit/day in
+  // the window. Set higher for less DB chatter (10min still safe).
+  PRUNE_GITHUB_REQUEST_EVENTS_INTERVAL_MS: z.coerce.number().int().positive().default(5 * 60_000),
   // M25 — Optional override for the SMTP_FROM header. Used by the
   // "send test" button so admins can verify a specific sender identity.
   EMAIL_FROM_DEFAULT: z.string().email().optional(),

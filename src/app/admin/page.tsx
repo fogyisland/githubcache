@@ -6,8 +6,11 @@ import { AdminKpiCard } from '@/app/admin/_components/admin-kpi-card';
 import { AdminStatusChip } from '@/app/admin/_components/admin-status-chip';
 import { queryAuditLog, getActorEmails } from '@/lib/db/audit';
 import { loadDashboardBuckets, getDashboardCounts } from '@/lib/admin/dashboard-buckets';
+import { loadGithubRequestVolume } from '@/lib/admin/github-request-volume';
 import { formatTime } from '@/lib/format/datetime';
 import { resolveRequestTimezone } from '@/lib/timezone/resolve';
+import { GithubRequestVolumeChart } from './_components/github-request-volume-chart';
+import { GithubRequestVolumeWindowSwitcher } from './_components/github-request-volume-window-switcher';
 
 /**
  * Admin dashboard (M11.9 rewrite + M13.3 translation).
@@ -18,6 +21,8 @@ import { resolveRequestTimezone } from '@/lib/timezone/resolve';
  *      active github tokens (with hint line)
  *   3. Two-column grid: requests-by-hour (last 6h, 1h buckets) + recent
  *      activity feed (top 5 audit entries)
+ *   4. M32.7.6 — full-width GitHub upstream API request volume chart
+ *      (24h or 7d, picked via ?window= search param).
  *
  * Data is fetched in parallel via Promise.all. The page is async SSR;
  * no client-side fetch needed.
@@ -27,27 +32,31 @@ import { resolveRequestTimezone } from '@/lib/timezone/resolve';
  * prisma.count calls). Recent-audit lookup still uses `queryAuditLog`
  * because it also needs actor emails for the activity feed.
  */
-export default async function AdminDashboardPage(): Promise<ReactElement> {
+export default async function AdminDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ window?: string }>;
+}): Promise<ReactElement> {
+  const sp = await searchParams;
   const t = await getTranslations('admin.shell.dashboard');
 
   // Dashboard doesn't validate its own session (layout.tsx gates auth),
   // so we read timezone from cookie/default only — no DB roundtrip.
   const userTz = await resolveRequestTimezone({});
 
-  const [counts, recentAudit] = await Promise.all([
+  // M32.7.6 — pick the chart window. Anything other than '7d' falls
+  // back to '24h' so a typo / stale link / unknown value can't 404.
+  const window: '24h' | '7d' = sp.window === '7d' ? '7d' : '24h';
+
+  const [counts, recentAudit, buckets, githubVolume] = await Promise.all([
     getDashboardCounts(),
     queryAuditLog({ limit: 5, offset: 0 }),
+    loadDashboardBuckets((hours) =>
+      t('chart.hoursAgo', { hours: String(hours) }),
+    ),
+    loadGithubRequestVolume(window),
   ]);
   const { cachedRepos, activeUsers, activeApiKeys, activeGithubTokens } = counts;
-
-  // Requests by hour — last 6h, 1h buckets, sourced from audit log
-  // (action = 'api.query' or 'cache.read'). Best-effort: counts are
-  // a sampled view, not exact traffic accounting. Bucket math is in a
-  // plain helper (loadDashboardBuckets) because Date.now() inside a
-  // server component body trips react-hooks/purity.
-  const buckets = await loadDashboardBuckets((hours) =>
-    t('chart.hoursAgo', { hours: String(hours) }),
-  );
 
   const actorIds = [
     ...new Set(
@@ -149,6 +158,16 @@ export default async function AdminDashboardPage(): Promise<ReactElement> {
             <Link href="/admin/audit">View full audit log →</Link>
           </p>
         </div>
+      </section>
+
+      <section className="ghc-admin-github-volume-row mt-6">
+        <div className="mb-3 flex items-baseline justify-between">
+          <GithubRequestVolumeWindowSwitcher
+            basePath="/admin"
+            current={window}
+          />
+        </div>
+        <GithubRequestVolumeChart data={githubVolume} tz={userTz} window={window} />
       </section>
     </div>
   );

@@ -301,6 +301,23 @@ enum RefreshJobStatus {
   failed
 }
 
+// M32.7.6 — per-call upstream GitHub request log for the /admin
+// "GitHub upstream API calls" chart. One row per successful upstream
+// HTTP round-trip (200 / 304). 7-day retention enforced by
+// src/lib/scheduler/cron-prune-events.ts. Pairs with the loader at
+// src/lib/admin/github-request-volume.ts.
+model GithubRequestEvent {
+  id         BigInt   @id @default(autoincrement())
+  endpoint   String   @db.VarChar(32) // 'core' | 'releases' | 'branches'
+  tokenId    BigInt?  @map("token_id") // nullable: fetchVersionExtras has no token context
+  statusCode Int      @map("status_code")
+  occurredAt DateTime @default(now()) @map("occurred_at")
+
+  @@index([occurredAt])
+  @@index([endpoint, occurredAt])
+  @@map("github_request_events")
+}
+
 model Session {
   id        String   @id @db.Char(43)
   userId    BigInt   @map("user_id")
