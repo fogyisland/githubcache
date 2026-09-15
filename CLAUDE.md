@@ -9,7 +9,8 @@ metadata behind a public query API, with a multi-token pool, background
 refresh scheduler, and cookie-session admin panel. Single-machine deploy,
 MySQL backend. ~870 vitest tests + several Playwright e2e tests.
 
-**Status:** shipped through M24 (per-user timezone + Wulan theme). Master
+**Status:** shipped through M32.7 (commercial hardening — setup writes
+scheduler defaults, pool state pinned to globalThis). Master
 branch on GitHub: https://github.com/fogyisland/githubcache
 
 ## Quick start
@@ -126,10 +127,13 @@ Key files for context:
 - **No Docker** — deploy is plain Node.js behind systemd / pm2 / k8s pod.
   Per `feedback_no_docker.md`.
 - **Port 5002** — both `npm run dev` (hardcoded) and `dev:server` (env).
-- **Scheduler tick 60s default** — can be lowered to 1s in dev via
-  `SCHEDULER_TICK_MS=1000` in `.env`.
-- **Pool is in-memory** — Next.js dev HMR resets the pool Map. For long
-  smoke tests use `npm run build && NODE_ENV=production npm run start:server`.
+- **Scheduler tick 60s default** — `lockSetupSubtask` writes `1000` to
+  `.env` on first init (M32.7), so a fresh install runs at 1 req/sec
+  out of the box. Override via `SCHEDULER_TICK_MS` in `.env`.
+- **Pool is in-memory** — state pinned to `globalThis.__ghcPool` (M32.7)
+  so it survives Next.js dev HMR and webpack split-chunks route-worker
+  isolation. For long smoke tests use `npm run build && NODE_ENV=production
+  npm run start:server`.
 - **GitHub token rotation** — DB-direct since M21. Add new tokens via
   `/admin/github-tokens`; pool is updated immediately, no restart needed.
 - **Rate-limit auto-pause** — scheduler pauses when all tokens exhausted,
@@ -145,8 +149,10 @@ Key files for context:
    `tests/integration/timezone-persistence.test.ts` for the pattern).
 3. **Prisma `@@map` + raw SQL** — write the SQL with the mapped snake_case
    name, not the camelCase model name.
-4. **Module-level state + HMR** — `pool.ts` Map gets reset by Next dev HMR.
-   Pin on `globalThis` for long-lived state in dev. Production is fine.
+4. **Module-level state + HMR** — `pool.ts` state is pinned to
+   `globalThis.__ghcPool` (M32.7) so it survives Next dev HMR and the
+   webpack split-chunks route-worker isolation. Production is a single
+   process so the pin is harmless there.
 5. **t.rich callbacks** without `chunk` argument — see "i18n" section above.
 6. **setState in useEffect** — React 19 cascading-render lint. Defer with
    setTimeout(0).

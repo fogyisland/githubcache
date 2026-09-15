@@ -8,6 +8,43 @@ once a stable release is cut. Until then, milestone tags serve as the version an
 
 ---
 
+## [m32.7] — 2026-09-15
+
+**Commercial hardening: setup writes scheduler defaults + pool state
+survives Next.js dev-mode split-chunks.**
+
+Two related fixes that complete the commercial-readiness pass for the
+init wizard and the GitHub-token pool:
+
+- **`lockSetupSubtask` now writes `SCHEDULER_TICK_MS=1000` and
+  `SCHEDULER_BATCH_SIZE=1` to `.env`** alongside the existing
+  `GHC_SETUP_DONE=1`. A fresh `npm run init` (or first boot through
+  `/init`) lands on a 1 req/sec scheduler without the operator
+  editing `.env` by hand. All three keys are also mirrored into
+  `process.env` so in-flight callers see the new values immediately,
+  without a restart.
+
+- **`src/lib/github/pool.ts` module-level state pinned to
+  `globalThis.__ghcPool`**. Next.js dev mode + webpack split-chunks
+  creates a separate module instance per route worker; the in-memory
+  pool Map was reset on every HMR / route reload, so a token added
+  via `POST /api/admin/github-tokens` was invisible to `poolHasId()`
+  on `GET /admin/github-tokens` (admin UI showed "未加入池" / "not
+  in pool" even immediately after adding the token). All 7 state
+  holders (2 Maps + 5 primitives) are now pinned: Maps via reference
+  alias, primitives via getter/setter helpers that funnel through
+  `poolGlobal()`. Production correctness is unchanged (single
+  process), but the fix also closes a class of "two route workers
+  see different pool state" bugs in dev.
+
+Tests:
+- `tests/unit/lock-setup-subtask.test.ts`: 5/5 green (3 existing + 2
+  new — persist defaults + idempotency).
+- `tests/unit/pool.test.ts`: 29/29 green (27 existing + 2 new —
+  cross-instance `poolHasId` + counter survival across `vi.resetModules`).
+
+---
+
 ## [m26x-auth-repo] — 2026-09-06
 
 **`/api/v1/repos/[owner]/[name]` is now authenticated.**

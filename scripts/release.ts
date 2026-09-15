@@ -300,7 +300,7 @@ Optional (all have sensible defaults in \`src/lib/config/env.ts\`):
   - \`PORT\`               default 5002
   - \`NODE_ENV\`           set to \`production\`
   - \`LOG_LEVEL\`          \`info\` for prod, \`debug\` for local
-  - \`SCHEDULER_TICK_MS\`  default 60000 (1s in dev only)
+  - \`SCHEDULER_TICK_MS\`  default 60000 — \`lockSetupSubtask\` writes 1000 on first init so the shipped artifact drains at ~1 req/sec out of the box
   - \`SCHEDULER_*_SWEEP_HOURS\`  per-facet cadence (M27.5)
   - \`BACKUP_DIR\`, \`BACKUP_KEEP_N\`  (M17)
   - \`EMAIL_DAILY_REPORT_INTERVAL_MS\`, etc.  (M25)
