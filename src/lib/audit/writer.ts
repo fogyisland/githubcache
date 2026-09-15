@@ -1,4 +1,17 @@
 import { prisma } from '@/lib/db/client';
+// M32.7.3 — static import (was previously a lazy-loaded import() of
+// the webhooks module inside fanOutAuditEvent). Root cause: webpack's
+// dynamicImportMode=weak (set in next.config.mjs to silence a
+// next-intl FileSystemInfo warning) marks every dynamic import as an
+// optional chunk; in production the server bundle's lazy import of the
+// webhooks module couldn't be resolved and the audit fan-out crashed
+// with "Module is not available (weak dependency)" at every audit
+// hook. Switching to a static import keeps the audit hot path unchanged
+// (the webhooks module only adds prisma + type imports) and removes the
+// webpack weak-dependency surface. See
+// tests/unit/audit-writer-fanout.test.ts for the source-level invariant
+// that pins this contract.
+import { findMatchingSubscriptions, enqueueDelivery } from '@/lib/webhooks/db';
 import type { AuditLog, Prisma } from '@prisma/client';
 
 export interface WriteAuditArgs {
@@ -43,12 +56,17 @@ export async function writeAudit(args: WriteAuditArgs): Promise<AuditLog> {
 
 /**
  * Find every active subscription matching the audit action and enqueue
- * a delivery row for each. Imported lazily to keep the audit writer's
- * module-load graph narrow and to avoid pulling the entire webhook
- * module into every code path that writes audit rows.
+ * a delivery row for each.
+ *
+ * M32.7.3 — function body uses statically-imported findMatchingSubscriptions
+ * and enqueueDelivery (see top-of-file import). The previous lazy
+ * `await import('@/lib/webhooks/db')` was killed by webpack's
+ * `dynamicImportMode: 'weak'` (set in next.config.mjs to silence a
+ * next-intl FileSystemInfo warning) — production chunk loader treated
+ * the import as optional and the server chunk couldn't find the module
+ * id at runtime.
  */
 async function fanOutAuditEvent(row: AuditLog): Promise<void> {
-  const { findMatchingSubscriptions, enqueueDelivery } = await import('@/lib/webhooks/db');
   const subs = await findMatchingSubscriptions(row.action);
   if (subs.length === 0) return;
   // Enqueue in parallel — each insert is independent. A failure on one
