@@ -50,6 +50,14 @@ async function usersTableExists(): Promise<boolean> {
 }
 
 export async function getSetupStatus(): Promise<SetupStatus> {
+  // M32.7.2 — guard the prisma proxy throw so the wizard doesn't get
+  // a noisy stderr stream from prisma's "DATABASE_URL is not set"
+  // error. The frontend polls this endpoint every ~5s while /init is
+  // in progress; without this guard, every poll triggers a prisma
+  // proxy init that throws before usersTableExists() can run.
+  if (!process.env.DATABASE_URL) {
+    return { done: false, reason: 'database_unreachable' };
+  }
   if (!(await usersTableExists())) {
     return { done: false, reason: 'users_table_missing' };
   }
