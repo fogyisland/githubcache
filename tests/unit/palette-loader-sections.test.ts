@@ -20,15 +20,15 @@ vi.mock('next-intl/server', () => ({
 
 import { loadPaletteData } from '@/lib/admin/palette-loader';
 
-describe('palette-loader — sections (M30.9 F1)', () => {
-  it('admin sees all 18 sections', async () => {
+describe('palette-loader — sections (M30.9 F1, M32.7.7-b)', () => {
+  it('admin sees all 19 sections (18 + M32.7.7-b import)', async () => {
     const data: PaletteData = await loadPaletteData('admin');
-    expect(data.sections).toHaveLength(18);
+    expect(data.sections).toHaveLength(19);
     const slugs = data.sections.map((s) => s.slug).sort();
     expect(slugs).toEqual([
       'api-keys', 'api-settings', 'audit', 'dashboard',
       'database', 'email', 'email-log', 'github-tokens',
-      'ingestion', 'insights', 'providers', 'queries',
+      'import', 'ingestion', 'insights', 'providers', 'queries',
       'queue', 'refresh', 'reports', 'repositories',
       'users', 'webhooks',
     ]);
