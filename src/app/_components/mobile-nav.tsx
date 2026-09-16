@@ -14,6 +14,10 @@ interface Props {
   links: NavLink[];
   accountLabel: string;
   accountHref: string;
+  // loggedInLabel is accepted for parity with AccountMenu so the parent
+  // site-header can pass the same i18n keys to both sub-views without
+  // branching. MobileNav doesn't need it today; the prop is reserved
+  // for a future "you are signed in as X" drawer line.
   loggedInLabel: string;
 }
 
@@ -22,7 +26,17 @@ interface Props {
  * Server side renders nothing (returns null) when the layout is
  * hidden via CSS — hamburger is mobile-only via @media.
  */
-export function MobileNav({ links, accountLabel, accountHref, loggedInLabel }: Props): JSX.Element {
+export function MobileNav({
+  links,
+  accountLabel,
+  accountHref,
+  // Accept loggedInLabel to keep the parent site-header's call site
+  // symmetrical with AccountMenu — but MobileNav doesn't render a
+  // "signed in as X" line, so the prop is currently unused. Underscore
+  // prefix opts out of the unused-vars lint until a future drawer line
+  // surfaces it.
+  loggedInLabel: _loggedInLabel,
+}: Props): JSX.Element {
   const t = useTranslations('nav');
   const [open, setOpen] = useState(false);
 

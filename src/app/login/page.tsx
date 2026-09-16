@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react';
+import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { LoginForm } from './_login-form';
 
@@ -33,9 +34,9 @@ export default async function LoginPage(): Promise<ReactElement> {
       <LoginForm />
 
       <p className="mt-6 text-center text-sm">
-        <a href="/" className="ghc-link">
+        <Link href="/" className="ghc-link">
           {t('backToHome')}
-        </a>
+        </Link>
       </p>
     </main>
   );

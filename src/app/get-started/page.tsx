@@ -2,7 +2,6 @@ import type { ReactElement } from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { CopyButton } from './_components/copy-button';
 import { CodeTabs } from './_components/code-tabs';
 
 /**

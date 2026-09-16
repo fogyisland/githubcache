@@ -38,31 +38,6 @@ export interface NodeBucket {
   defaultOpen: boolean;
 }
 
-const KNOWN_KEYS = new Set<string>([
-  // identity
-  'id', 'node_id', 'name', 'full_name', 'html_url', 'url', 'fork',
-  // visibility
-  'private', 'visibility', 'archived', 'disabled', 'is_template',
-  'has_issues', 'has_projects', 'has_wiki', 'has_pages', 'has_downloads',
-  'has_discussions', 'has_pull_requests', 'allow_forking',
-  'web_commit_signoff_required', 'pull_request_creation_policy',
-  // stats
-  'watchers', 'watchers_count', 'stargazers_count', 'forks', 'forks_count',
-  'open_issues', 'open_issues_count', 'network_count', 'subscribers_count',
-  'size',
-  // timestamps
-  'created_at', 'updated_at', 'pushed_at',
-  // content
-  'default_branch', 'description', 'homepage', 'language',
-  // license + topics
-  'license', 'topics',
-  // owner
-  'owner', 'organization',
-  // permissions
-  'permissions',
-  // misc
-  'custom_properties', 'mirror_url', 'temp_clone_token',
-]);
 
 const BUCKET_DEFS: ReadonlyArray<{
   id: string;
@@ -101,12 +76,11 @@ const BUCKET_DEFS: ReadonlyArray<{
     'permissions',
   ], defaultOpen: false },
   { id: 'urls', label: 'url templates', keys: [
-    // populated dynamically — anything ending with `_url` that isn't in KNOWN_KEYS
+    // populated dynamically — any `node` field ending with `_url` not already claimed by a named bucket
   ], defaultOpen: false },
   { id: 'misc', label: 'other', keys: [
-    // Populated dynamically in Pass 3 — anything in KNOWN_KEYS that
-    // wasn't claimed by a named bucket (custom_properties,
-    // mirror_url, temp_clone_token) plus truly unknown future fields.
+    // Populated dynamically in Pass 3 — anything not claimed by a named bucket (custom_properties,
+    // mirror_url, temp_clone_token, plus truly unknown future fields).
   ], defaultOpen: false },
 ];
 

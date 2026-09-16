@@ -1,13 +1,11 @@
 'use client';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import type { GithubTokenStatus } from '@prisma/client';
 import type { ReactElement } from 'react';
 import { fetchCsrfToken } from '@/lib/csrf/client';
 import { AdminConfirmDialog } from '@/app/admin/_components/admin-confirm-dialog';
-
-const CONFIRM_TIMEOUT_MS = 5_000;
 
 /**
  * M32.5 — Per-row action buttons for /admin/github-tokens.

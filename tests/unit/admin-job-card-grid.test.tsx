@@ -33,7 +33,7 @@ vi.mock('next-intl/server', () => ({
 // AdminJobActionButton is a client component; stub it to a translated
 // render so the SSR snapshot stays in this environment.
 vi.mock('@/app/admin/_components/admin-job-action-button', () => ({
-  AdminJobActionButton: ({ jobId, action }: { jobId: string; action: 'retry' | 'cancel' }) =>
+  AdminJobActionButton: ({ action }: { jobId: string; action: 'retry' | 'cancel' }) =>
     h('button', { type: 'button', className: `ghc-btn-${action}` }, action === 'retry' ? 'Retry' : 'Cancel'),
 }));
 

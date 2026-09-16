@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
+import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { validateSession } from '@/lib/auth/session';
 import { SignupForm } from './_components/signup-form';
@@ -42,9 +43,9 @@ export default async function SignupPage(): Promise<ReactElement> {
       </div>
 
       <p className="mt-6 text-center text-sm">
-        <a href="/" className="ghc-link">
+        <Link href="/" className="ghc-link">
           {t('backToHome')}
-        </a>
+        </Link>
       </p>
     </main>
   );

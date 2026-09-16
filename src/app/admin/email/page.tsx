@@ -2,7 +2,7 @@ import type { ReactElement } from 'react';
 import { cookies } from 'next/headers';
 import { getTranslations } from 'next-intl/server';
 import { requireAdmin } from '@/lib/auth/require-admin';
-import { getEmailConfig, publicConfigForUi } from '@/lib/email/config';
+import { getEmailConfig } from '@/lib/email/config';
 import { AdminPageHeader } from '@/app/admin/_components/admin-page-header';
 import { EmailConfigForm } from './_components/email-config-form';
 import { TestSendButton } from './_components/test-send-button';
@@ -48,7 +48,6 @@ export default async function AdminEmailPage(): Promise<ReactElement> {
       select: { createdAt: true },
     }),
   ]);
-  const safe = publicConfigForUi(cfg);
 
   const initial = cfg.configured && cfg.row
     ? {

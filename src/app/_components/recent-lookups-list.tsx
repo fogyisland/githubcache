@@ -14,9 +14,8 @@ export async function RecentLookupsList({ repos }: Props): Promise<ReactElement>
 
   function timeAgo(d: Date | null): string {
     if (!d) return tTime('dash');
-    // Date.now() is impure but is acceptable in this server-render context
+    // Date.now() is impure but acceptable in this server-render context
     // (server components run once during SSR; purity enforcement doesn't apply).
-    // eslint-disable-next-line react-hooks/purity
     const ms = Date.now() - d.getTime();
     if (ms < 60_000) return tTime('justNow');
     if (ms < 3_600_000) return tTime('minutesAgo', { m: Math.floor(ms / 60_000) });

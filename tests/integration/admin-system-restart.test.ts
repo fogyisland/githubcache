@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { hashPassword } from '@/lib/auth/password';
 import { prisma } from '@/lib/db/client';
 import { POST as restartPOST } from '@/app/api/admin/system/restart/route';

@@ -99,9 +99,6 @@ function setPersistTimer(t: ReturnType<typeof setInterval> | null): void {
   poolGlobal().persistTimer = t;
 }
 
-function getConsecutive429s(): number {
-  return poolGlobal().consecutive429s;
-}
 function setConsecutive429s(v: number): void {
   poolGlobal().consecutive429s = v;
 }
@@ -111,9 +108,6 @@ function bumpConsecutive429s(): number {
   return s.consecutive429s;
 }
 
-function isShuttingDown(): boolean {
-  return poolGlobal().shuttingDown;
-}
 function setShuttingDown(v: boolean): void {
   poolGlobal().shuttingDown = v;
 }

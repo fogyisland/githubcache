@@ -55,7 +55,7 @@ vi.mock('@/lib/timezone/resolve', () => ({
 // Mock next-intl/server — getTranslations is server-only and throws in
 // tests because it walks the server-component machinery we don't mock.
 vi.mock('next-intl/server', () => ({
-  getTranslations: async (namespace: string) => {
+  getTranslations: async (_namespace: string) => {
     // Return a t() that resolves any key to its dotted path. Tests assert
     // on specific keys (e.g. "admin.shell.dashboard.githubVolume.heading"),
     // so as long as that path appears somewhere in the rendered output

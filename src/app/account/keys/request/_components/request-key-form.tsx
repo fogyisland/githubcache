@@ -3,6 +3,7 @@
 import { useFormStatus } from 'react-dom';
 import { useActionState } from 'react';;
 import { useTranslations } from 'next-intl';
+import Link from 'next/link';
 import { requestKeyAction, type RequestKeyState } from '@/app/account/keys/request/_actions/request';
 
 const INITIAL: RequestKeyState = { status: 'idle' };
@@ -85,9 +86,9 @@ export function RequestKeyForm(): React.ReactElement {
 
       <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
         <SubmitBtn />
-        <a href="/account/keys" className="ghc-link" style={{ fontSize: '0.9rem' }}>
+        <Link href="/account/keys" className="ghc-link" style={{ fontSize: '0.9rem' }}>
           {t('cancel')}
-        </a>
+        </Link>
       </div>
     </form>
   );
