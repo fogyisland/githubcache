@@ -233,6 +233,21 @@ vi.mock('@/app/admin/database/_components/overview', () => ({
     ),
 }));
 
+// AdminDatabaseTabs is also an async server component. Mock as sync
+// for the same reason — see the Overview mock above.
+vi.mock('@/app/admin/database/_components/admin-database-tabs', () => ({
+  AdminDatabaseTabs: () =>
+    createElement('nav', { 'data-testid': 'database-tabs-stub' }, 'Database tabs'),
+}));
+
+// DatabaseHealthCard is a 'use client' component using `useTranslations`.
+// renderToStaticMarkup runs without a NextIntlClientProvider, so it
+// throws "useTranslations was not found". Mock it as a sync stub.
+vi.mock('@/app/admin/database/_components/database-health-card', () => ({
+  DatabaseHealthCard: () =>
+    createElement('div', { 'data-testid': 'database-health-stub' }, 'Database health'),
+}));
+
 // TablesSection is a client component — mock it synchronously.
 vi.mock('@/app/admin/database/_components/tables-section', () => ({
   TablesSection: () => createElement('div', { 'data-testid': 'tables-stub' }),
@@ -256,11 +271,17 @@ describe('AdminDatabasePage i18n', () => {
 
   it('renders the section stubs together', async () => {
     const html = renderToStaticMarkup(await AdminDatabasePage());
-    expect(html).toContain('data-testid="overview-stub"');
-    expect(html).toContain('data-testid="backup-section-stub"');
-    expect(html).toContain('data-testid="restore-section-stub"');
-    expect(html).toContain('data-testid="tables-stub"');
-    expect(html).toContain('data-testid="slow-queries-stub"');
-    expect(html).toContain('data-testid="prisma-studio-stub"');
+    // The overview section is rendered inline as kpi-cards on the
+    // /admin/database landing page; the kpi-grid is the visible
+    // marker. Sub-pages live under /admin/database/{schema,operations}.
+    expect(html).toContain('class="ghc-admin-kpi-grid"');
+    expect(html).toContain('class="ghc-admin-kpi-value');
+    // Binary warning is gated off (binariesReady() returns true from
+    // the mock) and DatabaseHealthCard is mocked to a stable stub.
+    expect(html).toContain('data-testid="database-health-stub"');
+    // Quick-nav cards are rendered as a <nav> with two <a> links.
+    expect(html).toContain('class="ghc-admin-quick-nav"');
+    expect(html).toContain('href="/admin/database/schema"');
+    expect(html).toContain('href="/admin/database/operations"');
   });
 });
