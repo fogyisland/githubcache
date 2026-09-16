@@ -50,6 +50,7 @@
     "@octokit/rest": "^22.0.1",
     "@prisma/client": "5",
     "bcrypt": "^6.0.0",
+    "mysql2": "^3.24.4",
     "next": "^15.0.0",
     "next-intl": "^4.14.1",
     "nodemailer": "^7.0.13",
