@@ -332,8 +332,11 @@ function buildReleaseNotes(files: CollectedFile[]): string {
 > \`npm start\` runs \`next start\` only. Your \`refresh_jobs\` backlog will never
 > drain and \`/api/v1/repos\` will return 503 even with tokens configured.
 > Use \`npm run start:server\` (or \`NODE_ENV=production npm run start:server\`)
-> for any production deployment. The \`prestart\` script in package.json
-> also aborts \`npm start\` at runtime with this same message.
+> for any production deployment. **To pin the listen port to 5002
+> explicitly** (default is already 5002 via package.json \`dev:port\`),
+> run \`npm run start:5002\` instead — it forwards \`--port 5002\` to
+> bootstrap.ts. The \`prestart\` script in package.json also aborts
+> \`npm start\` at runtime with this same message.
 
 `;
   return `# githubcache v${VERSION} — deploy guide

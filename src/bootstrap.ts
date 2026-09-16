@@ -31,8 +31,14 @@ import { DEFAULT_DEV_PORT } from './lib/config/dev-port';
 // at module-load time and ships react.development.js if it sees
 // 'development'.
 import { enforceProductionNodeEnv } from './lib/bootstrap-node-env.js';
+// npm run start:5002 → tsx src/bootstrap.ts --port 5002. The helper
+// lifts `--port <n>` / `-p <n>` / `--port=<n>` into process.env.PORT
+// BEFORE zod reads it, so a non-default port from argv wins over
+// .env / DEFAULT_DEV_PORT. Pure — see src/lib/bootstrap-argv-port.ts.
+import { applyPortFromArgv } from './lib/bootstrap-argv-port.js';
 
 const env = process.env as Record<string, string | undefined>;
+applyPortFromArgv(process.argv, env);
 enforceProductionNodeEnv(env);
 if (!env.PORT) env.PORT = String(DEFAULT_DEV_PORT);
 

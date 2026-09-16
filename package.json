@@ -29,6 +29,7 @@
     "prestart": "node -e \"console.error('FATAL: npm start is disabled — it runs Next.js without the refresh scheduler + GitHub token pool, so refresh_jobs will never drain and /api/v1/repos will return 503. Use npm run start:server (production) or npm run dev:server (local dev). See RELEASE.md.');process.exit(1)\"",
     "start": "next start -p 5002",
     "start:server": "tsx src/bootstrap.ts",
+    "start:5002": "tsx src/bootstrap.ts --port 5002",
     "lint": "eslint .",
     "format": "prettier --check .",
     "format:write": "prettier --write .",
