@@ -93,6 +93,19 @@ vi.mock('@/lib/auth/session', () => ({
   invalidateAllSessionsForUser: vi.fn(),
 }));
 
+// CopyKeyButton is a 'use client' component that calls
+// `useTranslations('account.keys.listActions')`. renderToStaticMarkup
+// runs without a NextIntlClientProvider, so the hook throws "no
+// useTranslations was found". Mock it as a stable stub so the page
+// renders cleanly in this unit context.
+vi.mock('@/app/account/keys/_components/copy-key-button', () => ({
+  CopyKeyButton: ({ keyName }: { keyName: string }) => (
+    <button type="button" data-testid="copy-key-stub">
+      Copy {keyName}
+    </button>
+  ),
+}));
+
 beforeAll(async () => {
   operator = await prisma.user.create({
     data: {
