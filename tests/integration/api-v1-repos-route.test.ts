@@ -142,15 +142,17 @@ describe('GET /api/v1/repos/[owner]/[name] (M26.x authenticated)', () => {
 
   it('returns 429 when count exceeds the per-key hourly ceiling', async () => {
     await createTestRepo({ owner: 'octocat', name: 'Hello-World', status: 'ok' });
-    // The default ceiling is 50_000. We can't override it post-import
-    // (zod caches the env at module load), so we pre-seed the bucket
-    // at 50_001 — the next GET's atomic upsert brings it to 50_002
-    // which exceeds the ceiling and trips 429.
+    // The default ceiling is 50_000 (schema default), but .env overrides
+    // to 10_000 in this repo. We can't override it post-import (zod
+    // caches the env at module load), so we pre-seed the bucket at
+    // limit+1 — the next GET's atomic upsert brings it to limit+2 which
+    // exceeds the ceiling and trips 429.
+    const limit = Number(process.env.PUBLIC_REPO_RATE_PER_HOUR ?? '50000');
     const windowStart = new Date(Math.floor(Date.now() / 3_600_000) * 3_600_000);
     await prisma.rateLimitBucket.upsert({
       where: { apiKeyId: activeKeyId },
-      create: { apiKeyId: activeKeyId, windowStart, count: 50_001 },
-      update: { count: 50_001, windowStart },
+      create: { apiKeyId: activeKeyId, windowStart, count: limit + 1 },
+      update: { count: limit + 1, windowStart },
     });
     const res = await GET(
       authedReq(
@@ -162,8 +164,13 @@ describe('GET /api/v1/repos/[owner]/[name] (M26.x authenticated)', () => {
     );
     expect(res.status).toBe(429);
     expect(res.headers.get('retry-after')).not.toBeNull();
-    expect(res.headers.get('x-ratelimit-limit')).toBe('50000');
-    // 50_001+1 = 50_002 hits, limit=50_000, remaining = max(0, 50_000 - 50_002) = 0
+    // PUBLIC_REPO_RATE_PER_HOUR schema default is 50_000 but the local
+    // .env overrides to 10_000. Read the actual limit from env so the
+    // assertion tracks whatever the running process sees (limit is
+    // already computed above for the upsert).
+    expect(res.headers.get('x-ratelimit-limit')).toBe(String(limit));
+    // Pre-seeded at limit+1; the next GET's atomic upsert brings it to
+    // limit+2, exceeding the ceiling. remaining = max(0, limit - (limit+2)) = 0.
     expect(res.headers.get('x-ratelimit-remaining')).toBe('0');
   });
 });
