@@ -82,7 +82,6 @@ const EXCLUDE_DIRS = new Set([
   '.claude',
   '.github',
   'tests',
-  'docs',
   'dist',
   'release',     // M28.bug27 — exclude this script's own output to prevent
                  // the matryoshka (release/githubcache/release/githubcache/...)
@@ -125,6 +124,13 @@ const ROOT_ONLY_EXCLUDE_DIRS = new Set([
   'reports',
   'test',
   'migrations',
+  // M32.7.8 — `docs/` at the repo root holds dev-only runbooks and
+  // superpowers plans. `src/app/docs/` is the public /docs site that
+  // ships with the artifact; previous releases silently dropped it
+  // because `docs` was in EXCLUDE_DIRS globally (a global rule
+  // matches the nested path too, same shape as the M30.9 F1
+  // `src/lib/reports/` regression).
+  'docs',
 ]);
 
 const EXCLUDE_FILES = new Set([
@@ -218,6 +224,22 @@ const SCRIPT_EXCLUDE = new Set([
   'install-status-trigger.mjs',
   'audit-admin.mjs',
   'add-token.mjs',
+  // M32.7.8 — one-shot probes / scratch / repro / test scripts that
+  // accumulated during local debugging and have no recipient use case.
+  // These were never added to SCRIPT_EXCLUDE and crept into past release
+  // artifacts. None of them are referenced by `npm run` scripts either.
+  '_tmp-probe.mjs',
+  'check-jobs.mts',
+  'create-raymond-user.mts',
+  'enqueue-30-jobs.mts',
+  'list-tokens.mts',
+  'probe-enqueue.mts',
+  'probe-jobs.mts',
+  'probe-queue-state.mts',
+  'probe-tokens.mts',
+  'repro-delete-126.mjs',
+  'reset-admin-password.mjs',
+  'test-delete-flow.mjs',
   // one-shot prod-sync SQL the recipient doesn't need on first deploy —
   // they would only use these if migrating from an older version, and
   // we ship a release note per-version explaining when to run them.
@@ -426,6 +448,25 @@ function main(): void {
 
   // Collect files first so we know the count for the manifest.
   const files = walk(ROOT, '');
+
+  // M32.7.8 — defensive guard. EXCLUDE_FILES already lists `.env` and
+  // every `.env.*` variant (production / local / backup / test / tmp /
+  // development), but a future regression in shouldExclude() must not
+  // be able to leak secrets into the artifact. If walk() ever returns
+  // any env-shaped path we abort immediately rather than write a
+  // credentials-bearing file to disk. `.env.example` IS shipped (init
+  // copies it to `.env` on first deploy), so it's explicitly allowed.
+  const envLeak = files.find((f) => {
+    const base = f.dest.split(/[\\/]/).pop() ?? '';
+    if (base === '.env.example') return false;
+    return /^\.env(\.|$)/.test(base);
+  });
+  if (envLeak) {
+    throw new Error(
+      `SECURITY: refused to write ${envLeak.dest} — shouldExclude() did not ` +
+      `filter a .env-shaped path. Update EXCLUDE_FILES in scripts/release.ts.`,
+    );
+  }
   console.log(`  ${files.length} files to copy`);
 
   // Ensure parent dir exists (idempotent re-runs).
