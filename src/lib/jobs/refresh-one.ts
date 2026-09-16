@@ -241,11 +241,19 @@ async function refreshCore(job: RefreshJob): Promise<RefreshJobResult> {
     // M31 — storeRepoMetadata handles both create (no row yet) and update
     // (row already exists) internally via findRepoByCanonical → createRepo /
     // updateRepo split.
+    //
+    // M32.7.8 — pass `releases` + `branches` through so the child
+    // `repo_releases` / `repo_branches` tables mirror the metadata JSON.
+    // Without this, legacy-path (M27_REFRESH_BY_KIND=false) refreshes
+    // only wrote metadata, leaving the child tables empty and breaking
+    // the read path that joins them.
     await storeRepoMetadata({
       owner: job.owner,
       name: job.name,
       node: result.data,
       metadata,
+      ...(result.releases !== undefined ? { releases: result.releases } : {}),
+      ...(result.branches !== undefined ? { branches: result.branches } : {}),
       ...(result.etag !== undefined ? { etag: result.etag } : {}),
       fetchStatus: 'ok',
     });

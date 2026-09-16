@@ -211,3 +211,205 @@ describe('create-then-update (M31 split)', () => {
     expect([1, 2]).toContain(all[0]?.stars);
   });
 });
+
+describe('M32.7.8 — storeRepoMetadata mirrors releases/branches into child tables', () => {
+  // M32.7.8 — legacy core-refresh path (`M27_REFRESH_BY_KIND=false`,
+  // today's production default) pulls releases/branches via
+  // `fetchRepoCore` → `fetchVersionExtras` but previously only wrote
+  // them to `repositories.metadata` JSON. `cache/read.ts` reads
+  // `repo_releases` for the API response, so users saw empty release
+  // data even though GitHub returned it. This block pins the fix:
+  // `storeRepoMetadata({ releases, branches })` must populate the
+  // child tables as a side effect.
+
+  afterEach(async () => {
+    await prisma.repoRelease.deleteMany({
+      where: { repository: { owner: 'mirror-test' } },
+    });
+    await prisma.repoBranch.deleteMany({
+      where: { repository: { owner: 'mirror-test' } },
+    });
+    await prisma.repository.deleteMany({ where: { owner: 'mirror-test' } });
+    await prisma.refreshJob.deleteMany({ where: { owner: 'mirror-test' } });
+  });
+  afterAll(async () => {
+    await prisma.repoRelease.deleteMany({
+      where: { repository: { owner: 'mirror-test' } },
+    });
+    await prisma.repoBranch.deleteMany({
+      where: { repository: { owner: 'mirror-test' } },
+    });
+    await prisma.repository.deleteMany({ where: { owner: 'mirror-test' } });
+    await prisma.refreshJob.deleteMany({ where: { owner: 'mirror-test' } });
+    await prisma.$disconnect();
+  });
+
+  it('writes passed releases to the repo_releases child table', async () => {
+    const releases = [
+      {
+        tag_name: 'v1.0.0',
+        name: 'Release 1.0.0',
+        published_at: '2026-01-15T10:00:00Z',
+        html_url: 'https://github.com/m/r/releases/tag/v1.0.0',
+        prerelease: false,
+        draft: false,
+        tarball_url: null,
+        zipball_url: null,
+        assets_count: 0,
+      },
+      {
+        tag_name: 'v0.9.0',
+        name: 'Release 0.9.0',
+        published_at: '2025-12-01T10:00:00Z',
+        html_url: 'https://github.com/m/r/releases/tag/v0.9.0',
+        prerelease: false,
+        draft: false,
+        tarball_url: null,
+        zipball_url: null,
+        assets_count: 2,
+      },
+    ];
+
+    await storeRepoMetadata({
+      owner: 'mirror-test',
+      name: 'with-releases',
+      node: { id: 1 },
+      metadata: { recentReleases: releases, releaseCount: 2 },
+      releases,
+      fetchStatus: 'ok',
+    });
+
+    const rows = await prisma.repoRelease.findMany({
+      where: { repository: { owner: 'mirror-test', name: 'with-releases' } },
+      orderBy: { publishedAt: 'desc' },
+    });
+    expect(rows).toHaveLength(2);
+    expect(rows[0]?.tag).toBe('v1.0.0');
+    expect(rows[0]?.name).toBe('Release 1.0.0');
+    expect(rows[1]?.tag).toBe('v0.9.0');
+    // RepoRelease schema doesn't carry assetsCount — that field stays
+    // in metadata JSON. We only pin what the child table actually stores.
+    expect(rows[1]?.prerelease).toBe(false);
+    expect(rows[1]?.draft).toBe(false);
+  });
+
+  it('writes passed branches to the repo_branches child table', async () => {
+    const branches = [
+      {
+        name: 'main',
+        protected: true,
+        commit_sha: 'abc123',
+      },
+      {
+        name: 'develop',
+        protected: false,
+        commit_sha: 'def456',
+      },
+    ];
+
+    await storeRepoMetadata({
+      owner: 'mirror-test',
+      name: 'with-branches',
+      node: { id: 2 },
+      metadata: { branches },
+      branches,
+      fetchStatus: 'ok',
+    });
+
+    const rows = await prisma.repoBranch.findMany({
+      where: { repository: { owner: 'mirror-test', name: 'with-branches' } },
+      orderBy: { name: 'asc' },
+    });
+    expect(rows).toHaveLength(2);
+    expect(rows.map((r) => r.name)).toEqual(['develop', 'main']);
+    // RepoBranch.commitSha → prisma `lastCommitSha` mapping.
+    expect(rows.find((r) => r.name === 'main')?.lastCommitSha).toBe('abc123');
+    expect(rows.find((r) => r.name === 'main')?.protected).toBe(true);
+  });
+
+  it('does NOT touch child tables when releases/branches are absent', async () => {
+    // Legacy callers (tests, dev-fetch, error paths) don't pass releases.
+    // The child-table mirror must be a no-op so empty inputs don't
+    // accidentally wipe existing rows.
+    await storeRepoMetadata({
+      owner: 'mirror-test',
+      name: 'no-facets',
+      node: { id: 3 },
+      metadata: { stars: 42 },
+      fetchStatus: 'ok',
+    });
+
+    const releases = await prisma.repoRelease.findMany({
+      where: { repository: { owner: 'mirror-test', name: 'no-facets' } },
+    });
+    const branches = await prisma.repoBranch.findMany({
+      where: { repository: { owner: 'mirror-test', name: 'no-facets' } },
+    });
+    expect(releases).toHaveLength(0);
+    expect(branches).toHaveLength(0);
+  });
+
+  it('replaces existing child rows on second storeRepoMetadata call', async () => {
+    const r1 = [
+      {
+        tag_name: 'v1',
+        name: 'one',
+        published_at: '2026-01-01T00:00:00Z',
+        html_url: 'x',
+        prerelease: false,
+        draft: false,
+        tarball_url: null,
+        zipball_url: null,
+        assets_count: 0,
+      },
+    ];
+    const r2 = [
+      {
+        tag_name: 'v2',
+        name: 'two',
+        published_at: '2026-02-01T00:00:00Z',
+        html_url: 'y',
+        prerelease: false,
+        draft: false,
+        tarball_url: null,
+        zipball_url: null,
+        assets_count: 0,
+      },
+      {
+        tag_name: 'v3',
+        name: 'three',
+        published_at: '2026-03-01T00:00:00Z',
+        html_url: 'z',
+        prerelease: false,
+        draft: false,
+        tarball_url: null,
+        zipball_url: null,
+        assets_count: 0,
+      },
+    ];
+
+    await storeRepoMetadata({
+      owner: 'mirror-test',
+      name: 'replace-test',
+      node: { id: 4 },
+      metadata: {},
+      releases: r1,
+      fetchStatus: 'ok',
+    });
+    await storeRepoMetadata({
+      owner: 'mirror-test',
+      name: 'replace-test',
+      node: { id: 4 },
+      metadata: {},
+      releases: r2,
+      fetchStatus: 'ok',
+    });
+
+    const rows = await prisma.repoRelease.findMany({
+      where: { repository: { owner: 'mirror-test', name: 'replace-test' } },
+      orderBy: { publishedAt: 'asc' },
+    });
+    // r1 was wholesale replaced by r2 (deleteMany + createMany).
+    expect(rows.map((r) => r.tag)).toEqual(['v2', 'v3']);
+  });
+});

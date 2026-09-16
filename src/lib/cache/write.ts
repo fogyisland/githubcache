@@ -12,6 +12,23 @@ export async function storeRepoMetadata(args: {
   node: unknown;
   metadata: unknown;
   etag?: string;
+  /**
+   * Top-N releases returned by GitHub (most recent first). When supplied
+   * the per-facet `storeRepoReleases` writer is invoked AFTER the
+   * repositories upsert so the child `repo_releases` table mirrors what
+   * `metadata.recentReleases` already carries.
+   *
+   * Why both: legacy read paths consumed `metadata.recentReleases`
+   * directly; the M27 read path joins `repo_releases`. Legacy mode
+   * (M27_REFRESH_BY_KIND=false — current production default) goes
+   * through `refreshCore` → `fetchRepoCore` which already pulled
+   * `releases` via `fetchVersionExtras` but never wrote the child
+   * table. This arg closes that gap so `/api/v1/repos` returns
+   * release data even when only the core refresh path is active.
+   */
+  releases?: ReleaseSummary[];
+  /** Same gap-closing rationale as `releases`, for `repo_branches`. */
+  branches?: BranchSummary[];
   fetchStatus: FetchStatus;
   fetchError?: string;
 }): Promise<Repository> {
@@ -114,6 +131,23 @@ export async function storeRepoMetadata(args: {
     { owner: args.owner, name: args.name, fetchStatus: args.fetchStatus },
     'repo stored',
   );
+
+  // Mirror releases + branches into the per-facet child tables so the
+  // child-table read path stays consistent with the metadata JSON. Both
+  // writers are no-ops if the matching array is undefined — the original
+  // behavior (legacy callers passing neither) is preserved.
+  //
+  // Each writer does its own deleteMany + createMany + repositories
+  // update, which means `metadata.recentReleases` / `metadata.branches`
+  // get re-merged from the same arrays. Result is idempotent — same
+  // values written, just twice (once by us, once by the per-facet writer).
+  if (args.releases !== undefined) {
+    await storeRepoReleases(args.owner, args.name, args.releases);
+  }
+  if (args.branches !== undefined) {
+    await storeRepoBranches(args.owner, args.name, args.branches);
+  }
+
   return row;
 }
 
