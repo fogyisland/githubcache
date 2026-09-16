@@ -140,3 +140,53 @@ export async function getOldestPending(): Promise<Date | null> {
   });
   return row?.scheduledFor ?? null;
 }
+
+/**
+ * Paginated list of refresh jobs for the `/admin/refresh-jobs` page.
+ *
+ * Returns `{ rows, total }` so the page renders `AdminPagination` without
+ * a second round-trip (mirrors `listApiKeys` shape).
+ *
+ * Filters compose: status / kind / owner substring / name substring /
+ * updatedAt window. `owner` and `name` use Prisma `contains` (default
+ * case-sensitive on MySQL — page trims before calling).
+ *
+ * Order rule (mirrors `listJobsByStatus`):
+ *   - status === 'pending' → priority ASC, scheduledFor ASC
+ *     (queue head the scheduler is about to drain)
+ *   - anything else        → updatedAt DESC
+ *     (most-recently-active rows first)
+ */
+export async function listRefreshJobs(opts: {
+  status?: 'pending' | 'in_progress' | 'done' | 'failed';
+  kind?: 'core' | 'releases' | 'branches';
+  owner?: string;
+  name?: string;
+  from?: Date;
+  to?: Date;
+  skip: number;
+  take: number;
+}): Promise<{ rows: RefreshJob[]; total: number }> {
+  const where: Prisma.RefreshJobWhereInput = {};
+  if (opts.status) where.status = opts.status;
+  if (opts.kind) where.kind = opts.kind;
+  if (opts.owner) where.owner = { contains: opts.owner };
+  if (opts.name) where.name = { contains: opts.name };
+  if (opts.from || opts.to) {
+    where.updatedAt = {
+      ...(opts.from ? { gte: opts.from } : {}),
+      ...(opts.to ? { lt: opts.to } : {}),
+    };
+  }
+  const orderBy:
+    | Prisma.RefreshJobOrderByWithRelationInput
+    | Prisma.RefreshJobOrderByWithRelationInput[] =
+    opts.status === 'pending'
+      ? [{ priority: 'asc' }, { scheduledFor: 'asc' }]
+      : { updatedAt: 'desc' };
+  const [rows, total] = await Promise.all([
+    prisma.refreshJob.findMany({ where, orderBy, skip: opts.skip, take: opts.take }),
+    prisma.refreshJob.count({ where }),
+  ]);
+  return { rows, total };
+}

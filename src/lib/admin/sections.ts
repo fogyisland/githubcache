@@ -13,6 +13,7 @@ export type AdminSectionSlug =
   | 'audit'
   | 'refresh'
   | 'queue'
+  | 'refresh-jobs'
   | 'webhooks'
   | 'database'
   | 'api-settings'
@@ -56,6 +57,7 @@ export const ADMIN_SECTIONS: Record<AdminSectionSlug, AdminSection> = {
   audit:           { slug: 'audit',           icon: 'audit',           href: '/admin/audit',        roles: ['admin'] },
   refresh:         { slug: 'refresh',         icon: 'refresh',         href: '/admin/refresh',      roles: ['admin'] },
   queue:           { slug: 'queue',           icon: 'queue',           href: '/admin/queue',        roles: ['admin'] },
+  'refresh-jobs':  { slug: 'refresh-jobs',    icon: 'queue',           href: '/admin/refresh-jobs', roles: ['admin'] },
   webhooks:        { slug: 'webhooks',        icon: 'webhooks',        href: '/admin/webhooks',     roles: ['admin'] },
   database:        { slug: 'database',        icon: 'database',        href: '/admin/database',     roles: ['admin'] },
   'api-settings':  { slug: 'api-settings',    icon: 'queries',         href: '/admin/api-settings', roles: ['admin'] },
@@ -93,7 +95,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
   { slug: 'overview',   slugs: ['dashboard'],                                          roles: ['admin', 'operator'] },
   { slug: 'access',     slugs: ['users', 'api-keys', 'github-tokens'],               roles: ['admin', 'operator'] },
   { slug: 'data',       slugs: ['repositories', 'ingestion', 'providers'],           roles: ['admin', 'operator'] },
-  { slug: 'operations', slugs: ['refresh', 'queue', 'webhooks', 'audit', 'import'],    roles: ['admin'] },
+  { slug: 'operations', slugs: ['refresh', 'queue', 'refresh-jobs', 'webhooks', 'audit', 'import'],    roles: ['admin'] },
   { slug: 'system',     slugs: ['database', 'api-settings', 'insights', 'email', 'email-log', 'reports', 'queries'], roles: ['admin'] },
 ];
 

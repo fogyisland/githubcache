@@ -127,6 +127,7 @@
         "audit": "审计",
         "refresh": "刷新",
         "queue": "队列",
+        "refresh-jobs": "刷新任务",
         "webhooks": "Webhook",
         "database": "数据库",
         "api-settings": "API 设置",
@@ -919,6 +920,57 @@
       },
       "emptyTitle": "暂无待处理任务",
       "emptyDescription": "调度器已追上。待处理刷新任务在入队后会显示在此处。"
+    },
+    "refreshJobs": {
+      "title": "刷新任务",
+      "description": "refresh_jobs 表的全部记录。可按状态、类型、owner/name 子串以及更新时间区间筛选。页面需手动刷新浏览器以查看调度器新写入的数据。",
+      "breadcrumb": {
+        "admin": "管理员",
+        "refreshJobs": "刷新任务"
+      },
+      "filters": {
+        "status": "状态",
+        "kind": "类型",
+        "owner": "Owner",
+        "ownerPlaceholder": "包含…",
+        "name": "名称",
+        "namePlaceholder": "包含…",
+        "from": "起始",
+        "to": "截止",
+        "anyOption": "（任意）",
+        "apply": "应用筛选",
+        "reset": "重置"
+      },
+      "status": {
+        "pending": "待处理",
+        "in_progress": "进行中",
+        "done": "已完成",
+        "failed": "已失败"
+      },
+      "kind": {
+        "core": "core",
+        "releases": "releases",
+        "branches": "branches"
+      },
+      "column": {
+        "id": "任务 ID",
+        "repo": "仓库",
+        "kind": "类型",
+        "status": "状态",
+        "priority": "优先级",
+        "scheduled": "计划时间",
+        "updated": "更新时间",
+        "attempts": "尝试次数",
+        "error": "最近错误"
+      },
+      "list": {
+        "dash": "—",
+        "empty": {
+          "title": "暂无符合筛选条件的刷新任务",
+          "description": "可尝试清除筛选条件或扩大时间区间。"
+        },
+        "ariaLabel": "刷新任务"
+      }
     },
     "queries": {
       "title": "查询",

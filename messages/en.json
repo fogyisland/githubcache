@@ -127,6 +127,7 @@
         "audit": "Audit",
         "refresh": "Refresh",
         "queue": "Queue",
+        "refresh-jobs": "Refresh jobs",
         "webhooks": "Webhooks",
         "database": "Database",
         "api-settings": "API Settings",
@@ -919,6 +920,57 @@
       },
       "emptyTitle": "No pending jobs",
       "emptyDescription": "The scheduler is up to date. Pending refresh jobs appear here when they are enqueued."
+    },
+    "refreshJobs": {
+      "title": "Refresh jobs",
+      "description": "Every row in refresh_jobs. Filter by status, kind, owner/name substring, and updated-at range. Page updates manually — refresh the browser to see new scheduler writes.",
+      "breadcrumb": {
+        "admin": "Admin",
+        "refreshJobs": "Refresh jobs"
+      },
+      "filters": {
+        "status": "Status",
+        "kind": "Kind",
+        "owner": "Owner",
+        "ownerPlaceholder": "contains…",
+        "name": "Name",
+        "namePlaceholder": "contains…",
+        "from": "From",
+        "to": "To",
+        "anyOption": "(any)",
+        "apply": "Apply filters",
+        "reset": "Reset"
+      },
+      "status": {
+        "pending": "Pending",
+        "in_progress": "In progress",
+        "done": "Done",
+        "failed": "Failed"
+      },
+      "kind": {
+        "core": "core",
+        "releases": "releases",
+        "branches": "branches"
+      },
+      "column": {
+        "id": "Job ID",
+        "repo": "Repository",
+        "kind": "Kind",
+        "status": "Status",
+        "priority": "Priority",
+        "scheduled": "Scheduled",
+        "updated": "Updated",
+        "attempts": "Attempts",
+        "error": "Last error"
+      },
+      "list": {
+        "dash": "—",
+        "empty": {
+          "title": "No refresh jobs match these filters",
+          "description": "Try clearing filters or widening the time range."
+        },
+        "ariaLabel": "Refresh jobs"
+      }
     },
     "queries": {
       "title": "Queries",
