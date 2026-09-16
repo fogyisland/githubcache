@@ -149,6 +149,17 @@ const PATHS = {
       <path d="M7 14h4M7 17h10" />
     </>
   ),
+  // M32.7.7-b — down-arrow-into-tray (distinct from ingestion's
+  // down-arrow-into-stack so the sidebar visually differentiates the
+  // "import from another DB" route from the "ingest GitHub data" route).
+  import: (
+    <>
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="M7 10l5 5 5-5" />
+      <path d="M12 15V3" />
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+    </>
+  ),
 } as const;
 
 export type SidebarIconName = keyof typeof PATHS;

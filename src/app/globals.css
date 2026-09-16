@@ -1695,6 +1695,70 @@ a {
   }
   .ghc-admin-confirm-actions button[aria-busy="true"] { opacity: 0.7; cursor: progress; }
 
+  /* M32.7.7-a — About button dialog (native <dialog>). Sits in the
+     admin utility bar; surfaces repo URL, author, version. */
+  .ghc-admin-about-trigger {
+    /* Inherits .ghc-mode-toggle chrome from admin-mode-switcher.tsx
+       for visual parity with the sun/moon toggle to the left. */
+  }
+  .ghc-admin-about-dialog {
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    color: var(--color-ink);
+    padding: 0;
+    max-width: 32rem;
+    width: calc(100vw - 2rem);
+    box-shadow: 0 10px 30px color-mix(in srgb, black 18%, transparent);
+  }
+  .ghc-admin-about-dialog::backdrop {
+    background: color-mix(in srgb, black 50%, transparent);
+  }
+  .ghc-admin-about-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.25rem;
+  }
+  .ghc-admin-about-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+  }
+  .ghc-admin-about-fields {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .ghc-admin-about-field {
+    display: grid;
+    grid-template-columns: 6rem 1fr;
+    gap: 0.5rem;
+    align-items: baseline;
+  }
+  .ghc-admin-about-label {
+    margin: 0;
+    color: var(--color-ink-muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+  }
+  .ghc-admin-about-value {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--color-ink);
+    font-family: var(--font-mono-active);
+    word-break: break-all;
+  }
+  .ghc-admin-about-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+  }
+
   /* Status code chip — terminal signature element */
   .ghc-status {
     display: inline-flex;

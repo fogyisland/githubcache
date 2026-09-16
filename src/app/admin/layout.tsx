@@ -18,6 +18,8 @@ import {
 import { resolveAdminMode, type AdminModeId } from '@/lib/admin/mode';
 import { AdminShell } from '@/app/admin/_components/admin-shell';
 import { CommandPalette } from '@/app/admin/_components/command-palette';
+import { AboutButtonWithBuildMetadata } from '@/app/admin/_components/about-button';
+import { PROJECT_METADATA } from '@/lib/version';
 import { isPaused } from '@/lib/scheduler/state';
 import { loadAdminStatusData } from '@/lib/admin/status-loader';
 import type { AdminStatusBarData } from '@/app/admin/_components/admin-status-bar';
@@ -119,6 +121,7 @@ export default async function AdminLayout({
             <span className="ghc-admin-user-role">{tShell(`role.${user.role}`)}</span>
           </span>
           <AdminModeSwitcher current={currentAdminMode} />
+          <AboutButtonWithBuildMetadata metadata={PROJECT_METADATA} />
           <LogoutButton />
         </div>
       </div>

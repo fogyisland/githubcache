@@ -132,7 +132,8 @@
         "api-settings": "API Settings",
         "insights": "Insights",
         "email": "Email",
-        "email-log": "Email log"
+        "email-log": "Email log",
+        "import": "Import"
       },
       "groups": {
         "overview": {
@@ -154,6 +155,13 @@
       "groupToggle": {
         "collapse": "Collapse {group}",
         "expand": "Expand {group}"
+      },
+      "about": {
+        "triggerLabel": "About this app",
+        "title": "About githubcache",
+        "repoLabel": "GitHub repository",
+        "authorLabel": "Author",
+        "close": "Close"
       },
       "statusbar": {
         "db": "DB",
@@ -1098,6 +1106,45 @@
         "previewFailed": "Preview failed (HTTP {status})",
         "createFailed": "Failed to load providers (HTTP {status})"
       }
+    },
+    "import": {
+      "title": "Cross-database import",
+      "description": "Pull cached data from another MySQL database (same MySQL instance, different database name) without running the scheduler from scratch. INSERT IGNORE: existing rows are kept; only new rows are added.",
+      "breadcrumb": {
+        "admin": "Admin",
+        "import": "Import"
+      },
+      "sourceHeading": "Source MySQL connection",
+      "fields": {
+        "host": "Host",
+        "port": "Port",
+        "user": "User",
+        "password": "Password",
+        "database": "Database"
+      },
+      "testConnection": "Test connection",
+      "testOk": "Connected. {n, plural, one {# whitelist table} other {# whitelist tables}} available.",
+      "testFailed": "Connection failed: {error}",
+      "testing": "Testing…",
+      "tablesHeading": "Tables to import",
+      "tableMissing": "not present in source db",
+      "noTables": "Test the connection first to list available tables.",
+      "dryRun": "Dry-run",
+      "dryRunning": "Dry-running…",
+      "dryRunResultsHeading": "Dry-run estimate (sampled)",
+      "dryRunStats": "{willInsert} new, {willSkip} skipped, {willFail} would-fail (out of {totalSourceRows} sampled).",
+      "dryRunSampleRows": "Sample rows",
+      "confirmWord": "IMPORT",
+      "confirmPrompt": "Type {word} to confirm:",
+      "confirmPlaceholder": "Type IMPORT to enable apply",
+      "apply": "Apply",
+      "applying": "Applying…",
+      "applySuccess": "Imported {inserted} rows across {tables} tables.",
+      "passwordHint": "Password is held only in this form's state — it is never persisted or logged.",
+      "resultsHeading": "Apply result",
+      "resultsStats": "{table}: inserted {inserted}, skipped {skipped}, failed {failed}",
+      "inProgress": "Import already running, please wait.",
+      "noTablesSelected": "Pick at least one table."
     },
     "database": {
       "title": "Database",

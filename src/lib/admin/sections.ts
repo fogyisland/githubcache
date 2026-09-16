@@ -18,7 +18,8 @@ export type AdminSectionSlug =
   | 'api-settings'
   | 'insights'
   | 'email'
-  | 'email-log';
+  | 'email-log'
+  | 'import';
 
 /** Static metadata — `title` lives in messages, not here, so it can translate. */
 export interface AdminSection {
@@ -63,6 +64,9 @@ export const ADMIN_SECTIONS: Record<AdminSectionSlug, AdminSection> = {
   // can leak credentials to attackers who phish the form.
   email:           { slug: 'email',           icon: 'email',           href: '/admin/email',        roles: ['admin'] },
   'email-log':     { slug: 'email-log',       icon: 'email-log',       href: '/admin/email/log',    roles: ['admin'] },
+  // M32.7.7-b — Cross-database data import (admin-only because it can
+  // write to /admin/* tables from an external source DB).
+  import:          { slug: 'import',          icon: 'import',          href: '/admin/import',       roles: ['admin'] },
 };
 
 export type AdminGroupSlug = 'overview' | 'access' | 'data' | 'operations' | 'system';
@@ -89,7 +93,7 @@ export const ADMIN_GROUPS: AdminGroup[] = [
   { slug: 'overview',   slugs: ['dashboard'],                                          roles: ['admin', 'operator'] },
   { slug: 'access',     slugs: ['users', 'api-keys', 'github-tokens'],               roles: ['admin', 'operator'] },
   { slug: 'data',       slugs: ['repositories', 'ingestion', 'providers'],           roles: ['admin', 'operator'] },
-  { slug: 'operations', slugs: ['refresh', 'queue', 'webhooks', 'audit'],             roles: ['admin'] },
+  { slug: 'operations', slugs: ['refresh', 'queue', 'webhooks', 'audit', 'import'],    roles: ['admin'] },
   { slug: 'system',     slugs: ['database', 'api-settings', 'insights', 'email', 'email-log', 'reports', 'queries'], roles: ['admin'] },
 ];
 

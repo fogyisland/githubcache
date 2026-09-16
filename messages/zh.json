@@ -132,7 +132,8 @@
         "api-settings": "API 设置",
         "insights": "内容洞察",
         "email": "邮件",
-        "email-log": "邮件日志"
+        "email-log": "邮件日志",
+        "import": "导入"
       },
       "groups": {
         "overview": {
@@ -154,6 +155,13 @@
       "groupToggle": {
         "collapse": "折叠 {group}",
         "expand": "展开 {group}"
+      },
+      "about": {
+        "triggerLabel": "关于本系统",
+        "title": "关于 githubcache",
+        "repoLabel": "GitHub 仓库",
+        "authorLabel": "作者",
+        "close": "关闭"
       },
       "statusbar": {
         "db": "数据库",
@@ -1098,6 +1106,45 @@
         "previewFailed": "预览失败（HTTP {status}）",
         "createFailed": "加载数据源失败（HTTP {status}）"
       }
+    },
+    "import": {
+      "title": "跨库数据导入",
+      "description": "从另一个 MySQL 数据库（同 MySQL 实例、不同 database 名）拉取缓存数据,无需重新跑调度器。INSERT IGNORE 语义:已存在的行保留,只新增不存在的行。",
+      "breadcrumb": {
+        "admin": "后台",
+        "import": "导入"
+      },
+      "sourceHeading": "源 MySQL 连接",
+      "fields": {
+        "host": "主机",
+        "port": "端口",
+        "user": "用户",
+        "password": "密码",
+        "database": "数据库名"
+      },
+      "testConnection": "测试连接",
+      "testOk": "已连接。可导入 {n, plural, other {# 张白名单表}}。",
+      "testFailed": "连接失败：{error}",
+      "testing": "测试中…",
+      "tablesHeading": "要导入的表",
+      "tableMissing": "源库中不存在",
+      "noTables": "请先测试连接以列出可用表。",
+      "dryRun": "干跑（dry-run）",
+      "dryRunning": "干跑中…",
+      "dryRunResultsHeading": "干跑预估（抽样）",
+      "dryRunStats": "{willInsert} 新增,{willSkip} 跳过,{willFail} 会失败（抽样 {totalSourceRows} 行）。",
+      "dryRunSampleRows": "样本行",
+      "confirmWord": "IMPORT",
+      "confirmPrompt": "键入 {word} 以确认：",
+      "confirmPlaceholder": "输入 IMPORT 启用应用",
+      "apply": "应用",
+      "applying": "应用中…",
+      "applySuccess": "已导入 {inserted} 行（{tables} 张表）。",
+      "passwordHint": "密码仅在本表单 state 中保存,从不持久化或写入日志。",
+      "resultsHeading": "导入结果",
+      "resultsStats": "{table}:插入 {inserted},跳过 {skipped},失败 {failed}",
+      "inProgress": "已有导入在运行,请稍候。",
+      "noTablesSelected": "请至少选一张表。"
     },
     "database": {
       "title": "数据库",
