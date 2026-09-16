@@ -138,20 +138,27 @@ describe('lookupAction (public form)', () => {
     it('rate-limits after exceeding the configured limit', async () => {
       xffState.current = '203.0.113.99';
 
-      const { env } = await import('@/lib/config/env');
-      const original = env.PUBLIC_LOOKUP_RATE_PER_MIN;
-      (env as { PUBLIC_LOOKUP_RATE_PER_MIN: number }).PUBLIC_LOOKUP_RATE_PER_MIN = 2;
-      try {
-        const r1 = await lookupAction(idleState, formDataFor('octocat', 'hello-world'));
-        const r2 = await lookupAction(idleState, formDataFor('octocat', 'hello-world'));
-        const r3 = await lookupAction(idleState, formDataFor('octocat', 'hello-world'));
-        expect(r1.status).not.toBe('rate_limited');
-        expect(r2.status).not.toBe('rate_limited');
-        expect(r3.status).toBe('rate_limited');
-        expect(r3.retryAfterSeconds).toBeGreaterThan(0);
-      } finally {
-        (env as { PUBLIC_LOOKUP_RATE_PER_MIN: number }).PUBLIC_LOOKUP_RATE_PER_MIN = original;
-      }
+      // The env is read-only via a Proxy (src/lib/config/env.ts uses
+      // a Proxy to defer zod parse), so we can't mutate
+      // PUBLIC_LOOKUP_RATE_PER_MIN in-process. Instead, pre-seed the
+      // IP bucket at the limit so the next atomic increment trips the
+      // ceiling on the very first lookupAction call.
+      const limit = Number(process.env.PUBLIC_LOOKUP_RATE_PER_MIN ?? '30');
+      const now = new Date();
+      const windowStart = new Date(
+        Math.floor(now.getTime() / 60_000) * 60_000,
+      );
+      await prisma.ipRateLimitBucket.deleteMany({ where: { ip: '203.0.113.99' } });
+      await prisma.$executeRaw`
+        INSERT INTO ip_rate_limit_buckets
+          (ip, window_start, count, created_at, updated_at)
+        VALUES
+          ('203.0.113.99', ${windowStart}, ${limit}, ${now}, ${now})
+      `;
+
+      const r = await lookupAction(idleState, formDataFor('octocat', 'hello-world'));
+      expect(r.status).toBe('rate_limited');
+      expect(r.retryAfterSeconds).toBeGreaterThan(0);
     });
 
     it('counts different IPs independently', async () => {
