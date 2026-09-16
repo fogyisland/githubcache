@@ -15,9 +15,9 @@ import {
 } from '@/lib/theme/cookie';
 
 describe('themes registry', () => {
-  it('has 3 themes', () => {
-    expect(THEME_IDS).toEqual(['terminal', 'editorial', 'brutalist']);
-    expect(Object.keys(THEMES)).toHaveLength(3);
+  it('has 4 themes (M29 added professional + professional-dark)', () => {
+    expect(THEME_IDS).toEqual(['professional', 'professional-dark', 'editorial', 'brutalist']);
+    expect(Object.keys(THEMES)).toHaveLength(4);
   });
 
   it('every theme has font tokens', () => {
@@ -32,8 +32,8 @@ describe('themes registry', () => {
     }
   });
 
-  it('default theme is terminal', () => {
-    expect(DEFAULT_THEME).toBe('terminal');
+  it('default theme is professional (M29 — terminal was renamed)', () => {
+    expect(DEFAULT_THEME).toBe('professional');
   });
 
   describe('isThemeId', () => {
