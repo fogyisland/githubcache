@@ -127,6 +127,20 @@ vi.mock('next-intl/server', () => ({
         'docs.landing.errorCodes.codes.payload_too_large': 'Request body exceeds the configured size limit.',
         'docs.landing.developmentLink': 'Development guide',
         'docs.landing.developmentLinkBody': 'Local development, fork, PR',
+        // M14.x — overview cards on the docs landing page
+        'docs.landing.overviewCards.heading': 'Overview',
+        'docs.landing.overviewCards.endpointsTitle': 'Endpoints',
+        'docs.landing.overviewCards.endpointsBody': 'Three routes cover single-repo lookups, batched queries, and unauthenticated service health.',
+        'docs.landing.overviewCards.howCachingTitle': 'How caching works',
+        'docs.landing.overviewCards.howCachingBody': 'Cache-first reads, queue-on-miss fetches, exponential backoff on errors, rate-aware auto-pause.',
+        'docs.landing.overviewCards.rateLimitsTitle': 'Rate limits',
+        'docs.landing.overviewCards.rateLimitsBody': 'Per-key quotas and per-IP caps to keep the service fair for everyone.',
+        'docs.landing.overviewCards.errorCodesTitle': 'Error codes',
+        'docs.landing.overviewCards.errorCodesBody': 'All error shapes returned by the API, with status codes and remediation.',
+        'docs.landing.overviewCards.developmentTitle': 'Development',
+        'docs.landing.overviewCards.developmentBody': 'Local setup, contributing guide, and architecture notes.',
+        'docs.landing.overviewCards.deploymentTitle': 'Deployment',
+        'docs.landing.overviewCards.deploymentBody': 'Production deployment: env vars, scheduler, and operational notes.',
       };
       let s = dict[`${ns}.${key}`];
       if (s === undefined) {
