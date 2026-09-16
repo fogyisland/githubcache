@@ -366,7 +366,7 @@ describe('PATCH /api/admin/github-tokens/[id]', () => {
       new Request(`http://x/api/admin/github-tokens/${id}`, {
         method: 'PATCH',
         headers: authHeaders({ 'content-type': 'application/json' }),
-        body: JSON.stringify({ status: 2, csrf: csrfToken }),
+        body: JSON.stringify({ status: 'disabled', csrf: csrfToken }),
       }),
       { params: { id: String(id) } },
     );
@@ -541,7 +541,7 @@ describe('M21 — DB-direct token activation', () => {
       new Request(`http://x/api/admin/github-tokens/${id}`, {
         method: 'PATCH',
         headers: authHeaders({ 'content-type': 'application/json' }),
-        body: JSON.stringify({ status: 2, csrf: csrfToken }),
+        body: JSON.stringify({ status: 'disabled', csrf: csrfToken }),
       }),
       { params: { id: String(id) } },
     );
@@ -553,7 +553,7 @@ describe('M21 — DB-direct token activation', () => {
       new Request(`http://x/api/admin/github-tokens/${id}`, {
         method: 'PATCH',
         headers: authHeaders({ 'content-type': 'application/json' }),
-        body: JSON.stringify({ status: 0, csrf: csrfToken }),
+        body: JSON.stringify({ status: 'active', csrf: csrfToken }),
       }),
       { params: { id: String(id) } },
     );
