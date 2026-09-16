@@ -18,15 +18,21 @@ import { applyRequestId } from '@/lib/api/request-id';
  *    the cookie expired/cleared, even though the underlying DB was
  *    fully provisioned.
  *
- *    The cookie is now **written by `src/server.ts` on every response**
- *    based on a cached DB query at server boot. Server.ts queries
- *    `users WHERE role='admin'` once, then for any incoming request
- *    whose cookie is missing, it sets `ghc_setup_done=1` before
- *    forwarding to Next.js. Middleware just reads the cookie. If the
- *    cache says setup-done and the cookie is missing, server.ts has
- *    already injected it by the time middleware runs. If the cache
- *    says not-done, no injection happens and middleware sees the
- *    genuine "not done" state.
+ *    M32.6.5: the wizard's `lockSetupSubtask` now also persists
+ *    `GHC_SETUP_DONE=1` to `.env`. Next.js's `loadEnvConfig` reads
+ *    `.env` once at `bootServer()` time, so `process.env.GHC_SETUP_DONE`
+ *    is `'1'` for every request after init has run — even on a fresh
+ *    process with no browser cookie. Middleware reads BOTH signals:
+ *
+ *    - the cookie (per-browser, fast, set by the wizard on completion)
+ *    - `process.env.GHC_SETUP_DONE === '1'` (process-wide, durable
+ *      across server restarts because `.env` is loaded by Next's
+ *      `loadEnvConfig` at boot)
+ *
+ *    Either signal satisfies the gate. This makes init one-shot — after
+ *    completion the service runs without the wizard ever being
+ *    re-entered, and the `ghc_setup_done` cookie is only a per-tab
+ *    fallback (e.g. for browsers that arrived before init completed).
  *
  *    When `done=false`, non-`/init` requests redirect to `/init`.
  *    When `done=true`, the `/init` wizard bounces back to `/` (stale
@@ -47,11 +53,21 @@ import { applyRequestId } from '@/lib/api/request-id';
 export async function middleware(req: NextRequest): Promise<NextResponse> {
   const path = req.nextUrl.pathname;
 
-  // --- M28.bug12 / M32.6 setup wizard gate ---------------------------------
-  // Cookie-only signal; src/server.ts auto-injects it when DB shows
-  // setup is done, so a missing cookie on a provisioned DB is impossible
-  // in normal operation.
-  const setupDone = req.cookies.get('ghc_setup_done')?.value === '1';
+  // --- M28.bug12 / M32.6 / M32.6.5 setup wizard gate -----------------------
+  // Two independent signals, either is sufficient:
+  //   1. ghc_setup_done=1 cookie (per-browser; the wizard sets it at the
+  //      end of step 3)
+  //   2. process.env.GHC_SETUP_DONE === '1' (process-wide; written to
+  //      .env by lockSetupSubtask, picked up by Next's loadEnvConfig
+  //      at bootServer() time)
+  //
+  // The env signal is the durable one — it survives server restarts and
+  // the absence of any browser cookie. The cookie is a per-tab fallback
+  // that still works (and is needed by the backfill route at
+  // /api/setup/backfill).
+  const cookieSetupDone = req.cookies.get('ghc_setup_done')?.value === '1';
+  const envSetupDone = process.env.GHC_SETUP_DONE === '1';
+  const setupDone = cookieSetupDone || envSetupDone;
   if (!setupDone && !path.startsWith('/init') && !path.startsWith('/api/init')) {
     const initUrl = new URL('/init', req.url);
     const redirectRes = NextResponse.redirect(initUrl);
