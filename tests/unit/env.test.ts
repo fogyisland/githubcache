@@ -17,8 +17,13 @@ describe('env loader', () => {
     Object.assign(process.env, originalEnv);
   });
 
-  it('throws when DATABASE_URL missing', async () => {
-    await expect(import('@/lib/config/env')).rejects.toThrow(/DATABASE_URL/);
+  it('does not throw when DATABASE_URL missing (M28.bug16 — schema is .optional())', async () => {
+    // M28.bug16 made DATABASE_URL optional so `next build` succeeds
+    // before the init wizard has written .env. The Prisma client
+    // construction (src/lib/db/client) is now the place that surfaces
+    // "DATABASE_URL is required" at runtime, not env validation.
+    const { env } = await import('@/lib/config/env');
+    expect(env.DATABASE_URL).toBeUndefined();
   });
 
   it('loads required vars with defaults', async () => {
@@ -41,7 +46,18 @@ describe('env loader', () => {
   it('rejects invalid LOG_LEVEL', async () => {
     process.env.DATABASE_URL = 'mysql://u:p@localhost:3306/db';
     process.env.LOG_LEVEL = 'banana';
-    await expect(import('@/lib/config/env')).rejects.toThrow();
+    // The Proxy's parse() throws ZodError on the first access; we
+    // trigger it by reading a property and catch the rejection.
+    let captured: unknown = null;
+    try {
+      const mod = await import('@/lib/config/env');
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const _ = mod.env.LOG_LEVEL;
+    } catch (e: unknown) {
+      captured = e;
+    }
+    expect(captured).toBeInstanceOf(Error);
+    expect((captured as Error).message).toMatch(/LOG_LEVEL/);
   });
 
   it('treats empty-string SCHEDULER_BATCH_SIZE as missing (uses default)', async () => {
