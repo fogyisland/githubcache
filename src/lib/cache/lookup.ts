@@ -49,6 +49,43 @@ export interface ResultError {
 }
 export type QueryResult = ResultOk | ResultNotFound | ResultPending | ResultError;
 
+/**
+ * M32.7.9 — negative-cache check for owner/name that was previously
+ * 404'd / 410'd by `refreshOne.handleError`.
+ *
+ * The terminal 404/410 path writes:
+ *   - repositories row DELETED (Cascade also drops releases/branches)
+ *   - refresh_jobs row with status='failed' AND
+ *     lastError startsWith 'not_found:'
+ *
+ * claimBatch only picks up status='pending', so the failed row stays
+ * terminal indefinitely. lookupRepo checks for it BEFORE
+ * enqueueRefresh to short-circuit the "fresh public-form submit for a
+ * deleted repo re-fetches forever" loop — return the same not_found
+ * shape that an in-row `fetchStatus='not_found'` produces.
+ *
+ * Why a startsWith marker instead of a column: 1.0 schema freeze.
+ * Adding a `negative_cached` column would require a migration + the
+ * @@unique([owner,name]) indexing decision. The string marker is
+ * grep-able, runs in <1ms with the existing @@index([status]), and
+ * the column can be added later when the schema un-freezes.
+ */
+export async function findNotFoundJob(
+  owner: string,
+  name: string,
+): Promise<boolean> {
+  const row = await prisma.refreshJob.findFirst({
+    where: {
+      owner,
+      name,
+      status: 'failed',
+      lastError: { startsWith: 'not_found:' },
+    },
+    select: { id: true },
+  });
+  return row !== null;
+}
+
 export const STALE_WARNING = 'data may be delayed';
 
 /**
@@ -246,6 +283,20 @@ export async function lookupRepo(owner: string, name: string): Promise<QueryResu
       };
     }
     // forbidden/error: re-enqueue so scheduler can retry.
+  }
+  // M32.7.9 — short-circuit if a previous 404/410 left a negative-cache
+  // marker on refresh_jobs. Without this check, every fresh public-form
+  // submit for a deleted repo would re-enqueue forever, fetching GitHub
+  // again only to hit the same 404. Now: same not_found shape as the
+  // in-row path, no scheduler work, no rate-limit burn.
+  if (await findNotFoundJob(owner, name)) {
+    return {
+      canonical: original,
+      original,
+      found: false,
+      fetch_status: 'not_found',
+      error: 'Repository not found or private',
+    };
   }
   try {
     const { queuedAt, scheduledFor, queueDepth, medianFetchMs } = await enqueueRefresh(owner, name);

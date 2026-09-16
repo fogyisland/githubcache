@@ -435,35 +435,70 @@ async function handleError(
   e: unknown,
   job: RefreshJob,
 ): Promise<RefreshJobResult> {
-  // 404 / 410 — repo missing or gone. First occurrence immediately
-  // records a terminal `fetchStatus='not_found'` row on `repositories`
-  // so subsequent GETs return 404 with a user-friendly error body
-  // instead of bouncing through the 202 pending → re-poll loop.
-  // M31.x — refresh_jobs without a backing repositories row (the
-  // queue-on-miss path) get a stub row created here. Existing rows
-  // are upserted in place so concurrent re-fetches converge.
+  // 404 / 410 — repo missing or gone. M32.7.9 contract change:
+  // DELETE the `repositories` row (releases / branches child tables
+  // cascade onDelete) so the cache stays clean of phantom data, and
+  // write a terminal `refresh_jobs` row with status='failed' +
+  // lastError='not_found: <code> ...' as the negative cache. The
+  // scheduler's claimBatch only picks up status='pending', so a
+  // failed row is never re-claimed automatically — admin must
+  // enqueueManualRefresh to retry.
+  //
+  // Subsequent lookupRepo calls see the negative cache via
+  // `findNotFoundJob` (src/lib/cache/lookup.ts) and return
+  // fetch_status='not_found' directly without re-enqueueing — fixes
+  // the "fresh public-form submit for a deleted repo re-fetches
+  // forever" loop.
   if (
     e instanceof NotFoundError ||
     (e instanceof GitHubError && (e.httpStatus === 404 || e.httpStatus === 410))
   ) {
     const attempts = job.attempts + 1;
+    const httpStatus = e instanceof GitHubError ? e.httpStatus : 404;
     const message = e.message;
+    const negativeCacheError = `not_found: ${httpStatus} ${message}`;
+    // scheduledFor pushed +1y as belt-and-suspenders. claimBatch's
+    // `WHERE status='pending'` already excludes failed rows, but a
+    // far-future timestamp guarantees safety even if the scheduler
+    // filter is ever loosened.
+    const farFuture = new Date(Date.now() + 365 * 24 * 60 * 60_000);
     try {
-      await storeRepoMetadata({
-        owner: job.owner,
-        name: job.name,
-        node: null,
-        metadata: { notFound: true, githubStatus: e instanceof GitHubError ? e.httpStatus : 404 },
-        fetchStatus: 'not_found',
-        fetchError: message,
-      });
+      await prisma.$transaction([
+        // 1. Update the refresh_job FIRST so we can null out
+        //    repositoryId before deleting the repositories row.
+        //    RefreshJob.repositoryId is a nullable FK with
+        //    onDelete: Cascade (when the row exists); attempting to
+        //    delete the repository while a refresh_job still points
+        //    at it would violate the FK. Two operations need to happen:
+        //    (a) clear the FK pointer, (b) mark terminal + negative
+        //    cache. Doing them in one update keeps the transaction
+        //    atomic and avoids a second round-trip.
+        prisma.refreshJob.update({
+          where: { id: job.id },
+          data: {
+            repositoryId: null,
+            status: 'failed',
+            lockedUntil: null,
+            scheduledFor: farFuture,
+            lastError: negativeCacheError,
+            attempts,
+          },
+        }),
+        // 2. DELETE the repositories row (child tables cascade).
+        //    deleteMany instead of delete so the path is idempotent
+        //    when called against a queue-on-miss job whose repositories
+        //    row never existed in the first place.
+        prisma.repository.deleteMany({
+          where: { owner: job.owner, name: job.name },
+        }),
+      ]);
     } catch (storeErr: unknown) {
       // If the terminal write fails (DB hiccup), fall through to the
       // legacy retry loop so we get another shot — better than losing
       // the 404 evidence entirely.
       logger.error(
         { err: storeErr, owner: job.owner, name: job.name },
-        'failed to persist not_found row; will retry',
+        'failed to persist not_found negative cache; will retry',
       );
       const delay = nextDelay(attempts, -1); // failure mode
       await prisma.refreshJob.update({
@@ -478,25 +513,15 @@ async function handleError(
       });
       return { status: 'pending' };
     }
-    await prisma.refreshJob.update({
-      where: { id: job.id },
-      data: {
-        status: 'done',
-        lockedUntil: null,
-        scheduledFor: new Date(Date.now() + 24 * 60 * 60_000), // 24h, aging will reschedule if repo is touched
-        lastError: message,
-        attempts,
-      },
-    });
     await writeAudit({
       action: 'repo_not_found',
       targetType: 'repository',
       targetId: `${job.owner}/${job.name}`,
-      metadata: { attempts, message, kind: 'not_found' },
+      metadata: { attempts, message, kind: 'not_found', httpStatus },
     });
     logger.warn(
-      { jobId: job.id.toString(), owner: job.owner, name: job.name, attempts },
-      'refresh: 404 terminal, fetchStatus=not_found persisted',
+      { jobId: job.id.toString(), owner: job.owner, name: job.name, attempts, httpStatus },
+      'refresh: 404/410 terminal, repositories row deleted, refresh_job negative-cached',
     );
     return { status: 'done' };
   }

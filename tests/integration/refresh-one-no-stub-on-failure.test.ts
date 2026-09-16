@@ -7,18 +7,22 @@ import { prisma } from '@/lib/db/client';
 import { refreshOne } from '@/lib/jobs/refresh-one';
 
 /**
- * M31.x — refresh-one 404 / 410 paths immediately write a terminal
- * `repositories` row with `fetchStatus='not_found'`, so subsequent
- * GETs return 404 with a user-friendly error body instead of bouncing
- * through the 202 pending → re-poll loop. 403 stays terminal but
- * leaves repositories empty (admin must intervene).
+ * M32.7.9 — refresh-one 404 / 410 paths DELETEs any existing
+ * `repositories` row (releases / branches child tables cascade) and
+ * marks the refresh_job terminal with status='failed' +
+ * lastError='not_found: <code> <message>'. A subsequent lookupRepo
+ * sees the negative cache via `findNotFoundJob` and returns
+ * fetch_status='not_found' directly without re-enqueueing. 403 stays
+ * terminal but does not create a repositories row (admin must
+ * intervene).
  *
  * This test creates a claimed refresh_job whose `repositoryId` is null
  * (no backing repositories row), then runs refreshOne against a mock
  * GitHub endpoint that returns each failure code. After the run:
  *
- *   - 404 / 410 → repositories row written with fetchStatus='not_found';
- *     refresh_job marked status='done' (terminal, 24h reschedule).
+ *   - 404 / 410 → repositories row IS NOT present (negative cache
+ *     lives on refresh_jobs, status='failed', lastError='not_found:…');
+ *     refresh_job marked status='failed' (terminal, scheduledFor=+1y).
  *   - 403 → repositories row stays empty; refresh_job status='failed';
  *     audit log carries repo_forbidden.
  */
@@ -123,10 +127,26 @@ function ghForbidden(name = 'orphan') {
   );
 }
 
-describe('refreshOne on 404 (M31.x — terminal not_found row)', () => {
-  it('writes repositories row with fetchStatus=not_found; refresh_job status=done', async () => {
+describe('refreshOne on 404 (M32.7.9 — negative cache, no repositories row)', () => {
+  it('DELETEs any repositories row; refresh_job status=failed with lastError "not_found: ..."', async () => {
     pickQueue.push({ id: BigInt(1), octokit: fakeOctokit() });
     server.use(ghNotFound());
+
+    // Pre-create a repositories row that the 404 path must DELETE —
+    // proves we don't orphan stale data from a prior successful fetch
+    // before the repo was removed / made private on GitHub.
+    await prisma.repository.create({
+      data: {
+        owner: TEST_OWNER,
+        name: 'orphan',
+        node: {} as object as never,
+        metadata: { stars: 42 } as object as never,
+        defaultBranch: 'main',
+        stars: 42,
+        fetchStatus: 'ok',
+        lastFetchedAt: new Date(),
+      },
+    });
 
     const job = await claimOrphan();
     const result = await refreshOne(job);
@@ -134,24 +154,31 @@ describe('refreshOne on 404 (M31.x — terminal not_found row)', () => {
     // 404 is terminal on first occurrence — refreshOne returns 'done'.
     expect(result.status).toBe('done');
 
-    // M31.x — repositories row IS written with fetchStatus='not_found'.
-    // Subsequent GETs hit the lookupRepo cache and return 404 directly.
+    // M32.7.9 — repositories row IS DELETED. The negative cache moves
+    // to refresh_jobs so subsequent GETs return not_found via
+    // findNotFoundJob (see lookup-not-found-cache.test.ts).
     const repo = await prisma.repository.findUnique({
       where: { owner_name: { owner: TEST_OWNER, name: 'orphan' } },
     });
-    expect(repo).not.toBeNull();
-    expect(repo?.fetchStatus).toBe('not_found');
-    expect(repo?.fetchError?.toLowerCase()).toContain('not found');
+    expect(repo).toBeNull();
 
     const refreshed = await prisma.refreshJob.findUnique({ where: { id: job.id } });
     expect(refreshed?.attempts).toBe(1);
-    expect(refreshed?.status).toBe('done');
-    expect(refreshed?.lastError?.toLowerCase()).toContain('not found');
+    expect(refreshed?.status).toBe('failed');
+    // The marker findNotFoundJob scans for: startsWith('not_found:').
+    expect(refreshed?.lastError?.startsWith('not_found:')).toBe(true);
+    expect(refreshed?.lastError).toContain('404');
+    // scheduledFor must be in the future — claimBatch only selects
+    // status='pending' AND scheduled_for<=now, so a failed row with
+    // scheduledFor in the past is fine, but a future timestamp is a
+    // belt-and-suspenders defense if anyone ever loosens the claim
+    // filter.
+    expect(refreshed?.scheduledFor.getTime()).toBeGreaterThan(Date.now());
   });
 });
 
-describe('refreshOne on 410 (M31.x — terminal not_found row)', () => {
-  it('writes repositories row with fetchStatus=not_found', async () => {
+describe('refreshOne on 410 (M32.7.9 — negative cache, no repositories row)', () => {
+  it('DELETEs repositories row; refresh_job status=failed with lastError "not_found: 410 ..."', async () => {
     pickQueue.push({ id: BigInt(1), octokit: fakeOctokit() });
     server.use(ghGone());
 
@@ -163,16 +190,13 @@ describe('refreshOne on 410 (M31.x — terminal not_found row)', () => {
     const repo = await prisma.repository.findUnique({
       where: { owner_name: { owner: TEST_OWNER, name: 'orphan' } },
     });
-    expect(repo).not.toBeNull();
-    expect(repo?.fetchStatus).toBe('not_found');
+    expect(repo).toBeNull();
 
     const refreshed = await prisma.refreshJob.findUnique({ where: { id: job.id } });
     expect(refreshed?.attempts).toBe(1);
-    expect(refreshed?.status).toBe('done');
-    // 410 falls into the same not-found branch as 404; lastError is
-    // the GitHub response body. Either substring is acceptable.
-    const msg = refreshed?.lastError?.toLowerCase() ?? '';
-    expect(msg.includes('not found') || msg.includes('gone')).toBe(true);
+    expect(refreshed?.status).toBe('failed');
+    expect(refreshed?.lastError?.startsWith('not_found:')).toBe(true);
+    expect(refreshed?.lastError).toContain('410');
   });
 });
 
@@ -218,34 +242,35 @@ describe('refreshOne on 403 (M31 — no stub row, audit only)', () => {
   });
 });
 
-describe('refreshOne on repeated 404s (M31.x — first occurrence is terminal)', () => {
-  it('writes repo_not_found audit; refreshOne ignores prior attempts since first 404 already terminated', async () => {
+describe('refreshOne on repeated 404s (M32.7.9 — first occurrence is terminal)', () => {
+  it('writes repo_not_found audit; refreshOne records attempts on the failed refresh_job', async () => {
     pickQueue.push({ id: BigInt(1), octokit: fakeOctokit() });
     server.use(ghNotFound());
 
     // Pre-set attempts:4 — irrelevant now. First 404 always terminates
-    // immediately in M31.x, regardless of attempts count. We assert that
-    // the run is still 'done' and the audit carries the repo_not_found
-    // action (not the legacy refresh.failed_review escalation).
+    // immediately in M32.7.9, regardless of attempts count. We assert
+    // that the run is still 'done' and the audit carries the
+    // repo_not_found action.
     const job = await claimOrphan({ attempts: 4 });
     const result = await refreshOne(job);
 
     expect(result.status).toBe('done');
 
-    // M31.x — repositories row IS written with fetchStatus='not_found'.
+    // M32.7.9 — repositories row is NOT present (deleted if existed,
+    // never created otherwise).
     const repo = await prisma.repository.findUnique({
       where: { owner_name: { owner: TEST_OWNER, name: 'orphan' } },
     });
-    expect(repo).not.toBeNull();
-    expect(repo?.fetchStatus).toBe('not_found');
+    expect(repo).toBeNull();
 
     const refreshed = await prisma.refreshJob.findUnique({ where: { id: job.id } });
-    expect(refreshed?.status).toBe('done');
+    expect(refreshed?.status).toBe('failed');
     // attempts is job.attempts + 1 = 5 — recorded for diagnostics,
     // but the row is terminal regardless.
     expect(refreshed?.attempts).toBe(5);
+    expect(refreshed?.lastError?.startsWith('not_found:')).toBe(true);
 
-    // Audit log: action=repo_not_found (the new M31.x terminal-write
+    // Audit log: action=repo_not_found (the new M32.7.9 terminal-write
     // action). targetId is owner/name. metadata carries attempts + message.
     const audits = await prisma.auditLog.findMany({
       where: {
